@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.19.0">
+<meta name="app-version" content="2.20.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1289,6 +1289,14 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 
     <div class="aj-sec">Membros</div>
     <div class="card" id="aj-membros"></div>
+
+    <div id="aj-limpar-teste" style="display:none">
+      <div class="aj-sec">🧪 Ambiente de teste</div>
+      <div class="card">
+        <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Apaga <b>todos os lançamentos</b> desta casa de teste, para começar do zero. Categorias, orçamentos e membros continuam. Este botão só existe no ambiente de teste.</div>
+        <button class="aj-btn perigo aj-full" id="aj-limpar-btn">Apagar todos os lançamentos</button>
+      </div>
+    </div>
 
     <div class="aj-sec">Backup</div>
     <div class="card">

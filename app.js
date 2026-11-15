@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.19.0';
+var VERSAO = '2.20.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1809,6 +1809,7 @@ function renderAjustes() {
       (souDono() && !eu ? '<button class="aj-btn perigo" data-remover="' + uid + '">Remover</button>' : '') + '</div>';
   }).join('');
   renderAdmin();
+  renderLimparTeste();
   $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
 }
@@ -2034,6 +2035,25 @@ function mostrarAdmin() {
     db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', 'Código novo: ' + c + '. O anterior não vale mais.', 5000); },
       function (e) { $('adm-erro').textContent = 'Não foi possível trocar o código (' + ((e && e.code) || e) + ').'; })
       .then(function () { bn.disabled = false; mostrarAdmin(); });
+  };
+}
+// ── Só no ambiente de teste (14/11/2026): apagar todos os lançamentos da casa ──
+// Escondido em produção pelo config.js (MINHACASA_AMBIENTE). Pede dois toques.
+var _limparConf = false;
+function renderLimparTeste() {
+  var box = $('aj-limpar-teste'); if (!box) return;
+  if (window.MINHACASA_AMBIENTE !== 'teste') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  var n = Object.keys(S.raw).length, b = $('aj-limpar-btn');
+  b.disabled = !n;
+  b.textContent = !n ? 'Nenhum lançamento para apagar' : _limparConf ? 'Toque de novo para apagar ' + n + ' lançamento' + (n === 1 ? '' : 's') : 'Apagar todos os lançamentos (' + n + ')';
+  b.onclick = function () {
+    if (window.MINHACASA_AMBIENTE !== 'teste') return;
+    if (!_limparConf) { _limparConf = true; renderLimparTeste(); setTimeout(function () { if (_limparConf) { _limparConf = false; renderLimparTeste(); } }, 5000); return; }
+    _limparConf = false; b.disabled = true; b.textContent = 'Apagando…';
+    db.ref('casas/' + S.casa + '/dados/lanc').remove().then(function () {
+      S.raw = {}; mostrarToast('🗑️', n + ' lançamento' + (n === 1 ? '' : 's') + ' apagado' + (n === 1 ? '' : 's')); renderLogo();
+    }, function (e) { mostrarToast('⚠️', 'Erro ao apagar (' + ((e && e.code) || e) + ')'); renderLimparTeste(); });
   };
 }
 function copiar(txt) {
