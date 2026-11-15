@@ -4,12 +4,38 @@
     ".write": false,
 
     "admin": {
-      ".read": "auth != null && root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid",
+      ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
       "codigoAcesso": {
-        ".write": "auth != null && root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid",
+        ".write": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
         ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9-]{6,40}$/)"
       },
+      "casaAdmin": { ".validate": "newData.isString() && newData.val().length <= 64" },
       "$outro": { ".validate": false }
+    },
+
+    "convites": {
+      ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+      "$cod": {
+        ".write": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+        ".validate": "$cod.matches(/^[A-Z0-9-]{6,40}$/) && newData.hasChildren(['nome', 'criado'])",
+        "nome":      { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
+        "criado":    { ".validate": "newData.isNumber()" },
+        "cancelado": { ".validate": "newData.isBoolean()" },
+        "usadoPor":  { ".write": "auth != null && !data.exists() && newData.val() === auth.uid && data.parent().child('nome').exists() && data.parent().child('cancelado').val() !== true", ".validate": "newData.isString()" },
+        "usadoEm":   { ".write": "auth != null && !data.exists() && data.parent().child('nome').exists() && data.parent().child('cancelado').val() !== true", ".validate": "newData.isNumber() && newData.val() === now" },
+        "email":     { ".write": "auth != null && !data.exists() && data.parent().child('nome').exists() && data.parent().child('cancelado').val() !== true", ".validate": "newData.isString() && newData.val() === auth.token.email" },
+        "$outro":    { ".validate": false }
+      }
+    },
+
+    "contas": {
+      ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "email":  { ".validate": "newData.isString() && newData.val() === auth.token.email" },
+        "ultimo": { ".validate": "newData.isNumber() && newData.val() === now" },
+        "$outro": { ".validate": false }
+      }
     },
 
     "usuarios": {
@@ -24,7 +50,7 @@
     "casas": {
       "$casa": {
         ".read": "auth != null && data.child('membros').child(auth.uid).exists()",
-        ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()",
+        ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && newData.child('acesso').isString() && newData.child('acesso').val().matches(/^[A-Z0-9-]{6,40}$/) && ((root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()) || (root.child('convites').child(newData.child('acesso').val()).child('nome').exists() && !root.child('convites').child(newData.child('acesso').val()).child('usadoPor').exists() && root.child('convites').child(newData.child('acesso').val()).child('cancelado').val() !== true && newData.parent().parent().child('convites').child(newData.child('acesso').val()).child('usadoPor').val() === auth.uid))",
 
         "dono":   { ".validate": "newData.isString()" },
         "salt":   { ".read": "auth != null", ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.isString() && newData.val().length <= 64" },

@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.21.1';
+var VERSAO = '2.22.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2020,36 +2020,75 @@ function excluirCat() {
 // ── Administrador (14/11/2026) ──
 // O cartão só aparece se o Firebase deixar ler admin/codigoAcesso. Quem pode ler e trocar é decidido nas regras
 // (o dono da casa do Luiz), então esconder o cartão não é a proteção: a proteção é o servidor recusar os outros.
-var _adm = { uid: null, codigo: null, confirmar: false };
+// Convites com nome (14/11/2026): um código por pessoa, que vale uma vez. Ao criar a casa, o app grava em
+// convites/<código> quem usou (uid, e-mail, data). contas/<uid> guarda e-mail e último acesso. Só o admin lê os dois.
+var _adm = { uid: null, codigo: null, confirmar: null, convites: {}, contas: {} };
+var CHARS_COD = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function aleatorio(n) { var r = crypto.getRandomValues(new Uint8Array(n)), t = ''; for (var i = 0; i < n; i++) t += CHARS_COD[r[i] % CHARS_COD.length]; return t; }
+function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 function renderAdmin() {
   var box = $('aj-admin'); if (!box || !S.user) return;
   if (_adm.uid === S.user.uid) { mostrarAdmin(); return; }
   _adm.uid = S.user.uid; _adm.codigo = null;
-  db.ref('admin/codigoAcesso').once('value').then(function (snap) { _adm.codigo = snap.val() || ''; mostrarAdmin(); }, function () { _adm.codigo = null; box.style.display = 'none'; });
+  db.ref('admin/codigoAcesso').once('value').then(function (snap) { _adm.codigo = snap.val() || ''; mostrarAdmin(); carregarConvites(); }, function () { _adm.codigo = null; box.style.display = 'none'; });
+}
+function carregarConvites() {
+  return Promise.all([db.ref('convites').once('value'), db.ref('contas').once('value').catch(function () { return null; })]).then(function (r) {
+    _adm.convites = r[0].val() || {}; _adm.contas = (r[1] && r[1].val()) || {}; mostrarAdmin();
+  }, function (e) { $('adm-erro').textContent = 'Não foi possível ler os convites (' + ((e && e.code) || e) + '). As regras do Firebase estão atualizadas?'; });
+}
+function msgConvite(nome, cod) {
+  return '🏠 Olá, ' + nome + '! Você foi convidado para testar o Minha Casa.\n\n1. Abra: ' + location.origin + '\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o seu código pessoal: ' + cod + '\n\nEste código é só seu e vale uma vez.';
 }
 function mostrarAdmin() {
   var box = $('aj-admin'); if (_adm.codigo === null) { box.style.display = 'none'; return; }
   box.style.display = '';
-  $('adm-codigo').textContent = _adm.codigo || '(nenhum código: ninguém consegue criar casa)';
-  $('adm-copiar').onclick = function () { if (_adm.codigo) copiar(_adm.codigo); };
-  $('adm-compart').onclick = function () {
-    if (!_adm.codigo) return;
-    var txt = '🏠 Você foi convidado para testar o Minha Casa!\n\n1. Abra: ' + location.origin + '\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o código de acesso: ' + _adm.codigo;
+  // convites com nome
+  var ids = Object.keys(_adm.convites).sort(function (a, b) { return (_adm.convites[b].criado || 0) - (_adm.convites[a].criado || 0); });
+  $('adm-lista').innerHTML = !ids.length ? '<div style="font-size:13px;color:#9ca3af;padding:8px 0">Nenhum convite criado ainda.</div>' : ids.map(function (cod) {
+    var c = _adm.convites[cod], conta = c.usadoPor ? _adm.contas[c.usadoPor] || {} : null;
+    var st = c.usadoPor ? '<span style="color:#16a34a;font-weight:700">✅ Criou a casa em ' + dataHora(c.usadoEm) + '</span>'
+      : c.cancelado ? '<span style="color:#9ca3af;font-weight:700">⛔ Cancelado</span>' : '<span style="color:#b45309;font-weight:700">⏳ Ainda não usou</span>';
+    var det = c.usadoPor ? esc(c.email || conta.email || '') + '<br>Último acesso: ' + dataHora(conta.ultimo) : '<span style="font-family:monospace">' + esc(cod) + '</span>';
+    var conf = _adm.confirmar === cod;
+    var bts = c.usadoPor ? '' : c.cancelado ? '<button class="aj-btn perigo" data-admapagar="' + esc(cod) + '">' + (conf ? 'Confirmar' : 'Apagar') + '</button>'
+      : '<button class="aj-btn" data-admenviar="' + esc(cod) + '">Enviar</button><button class="aj-btn perigo" data-admcancelar="' + esc(cod) + '">' + (conf ? 'Confirmar' : 'Cancelar') + '</button>';
+    return '<div class="aj-linha" style="align-items:flex-start"><div class="aj-ic" style="background:#eef2ff">👤</div><div class="aj-nm">' + esc(c.nome) +
+      '<small style="display:block;line-height:1.5">' + st + '<br>' + det + '</small></div>' + (bts ? '<div style="display:flex;flex-direction:column;gap:4px">' + bts + '</div>' : '') + '</div>';
+  }).join('');
+  $('adm-criar').onclick = function () {
+    var nome = $('adm-nome').value.trim(), er = $('adm-erro'); er.textContent = '';
+    if (!nome) { er.textContent = 'Digite o nome da pessoa.'; return; }
+    var base = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'PESSOA';
+    var cod = 'CASA-' + base + '-' + aleatorio(5), btn = $('adm-criar'); btn.disabled = true;
+    db.ref('convites/' + cod).set({ nome: nome, criado: firebase.database.ServerValue.TIMESTAMP }).then(function () {
+      $('adm-nome').value = ''; mostrarToast('✅', 'Convite criado para ' + nome + '. Toque em Enviar.', 4000); return carregarConvites();
+    }, function (e) { er.textContent = 'Não foi possível criar o convite (' + ((e && e.code) || e) + ').'; }).then(function () { btn.disabled = false; });
+  };
+  qsa('#adm-lista [data-admenviar]').forEach(function (b) { b.onclick = function () {
+    var cod = b.dataset.admenviar, txt = msgConvite(_adm.convites[cod].nome, cod);
     if (navigator.share) navigator.share({ text: txt }).catch(function () {}); else copiar(txt);
-  };
-  var bn = $('adm-novo');
-  bn.textContent = _adm.confirmar ? 'Toque de novo para confirmar' : 'Trocar código de acesso';
-  bn.classList.toggle('perigo', _adm.confirmar);
-  bn.onclick = function () {
-    if (!_adm.confirmar) { _adm.confirmar = true; mostrarAdmin(); setTimeout(function () { if (_adm.confirmar) { _adm.confirmar = false; mostrarAdmin(); } }, 5000); return; }
-    _adm.confirmar = false;
-    var a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)), c = 'CASA-';
-    for (var i = 0; i < 8; i++) { c += a[r[i] % a.length]; if (i === 3) c += '-'; }
-    bn.disabled = true; $('adm-erro').textContent = '';
-    db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', 'Código novo: ' + c + '. O anterior não vale mais.', 5000); },
-      function (e) { $('adm-erro').textContent = 'Não foi possível trocar o código (' + ((e && e.code) || e) + ').'; })
-      .then(function () { bn.disabled = false; mostrarAdmin(); });
-  };
+  }; });
+  function confirmarDepois(cod, acao) {
+    if (_adm.confirmar !== cod) { _adm.confirmar = cod; mostrarAdmin(); setTimeout(function () { if (_adm.confirmar === cod) { _adm.confirmar = null; mostrarAdmin(); } }, 5000); return; }
+    _adm.confirmar = null; acao().then(carregarConvites, function (e) { $('adm-erro').textContent = 'Não foi possível (' + ((e && e.code) || e) + ').'; });
+  }
+  qsa('#adm-lista [data-admcancelar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admcancelar; confirmarDepois(cod, function () { return db.ref('convites/' + cod + '/cancelado').set(true); }); }; });
+  qsa('#adm-lista [data-admapagar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admapagar; confirmarDepois(cod, function () { return db.ref('convites/' + cod).remove(); }); }; });
+  // código geral
+  $('adm-codigo').textContent = _adm.codigo || '(desativado)';
+  $('adm-copiar').disabled = !_adm.codigo; $('adm-desativar').disabled = !_adm.codigo;
+  $('adm-copiar').onclick = function () { if (_adm.codigo) copiar(_adm.codigo); };
+  var bn = $('adm-novo'), bd = $('adm-desativar');
+  bn.textContent = _adm.confirmar === '_trocar' ? 'Confirmar' : (_adm.codigo ? 'Trocar' : 'Ativar');
+  bd.textContent = _adm.confirmar === '_desativar' ? 'Confirmar' : 'Desativar';
+  bn.onclick = function () { confirmarDepois('_trocar', function () {
+    var c = 'CASA-' + aleatorio(4) + '-' + aleatorio(4);
+    return db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', 'Código geral novo: ' + c + '. O anterior não vale mais.', 5000); });
+  }); };
+  bd.onclick = function () { if (!_adm.codigo) return; confirmarDepois('_desativar', function () {
+    return db.ref('admin/codigoAcesso').remove().then(function () { _adm.codigo = ''; mostrarToast('⛔', 'Código geral desativado. Só os convites com nome funcionam.', 5000); });
+  }); };
 }
 // ── Só no ambiente de teste (14/11/2026): apagar todos os lançamentos da casa ──
 // Escondido em produção pelo config.js (MINHACASA_AMBIENTE). Pede dois toques.
@@ -2154,6 +2193,7 @@ function iniciar() {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
     if (!u) { mostrarEntrada('card-auth'); return; }
+    db.ref('contas/' + u.uid).set({ email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP }).catch(function () {});
     carregarCasa();
   });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
@@ -2293,6 +2333,7 @@ function criarCasa() {
   // Fase de testes (14/11/2026): só cria casa quem tem o código de acesso. A conferência é feita nas regras do Firebase (admin/codigoAcesso).
   var acesso = $('nc-acesso').value.trim().toUpperCase().replace(/\s+/g, '');
   if (!acesso) { er.textContent = 'Digite o código de acesso. O Minha Casa está em fase de testes.'; return; }
+  if (!/^[A-Z0-9-]{6,40}$/.test(acesso)) { er.textContent = 'Código de acesso inválido. Confira o código que você recebeu.'; return; }
   if (!nome) { er.textContent = 'Dê um nome para a casa.'; return; }
   if (s1.length < 8) { er.textContent = 'A senha da casa precisa ter pelo menos 8 caracteres.'; return; }
   if (s1 !== s2) { er.textContent = 'As senhas da casa não conferem.'; return; }
@@ -2301,8 +2342,15 @@ function criarCasa() {
   var casa = rid(20), convite = rid(24), salt = b64(crypto.getRandomValues(new Uint8Array(16))), chave;
   derivarChave(s1, salt).then(function (k) { chave = k; return cifrar(k, VERIF_TEXTO); }).then(function (verif) {
     var m = {}; m[S.user.uid] = convite;
-    return db.ref('casas/' + casa).set({ dono: S.user.uid, convite: convite, salt: salt, verif: verif, membros: m, acesso: acesso, criada: firebase.database.ServerValue.TIMESTAMP })
-      .catch(function (e) { if (e && /permission/i.test(e.code || e.message || '')) throw { codigoAcesso: true }; throw e; });
+    var nova = { dono: S.user.uid, convite: convite, salt: salt, verif: verif, membros: m, acesso: acesso, criada: firebase.database.ServerValue.TIMESTAMP };
+    var negado = function (e) { return e && /permission/i.test(e.code || e.message || ''); };
+    // 1º convite com nome (grava junto quem usou; tudo ou nada) · 2º código geral
+    var upd = {}; upd['casas/' + casa] = nova;
+    upd['convites/' + acesso + '/usadoPor'] = S.user.uid; upd['convites/' + acesso + '/usadoEm'] = firebase.database.ServerValue.TIMESTAMP; upd['convites/' + acesso + '/email'] = S.user.email || '';
+    return db.ref().update(upd).catch(function (e) {
+      if (!negado(e)) throw e;
+      return db.ref('casas/' + casa).set(nova);
+    }).catch(function (e) { if (negado(e)) throw { codigoAcesso: true }; throw e; });
   }).then(function () {
     return cifrar(chave, { v: 2, nome: nome, moeda: md, cats: catsPadrao(), limite: 0, alertaPct: 80, periodo: periodoMesAtual(), orcParc: 0 });
   }).then(function (c) { return db.ref('casas/' + casa + '/dados/config').set(c); })
