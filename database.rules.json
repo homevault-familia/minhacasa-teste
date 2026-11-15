@@ -1,0 +1,82 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admin": {
+      ".read": "auth != null && root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid",
+      "codigoAcesso": {
+        ".write": "auth != null && root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid",
+        ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9-]{6,40}$/)"
+      },
+      "$outro": { ".validate": false }
+    },
+
+    "usuarios": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "casa": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "$outro": { ".validate": false }
+      }
+    },
+
+    "casas": {
+      "$casa": {
+        ".read": "auth != null && data.child('membros').child(auth.uid).exists()",
+        ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()",
+
+        "dono":   { ".validate": "newData.isString()" },
+        "salt":   { ".read": "auth != null", ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.isString() && newData.val().length <= 64" },
+        "verif":  { ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length <= 200" },
+        "criada": { ".validate": "newData.isNumber()" },
+        "acesso": { ".validate": "newData.isString() && newData.val().length <= 64" },
+
+        "prova": {
+          ".write": "auth != null && data.parent().child('dono').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length === 64"
+        },
+        "convVer": {
+          ".read": "auth != null",
+          ".write": "auth != null && data.parent().child('dono').val() === auth.uid",
+          ".validate": "newData.isNumber()"
+        },
+
+        "convite": {
+          ".write": "auth != null && data.parent().child('dono').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 64"
+        },
+
+        "membros": {
+          "$uid": {
+            ".write": "auth != null && ((auth.uid === $uid && (!newData.exists() || (data.parent().parent().child('prova').exists() && newData.val() === data.parent().parent().child('convite').val() + ':' + data.parent().parent().child('prova').val()))) || data.parent().parent().child('dono').val() === auth.uid)",
+            ".validate": "newData.isString() && newData.val().length <= 128"
+          }
+        },
+
+        "dados": {
+          ".write": "auth != null && data.parent().child('membros').child(auth.uid).exists()",
+          "config": {
+            ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length < 200000",
+            "iv": { ".validate": true }, "d": { ".validate": true }, "$outro": { ".validate": false }
+          },
+          "lanc": {
+            "$id": {
+              ".validate": "$id.matches(/^[A-Za-z0-9_-]{1,64}$/) && newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length < 20000",
+              "iv": { ".validate": true }, "d": { ".validate": true }, "$outro": { ".validate": false }
+            }
+          },
+          "perfis": {
+            "$uid": {
+              ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length < 2000",
+              "iv": { ".validate": true }, "d": { ".validate": true }, "$outro": { ".validate": false }
+            }
+          },
+          "$outro": { ".validate": false }
+        },
+
+        "$outro": { ".validate": false }
+      }
+    }
+  }
+}

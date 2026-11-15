@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="app-version" content="2.19.0">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MinhaCasa">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>MinhaCasa</title>
+<style>
+/* ── LOADING SCREEN ── */
+#app-loading {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #f8fafc;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+}
+#app-loading .ld-icon { font-size: 48px; animation: ld-pulse 1.2s ease-in-out infinite; }
+#app-loading .ld-txt  { font-size: 15px; font-weight: 600; color: #6b7280; font-family: -apple-system, sans-serif; }
+@keyframes ld-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.92)} }
+
+/* ── LOGIN SCREEN ── */
+#tela-login {
+  position: fixed; inset: 0; z-index: 9998;
+  background: linear-gradient(150deg, #1d4ed8 0%, #1e3a8a 100%);
+  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+}
+#tela-login.ativa { display: flex; }
+.login-card {
+  background: #fff; border-radius: 20px; padding: 32px 28px;
+  width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.login-logo { text-align: center; font-size: 52px; margin-bottom: 6px; }
+.login-title { text-align: center; font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.login-sub { text-align: center; font-size: 13px; color: #6b7280; margin-bottom: 28px; }
+.login-campo { margin-bottom: 16px; }
+.login-campo label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.login-campo input { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 16px; outline: none; box-sizing: border-box; }
+.login-campo input:focus { border-color: #1d4ed8; }
+.login-btn { width: 100%; padding: 14px; background: #1d4ed8; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.login-btn:disabled { opacity: .55; cursor: default; }
+.login-erro { color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
+
+/* ── RESET & BASE ── */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+/* Previne zoom automático no iOS em inputs/selects */
+input, select, textarea { font-size: max(16px, 1em) !important; touch-action: manipulation; }
+button, a, [onclick] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  background: #f0f2f5;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  color: #111827;
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #0f172a;
+  border-top: 2px solid #1e3a8a;
+  display: flex;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.nav button {
+  flex: 1; border: none; background: none;
+  padding: 6px 2px 8px;
+  font-size: 9px; font-weight: 600;
+  color: #94a3b8; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-height: 52px; transition: background .18s, color .18s; letter-spacing: .2px;
+  border-radius: 0;
+  position: relative;
+}
+.nav button span { font-size: 19px; line-height: 1; transition: transform .18s; }
+/* Active state — solid square fill */
+.nav button:not(#nb-add).active {
+  background: #1d4ed8;
+  color: #fff;
+}
+.nav button:not(#nb-add).active span {
+  transform: scale(1.1);
+}
+.nav button:not(#nb-add):not(.active):active {
+  background: rgba(29,78,216,.08);
+}
+/* FAB — Registrar button */
+.nav button#nb-add {
+  flex: 0 0 64px; position: relative; overflow: visible; padding: 0; color: white; background: none;
+}
+.nav button#nb-add .nav-fab-circle {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  width: 52px; height: 52px; border-radius: 4px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  box-shadow: 0 4px 14px rgba(29,78,216,.55);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0; transition: transform .15s, box-shadow .15s;
+}
+.nav button#nb-add .nav-fab-circle span { font-size: 22px; line-height: 1; }
+.nav button#nb-add .nav-fab-circle .nav-fab-lbl { font-size: 8px; font-weight: 700; letter-spacing: .2px; color: rgba(255,255,255,.85); line-height: 1; margin-top: 2px; }
+.nav button#nb-add:active .nav-fab-circle { transform: translateX(-50%) scale(.94); box-shadow: 0 2px 8px rgba(29,78,216,.4); }
+.nav button#nb-add.active .nav-fab-circle { background: linear-gradient(135deg, #1e40af, #1d4ed8); box-shadow: 0 6px 18px rgba(29,78,216,.55); }
+
+/* ── TELAS ── */
+.tela { display: none; }
+.tela.ativa { display: block; }
+
+/* ── HEADER / TOPO INÍCIO ── */
+.topo {
+  background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%);
+  color: white;
+  padding-top: env(safe-area-inset-top, 0);
+}
+.topo-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 0;
+}
+.topo-title { font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+.topo-bar-right { display: flex; align-items: center; gap: 10px; }
+.topo-config-btn {
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 20px; color: rgba(255,255,255,.85);
+  padding: 5px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; letter-spacing: .2px;
+}
+
+/* ── HERO ── */
+.topo-hero { padding: 20px 16px 16px; text-align: center; }
+.hero-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: .55; margin-bottom: 4px; }
+.hero-amount { font-size: 48px; font-weight: 900; letter-spacing: -2px; line-height: 1; margin-bottom: 16px; font-variant-numeric: tabular-nums; }
+.hero-bar-outer { background: rgba(255,255,255,.15); height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.hero-bar-inner { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.hero-pcts { display: flex; justify-content: space-between; font-size: 11px; opacity: .65; margin-bottom: 14px; }
+.hero-pills { display: flex; gap: 8px; justify-content: center; }
+.hero-pill {
+  flex: 1; max-width: 160px;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px; padding: 10px 12px; text-align: center;
+}
+.hero-pill-label { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; opacity: .6; margin-bottom: 3px; }
+.hero-pill-val { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ── HERO TOTAL + PARCELADOS ── */
+.hero-total-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
+.hero-total-wrap .hero-amount { margin-bottom: 0; }
+.hero-parc-wrap { margin-top: 7px; }
+.hero-parc-line {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(167,139,250,.18);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 20px; padding: 4px 12px 4px 8px;
+}
+.hero-parc-ic { font-size: 13px; line-height: 1; }
+.hero-parc-lbl { font-size: 10px; font-weight: 700; color: #c4b5fd; text-transform: uppercase; letter-spacing: .5px; }
+.hero-parc-val { font-size: 14px; font-weight: 800; color: #ddd6fe; font-variant-numeric: tabular-nums; margin-left: 2px; }
+
+/* ── CONFIG COLLAPSIBLE ── */
+.topo-cfg-toggle {
+  width: 100%; border: none; cursor: pointer;
+  background: rgba(0,0,0,.2);
+  border-top: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.6);
+  padding: 9px 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.topo-cfg-toggle .cfg-arrow { transition: transform .2s; display: inline-block; }
+.topo-cfg-toggle.aberto .cfg-arrow { transform: rotate(180deg); }
+.topo-config {
+  background: rgba(0,0,0,.25);
+  border-top: 1px solid rgba(255,255,255,.06);
+  padding: 14px 16px 16px;
+  display: none;
+}
+.cfg-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.cfg-row:last-child { margin-bottom: 0; }
+
+/* ── CAMPOS CONFIG (dentro do topo) ── */
+.campo-topo { flex: 1; }
+.campo-topo label { display: block; font-size: 10px; color: rgba(255,255,255,.6); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+.campo-topo input {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid rgba(255,255,255,.2); border-radius: 9px;
+  background: rgba(255,255,255,.1); color: white;
+  font-size: 15px; font-family: inherit; box-sizing: border-box;
+}
+.campo-topo input::placeholder { color: rgba(255,255,255,.35); }
+.campo-orc { flex: 1; }
+.campo-orc label { display: block; font-size: 10px; color: rgba(255,255,255,.6); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .3px; }
+.campo-orc input {
+  width: 100%; padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.2); border-radius: 9px;
+  background: rgba(255,255,255,.1); color: white;
+  font-size: 15px; font-family: inherit; box-sizing: border-box;
+}
+.campo-orc input::placeholder { color: rgba(255,255,255,.35); }
+.grid-orc { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.cfg-actions { display: flex; gap: 8px; }
+.cfg-action-btn {
+  flex: 1; padding: 9px 8px;
+  border: 1px solid rgba(255,255,255,.25); border-radius: 9px;
+  background: rgba(255,255,255,.1); color: rgba(255,255,255,.85);
+  font-size: 12px; font-weight: 700; cursor: pointer; text-align: center;
+}
+
+/* ── ALERTA ── */
+.alerta { margin: 10px 14px; padding: 11px 14px; border-radius: 12px; font-weight: 600; font-size: 13px; display: none; }
+.alerta.atencao { background: #fffbeb; border: 1.5px solid #f59e0b; color: #92400e; display: block; }
+.alerta.excedido { background: #fef2f2; border: 1.5px solid #ef4444; color: #991b1b; display: block; }
+
+/* ── CONTEUDO ── */
+.conteudo { padding: 14px 14px; }
+
+/* ── BOTÕES AÇÃO RÁPIDA ── */
+.acao-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.btn-acao {
+  border: none; border-radius: 14px; padding: 16px 12px;
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+  text-align: left; font-family: inherit;
+}
+.btn-acao-registrar { background: #1d4ed8; color: white; }
+.btn-acao-foto { background: #dc2626; color: white; }
+.btn-acao-icon { font-size: 24px; line-height: 1; }
+.btn-acao-text { font-size: 14px; font-weight: 700; }
+.btn-acao-sub { font-size: 11px; opacity: .7; margin-top: 1px; font-weight: 400; }
+.btn-restaurar {
+  width: 100%; padding: 12px; background: white;
+  border: 1.5px solid #e5e7eb; border-radius: 12px;
+  color: #6b7280; font-size: 13px; font-weight: 700;
+  cursor: pointer; margin-bottom: 14px; font-family: inherit;
+}
+
+/* ── CARDS CATEGORIA ── */
+.grid-cat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.card-cat {
+  background: white; border-radius: 16px; padding: 14px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 3px 8px rgba(0,0,0,.04);
+  border: 1px solid #f1f5f9;
+  transition: transform .15s, box-shadow .15s;
+}
+.card-cat:active { transform: scale(.98); }
+.cat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cat-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.card-cat.carro    .cat-icon { background: #fee2e2; }
+.card-cat.diversos .cat-icon { background: #ffedd5; }
+.card-cat.mercado  .cat-icon { background: #dcfce7; }
+.card-cat.parcelados .cat-icon { background: #ede9fe; }
+.card-cat.viagens    .cat-icon { background: #e0f2fe; }
+.cat-nome { font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: .5px; flex: 1; }
+.cat-qtd { font-size: 10px; color: #64748b; background: #f3f4f6; border-radius: 20px; padding: 2px 8px; font-weight: 700; }
+.cat-linha-vals { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+.cat-rotulo { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+.cat-valor { font-size: 16px; font-weight: 900; white-space: nowrap; letter-spacing: -.3px; font-variant-numeric: tabular-nums; }
+.cat-sub-orc { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 600; }
+.cat-orc { font-size: 10px; color: #64748b; margin-top: 4px; font-weight: 600; }
+.cat-barra-fundo { background: #f3f4f6; height: 5px; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.cat-barra-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* ── CARD GENÉRICO ── */
+.card {
+  background: white; border-radius: 16px; padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+}
+.card-titulo { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+/* ── BARRA ORÇAMENTO RELATÓRIO ── */
+.orc-barra-fundo { background: #f3f4f6; height: 7px; border-radius: 4px; overflow: hidden; margin: 4px 0 2px; }
+.orc-barra-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+
+/* ── GRÁFICO BARRAS ── */
+.chart-wrap { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.chart-wrap::-webkit-scrollbar { display: none; }
+.chart-inner { display: inline-flex; gap: 0; min-width: 100%; }
+.chart-yaxis { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 6px; padding-bottom: 26px; flex-shrink: 0; width: 38px; }
+.chart-ylabel { font-size: 9px; color: #b0b8c8; white-space: nowrap; font-weight: 600; }
+.chart-body { flex: 1; position: relative; min-width: 0; }
+.chart-grid { position: absolute; left: 0; right: 0; top: 0; bottom: 26px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.chart-gridline { border-top: 1px solid #f1f5f9; width: 100%; }
+.chart-media-line { position: absolute; left: 0; right: 0; border-top: 2px dashed rgba(29,78,216,.45); pointer-events: none; }
+.chart-media-label { position: absolute; right: 0; background: #eff6ff; color: #1d4ed8; font-size: 8px; font-weight: 700; padding: 1px 5px; transform: translateY(-50%); border-radius: 4px; white-space: nowrap; }
+.chart-bars { display: flex; align-items: flex-end; gap: 3px; padding: 0 2px; }
+.bar-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+.bar-val { font-size: 7px; color: #6b7280; font-weight: 700; margin-bottom: 2px; white-space: nowrap; line-height: 1.1; }
+.bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px 6px 0 0; overflow: hidden; }
+.bar-seg { width: 100%; }
+.bar-seg:first-child { border-radius: 6px 6px 0 0; }
+.bar-empty { height: 3px; background: #e2e8f0; border-radius: 2px 2px 0 0; width: 100%; }
+.bar-dia { font-size: 9px; color: #94a3b8; font-weight: 500; margin-top: 4px; line-height: 1; }
+.bar-hoje .bar-dia { color: #1d4ed8; font-weight: 800; }
+.bar-hoje .bar-stack { box-shadow: 0 0 0 2px #1d4ed8; border-radius: 4px 4px 0 0; }
+.chart-legenda { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.chart-leg-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #64748b; font-weight: 600; }
+.chart-leg-cor { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.chart-stats { display: flex; justify-content: space-around; margin-bottom: 12px; background: #f8fafc; border-radius: 12px; padding: 10px 6px; }
+.chart-stat { text-align: center; flex: 1; }
+.chart-stat-val { font-weight: 800; color: #1d4ed8; font-size: 14px; }
+.chart-stat-label { color: #94a3b8; font-size: 10px; margin-top: 2px; }
+
+/* ── PIZZA ── */
+.pizza-wrap { display: flex; gap: 12px; align-items: center; }
+.pizza-legenda { flex: 1; }
+.pizza-item { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.pizza-item:last-child { margin-bottom: 0; }
+.pizza-cor { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pizza-txt { font-size: 13px; font-weight: 600; color: #374151; }
+.pizza-val { font-size: 13px; font-weight: 800; margin-left: auto; }
+
+/* ── HISTÓRICO ── */
+.hist-dia-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px 6px; background: #f0f2f5;
+  border-top: 1px solid #e5e7eb;
+  position: sticky; top: 0; z-index: 10;
+}
+.hist-dia-data { font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+.hist-dia-total { font-size: 13px; font-weight: 800; color: #1d4ed8; }
+.hist-linha {
+  display: flex; align-items: center; padding: 12px 14px;
+  border-bottom: 1px solid #f9fafb; gap: 10px; background: white;
+}
+.hist-linha:last-of-type { border-bottom: none; margin-bottom: 8px; }
+
+/* ── LANÇAMENTOS ── */
+.lancamento { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid #f9fafb; gap: 10px; }
+.lancamento:last-child { border-bottom: none; }
+.lanc-ponto { width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+.lanc-info { flex: 1; min-width: 0; }
+.lanc-desc { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111827; }
+.lanc-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.lanc-valor { font-size: 14px; font-weight: 800; flex-shrink: 0; color: #111827; font-variant-numeric: tabular-nums; }
+.lanc-del { background: none; border: none; color: #d1d5db; font-size: 15px; cursor: pointer; padding: 4px; }
+.lanc-del:hover { color: #ef4444; }
+.lanc-parcela { font-size: 10px; font-weight: 700; background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.25); border-radius: 9px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.vazio { text-align: center; padding: 28px 16px; color: #6b7280; font-size: 14px; line-height: 1.5; }
+/* ── PARCELAMENTO ── */
+.parcela-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-parcela-toggle { font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; border: 2px solid #e5e7eb; background: #f9fafb; color: #374151; cursor: pointer; transition: all .2s; }
+.btn-parcela-toggle.ativo { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+.parcela-preview { font-size: 12px; color: #6366f1; font-weight: 600; }
+.sel-parcelas { font-size: 16px; margin-top: 8px; width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #d1d5db; background: #fff; }
+
+/* ── RELATÓRIO POR CATEGORIA ── */
+.relcat-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+.relcat-tab { flex:0 0 auto; min-width:58px; padding:8px 6px; border:2px solid #e5e7eb; background:#f9fafb; border-radius:14px; font-size:11px; font-weight:700; color:#6b7280; cursor:pointer; text-align:center; line-height:1.4; transition:all .2s; font-family:inherit; }
+.relcat-tab.ativo-mercado    { border-color:#43a047; background:#f0fdf4; color:#2e7d32; }
+.relcat-tab.ativo-carro      { border-color:#e53935; background:#fef2f2; color:#c62828; }
+.relcat-tab.ativo-diversos   { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
+.relcat-tab.ativo-parcelados { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+.relcat-tab.ativo-parcelas   { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+.relcat-tab.ativo-viagens    { border-color:#0284c7; background:#f0f9ff; color:#0369a1; }
+/* ── PARCELAS REPORT ── */
+.parc-grupo-card { background:#fff; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.parc-grupo-hdr  { display:flex; justify-content:space-between; align-items:flex-start; padding-left:10px; margin-bottom:12px; }
+.parc-grupo-desc { font-size:15px; font-weight:700; color:#111827; }
+.parc-grupo-sub  { font-size:12px; color:#6b7280; margin-top:2px; }
+.parc-grupo-val  { font-size:14px; font-weight:700; color:#374151; text-align:right; white-space:nowrap; }
+.parc-barra-wrap { height:8px; background:#f3f4f6; border-radius:99px; overflow:hidden; margin-bottom:10px; }
+.parc-barra-fill { height:100%; border-radius:99px; transition:width .4s; }
+.parc-stats      { display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-bottom:12px; }
+.parc-stats strong { color:#111827; }
+.parc-numeros    { display:flex; flex-wrap:wrap; gap:5px; }
+.parc-num        { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+.parc-num-paga   { background:#dcfce7; color:#166534; }
+.parc-num-futura { background:#ede9fe; color:#5b21b6; border:1.5px dashed #a78bfa; }
+.parc-num-ausente{ background:#f3f4f6; color:#6b7280; }
+.relcat-hero { text-align:center; padding:14px 0 10px; }
+.relcat-hero-val { font-size:34px; font-weight:900; letter-spacing:-.5px; }
+.relcat-hero-sub { font-size:12px; color:#6b7280; margin-top:2px; }
+.relcat-orc-row { display:flex; justify-content:space-between; font-size:12px; margin-top:10px; }
+.relcat-sub-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-top:1px solid #f3f4f6; }
+.relcat-sub-nome { width:88px; font-size:12px; color:#374151; font-weight:600; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.relcat-sub-bar-wrap { flex:1; background:#f3f4f6; border-radius:4px; height:7px; }
+.relcat-sub-bar-fill { height:7px; border-radius:4px; }
+.relcat-sub-val { font-size:12px; font-weight:800; flex-shrink:0; min-width:72px; text-align:right; }
+.relcat-sub-pct { font-size:11px; color:#6b7280; width:30px; text-align:right; flex-shrink:0; }
+.relcat-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.relcat-stat { background:#f9fafb; border-radius:12px; padding:10px 12px; }
+.relcat-stat-val { font-size:16px; font-weight:900; }
+.relcat-stat-lbl { font-size:11px; color:#6b7280; margin-top:2px; }
+
+/* ── TOPO TELAS INTERNAS ── */
+.topo-add {
+  background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%);
+  color: white; padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: calc(16px + env(safe-area-inset-top, 0));
+}
+.topo-add h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+.btn-voltar {
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+  color: white; width: 36px; height: 36px; border-radius: 50%;
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── FORMULÁRIO ── */
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 11px; font-weight: 800; color: #6b7280; margin-bottom: 7px; text-transform: uppercase; letter-spacing: .5px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%; padding: 13px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; color: #111827;
+  background: #fafafa; box-sizing: border-box;
+  transition: border-color .2s, background .2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: #1d4ed8; background: white; outline: none; }
+.form-group textarea { resize: none; height: 80px; }
+.form-group .dica { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+/* ── CAMPO VALOR ── */
+.wrap-valor { position: relative; }
+.wrap-valor .prefixo { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; font-weight: 700; color: #6b7280; pointer-events: none; }
+.wrap-valor input { padding-left: 54px; font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+
+/* ── SELETOR CATEGORIA ── */
+.grid-sel { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.opt-cat {
+  border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 14px 6px;
+  text-align: center; cursor: pointer; background: #fafafa;
+  transition: all .15s;
+}
+.opt-cat .ic { font-size: 22px; margin-bottom: 4px; }
+.opt-cat .nm { font-size: 11px; font-weight: 700; color: #6b7280; }
+.opt-cat.sel-carro       { border-color: #ef4444; background: #fef2f2; }
+.opt-cat.sel-carro .nm   { color: #dc2626; }
+.opt-cat.sel-diversos    { border-color: #f97316; background: #fff7ed; }
+.opt-cat.sel-diversos .nm{ color: #ea580c; }
+.opt-cat.sel-mercado     { border-color: #22c55e; background: #f0fdf4; }
+.opt-cat.sel-mercado .nm { color: #16a34a; }
+.opt-cat.sel-parcelados  { border-color: #7c3aed; background: #f5f3ff; }
+.opt-cat.sel-parcelados .nm { color: #6d28d9; }
+.opt-cat.sel-viagens     { border-color: #0284c7; background: #f0f9ff; }
+.opt-cat.sel-viagens .nm { color: #0369a1; }
+
+/* ── BOTÕES ── */
+.btn-salvar {
+  width: 100%; background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: white; border: none; border-radius: 14px; padding: 17px;
+  font-size: 16px; font-weight: 800; cursor: pointer; min-height: 54px;
+  font-family: inherit; letter-spacing: -.2px;
+  box-shadow: 0 4px 12px rgba(29,78,216,.3);
+}
+
+/* ── TELA ADD REDESIGN ── */
+.add-header {
+  background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%);
+  color: white; padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: calc(16px + env(safe-area-inset-top, 0));
+  transition: background .35s;
+}
+.add-header.cat-carro     { background: linear-gradient(150deg, #7f1d1d, #dc2626); }
+.add-header.cat-mercado   { background: linear-gradient(150deg, #14532d, #16a34a); }
+.add-header.cat-diversos  { background: linear-gradient(150deg, #7c2d12, #ea580c); }
+.add-header.cat-parcelados{ background: linear-gradient(150deg, #3b0764, #7c3aed); }
+.add-header.cat-viagens   { background: linear-gradient(150deg, #0c4a6e, #0284c7); }
+.add-hdr-left { display: flex; align-items: center; gap: 12px; }
+.add-hdr-icon { font-size: 28px; line-height: 1; }
+.add-hdr-title { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+.add-hdr-sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+
+.add-body { padding: 14px; padding-bottom: 100px; }
+.add-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.add-card-title { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase;
+  letter-spacing: .8px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.add-step-n { width: 18px; height: 18px; border-radius: 50%; background: #1d4ed8;
+  color: white; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center;
+  justify-content: center; flex-shrink: 0; }
+
+.cat-grid-pro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cat-tile { border: 2px solid #e5e7eb; border-radius: 14px; padding: 18px 8px;
+  text-align: center; cursor: pointer; background: #fafafa; transition: all .15s; }
+.cat-tile-ic { font-size: 28px; margin-bottom: 6px; }
+.cat-tile-nm { font-size: 12px; font-weight: 700; color: #6b7280; }
+.cat-tile.sel-carro      { border-color: #ef4444; background: #fef2f2; box-shadow: 0 0 0 3px #fee2e2; }
+.cat-tile.sel-carro .cat-tile-nm    { color: #dc2626; }
+.cat-tile.sel-diversos   { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 0 3px #ffedd5; }
+.cat-tile.sel-diversos .cat-tile-nm { color: #ea580c; }
+.cat-tile.sel-mercado    { border-color: #22c55e; background: #f0fdf4; box-shadow: 0 0 0 3px #dcfce7; }
+.cat-tile.sel-mercado .cat-tile-nm  { color: #16a34a; }
+.cat-tile.sel-parcelados { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 0 0 3px #ede9fe; }
+.cat-tile.sel-parcelados .cat-tile-nm { color: #6d28d9; }
+.cat-tile.sel-viagens    { border-color: #0284c7; background: #f0f9ff; box-shadow: 0 0 0 3px #e0f2fe; }
+.cat-tile.sel-viagens .cat-tile-nm    { color: #0369a1; }
+
+.valor-big-wrap { position: relative; }
+.valor-big-pre { position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 18px; font-weight: 700; color: #6b7280; pointer-events: none; }
+.valor-big-input { width: 100%; padding: 16px 16px 16px 64px; font-size: 30px; font-weight: 800;
+  letter-spacing: -1px; border: 2px solid #e5e7eb; border-radius: 14px; background: #fafafa;
+  box-sizing: border-box; font-family: inherit; color: #111827; transition: border-color .2s, background .2s; }
+.valor-big-input:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.data-row-pro { display: flex; gap: 8px; align-items: stretch; }
+.btn-hoje { flex-shrink: 0; padding: 0 18px; background: #eff6ff; color: #1d4ed8;
+  border: 2px solid #bfdbfe; border-radius: 12px; font-size: 14px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; font-family: inherit; }
+.data-row-pro input[type="date"] { flex: 1; padding: 13px 14px; border: 1.5px solid #e5e7eb;
+  border-radius: 12px; font-size: 16px; font-family: inherit; color: #111827; background: #fafafa;
+  box-sizing: border-box; transition: border-color .2s; }
+.data-row-pro input[type="date"]:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.parc-toggle { display: flex; gap: 8px; }
+.parc-toggle-btn { flex: 1; padding: 13px 8px; border: 2px solid #e5e7eb; border-radius: 12px;
+  font-size: 14px; font-weight: 700; background: #fafafa; color: #6b7280; cursor: pointer;
+  text-align: center; transition: all .15s; font-family: inherit; }
+.parc-toggle-btn.ativo { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+
+.opt-badge { font-size: 10px; font-weight: 600; color: #6b7280; background: #f3f4f6;
+  border-radius: 20px; padding: 2px 8px; margin-left: 2px; text-transform: none; letter-spacing: 0; }
+.add-textarea { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; resize: none; height: 80px;
+  box-sizing: border-box; color: #111827; transition: border-color .2s, background .2s; }
+.add-textarea:focus { border-color: #1d4ed8; background: white; outline: none; }
+.add-select { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; color: #111827; box-sizing: border-box; }
+.add-select:focus { border-color: #1d4ed8; background: white; outline: none; }
+.add-input-text { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; color: #111827; box-sizing: border-box; margin-top: 8px; }
+.add-input-text:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.add-sticky-footer { position: sticky; bottom: 0; background: white;
+  padding: 12px 14px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  border-top: 1px solid #f3f4f6; }
+.btn-salvar-pro { width: 100%; background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: white; border: none; border-radius: 14px; padding: 18px;
+  font-size: 17px; font-weight: 800; cursor: pointer; font-family: inherit;
+  letter-spacing: -.3px; transition: background .35s, box-shadow .35s;
+  box-shadow: 0 4px 14px rgba(29,78,216,.35); }
+.btn-salvar-pro.cat-carro     { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 4px 14px rgba(220,38,38,.35); }
+.btn-salvar-pro.cat-mercado   { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 4px 14px rgba(22,163,74,.35); }
+.btn-salvar-pro.cat-diversos  { background: linear-gradient(135deg, #ea580c, #f97316); box-shadow: 0 4px 14px rgba(234,88,12,.35); }
+.btn-salvar-pro.cat-parcelados{ background: linear-gradient(135deg, #7c3aed, #8b5cf6); box-shadow: 0 4px 14px rgba(124,58,237,.35); }
+.btn-salvar-pro.cat-viagens   { background: linear-gradient(135deg, #0284c7, #38bdf8); box-shadow: 0 4px 14px rgba(2,132,199,.35); }
+.btn-foto-label {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 17px;
+  background: #fff7ed; border: 2px dashed #f97316;
+  border-radius: 14px; color: #c2410c;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  box-sizing: border-box; min-height: 54px;
+}
+.btn-whatsapp {
+  width: 100%; background: #128c4a; color: white; border: none;
+  border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700;
+  cursor: pointer; margin-top: 10px; font-family: inherit;
+}
+.btn-apagar {
+  width: 100%; background: none; border: 1.5px solid #fecaca;
+  color: #dc2626; border-radius: 12px; padding: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit;
+}
+
+/* ── NAVEGAÇÃO MÊS ── */
+.nav-mes { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 0; }
+.nav-mes button {
+  background: #f3f4f6; border: none; border-radius: 50%;
+  width: 34px; height: 34px; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-mes span { font-weight: 800; font-size: 15px; min-width: 140px; text-align: center; color: #111827; }
+
+/* ── RELATÓRIO ── */
+.rel-periodo-card { margin-bottom: 12px; }
+.rel-periodo-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.rel-per-btn {
+  flex: 1; min-width: 80px; padding: 9px 6px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  background: white; font-size: 12px; font-weight: 700;
+  color: #6b7280; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.rel-per-btn.ativo { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+.rel-metricas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.rel-met-card { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.rel-met-val { font-size: 20px; font-weight: 900; margin-bottom: 2px; letter-spacing: -.5px; }
+.rel-met-lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
+.rel-met-sub { font-size: 11px; color: #6b7280; margin-top: 3px; }
+.rel-cat-bloco {
+  background: white; border-radius: 14px; padding: 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  border-left: 4px solid;
+}
+.rel-cat-bloco.carro       { border-color: #ef4444; }
+.rel-cat-bloco.diversos    { border-color: #f97316; }
+.rel-cat-bloco.mercado     { border-color: #22c55e; }
+.rel-cat-bloco.parcelados  { border-color: #7c3aed; }
+.rel-cat-bloco.viagens     { border-color: #0284c7; }
+.rel-cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.rel-cat-nome { font-size: 14px; font-weight: 800; color: #111827; }
+.rel-cat-pct-total { font-size: 11px; color: #6b7280; font-weight: 700; }
+.rel-cat-nums { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.rel-cat-num { text-align: center; }
+.rel-cat-num-val { font-size: 15px; font-weight: 900; }
+.rel-cat-num-lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: .3px; }
+.rel-top-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9fafb; gap: 10px; }
+.rel-top-item:last-child { border-bottom: none; }
+.rel-top-num { font-size: 11px; font-weight: 800; color: #d1d5db; width: 16px; text-align: center; flex-shrink: 0; }
+.rel-top-info { flex: 1; min-width: 0; }
+.rel-top-desc { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-top-meta { font-size: 10px; color: #6b7280; margin-top: 1px; }
+.rel-top-val { font-size: 13px; font-weight: 900; flex-shrink: 0; }
+.linha-rel { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9fafb; font-size: 14px; }
+.linha-rel:last-child { border-bottom: none; }
+.linha-rel .rotulo { color: #6b7280; }
+.linha-rel .numero { font-weight: 800; color: #111827; }
+
+/* ── VISUAIS RELATÓRIO ── */
+.heatmap-card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.heatmap-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; }
+.heatmap-dow-cell { text-align: center; font-size: 9px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.heatmap-cell { border-radius: 4px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; min-height: 30px; }
+.heatmap-empty { background: transparent; }
+.heatmap-zero  { background: #f3f4f6; color: #d1d5db; }
+.heatmap-low   { background: #bbf7d0; color: #166534; }
+.heatmap-mid   { background: #fde68a; color: #92400e; }
+.heatmap-high  { background: #fca5a5; color: #7f1d1d; }
+.heatmap-leg   { display: flex; align-items: center; gap: 8px; margin-top: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.heatmap-leg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.heatmap-leg-lbl { font-size: 9px; color: #6b7280; }
+.semana-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.semana-row:last-child { margin-bottom: 0; }
+.semana-lbl { min-width: 52px; font-size: 11px; font-weight: 700; color: #6b7280; }
+.semana-barra-bg { flex: 1; height: 22px; background: #f3f4f6; border-radius: 6px; overflow: hidden; }
+.semana-barra-fill { height: 100%; border-radius: 6px; transition: width .4s; }
+.semana-val { min-width: 72px; text-align: right; font-size: 12px; font-weight: 800; }
+.dias-limit-card { border-radius: 14px; padding: 16px; margin-bottom: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.dias-limit-num { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -2px; }
+.dias-limit-lbl { font-size: 12px; font-weight: 700; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.dias-limit-sub { font-size: 11px; color: #6b7280; margin-top: 6px; }
+
+/* ── CARD PROJEÇÃO ── */
+.parc-proj-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(124,58,237,.13)}
+.parc-proj-row:last-child{border-bottom:none}
+.parc-proj-mes{min-width:52px;font-size:.78rem;font-weight:700;color:#6d28d9}
+.parc-proj-barra-bg{flex:1;height:8px;background:#ede9fe;border-radius:4px;overflow:hidden}
+.parc-proj-barra-fill{height:100%;background:#7c3aed;border-radius:4px;transition:width .3s}
+.parc-proj-val{min-width:72px;text-align:right;font-size:.82rem;font-weight:800;color:#5b21b6}
+.parc-proj-badge{font-size:.65rem;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap}
+.parc-proj-hoje{background:#ddd6fe;color:#5b21b6}
+.parc-proj-fim{background:#fce7f3;color:#9d174d}
+/* ── TERMÔMETRO DA DÍVIDA ── */
+.termo-total-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
+.termo-total-val{font-size:26px;font-weight:900;color:#dc2626;letter-spacing:-1px}
+.termo-total-pago{font-size:11px;color:#6b7280;font-weight:600;text-align:right}
+.termo-prog-bg{height:10px;background:#fee2e2;border-radius:5px;overflow:hidden;margin-bottom:14px}
+.termo-prog-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .4s}
+.termo-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(220,38,38,.1)}
+.termo-row:last-child{border-bottom:none}
+.termo-mes{min-width:52px;font-size:.76rem;font-weight:700;color:#7f1d1d}
+.termo-barra-bg{flex:1;height:14px;background:#fee2e2;border-radius:4px;overflow:hidden}
+.termo-barra-fill{height:100%;background:#dc2626;border-radius:4px;transition:width .4s}
+.termo-val{min-width:80px;text-align:right;font-size:.8rem;font-weight:800;color:#dc2626}
+.termo-badge-ok{font-size:.65rem;padding:1px 6px;border-radius:8px;font-weight:700;background:#dcfce7;color:#166534;white-space:nowrap}
+.proj-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+  border-radius: 18px; padding: 18px; margin-bottom: 14px; color: white;
+  box-shadow: 0 8px 32px rgba(29,78,216,.25);
+  position: relative; overflow: hidden;
+}
+.proj-card::before {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 140px; height: 140px; border-radius: 50%;
+  background: rgba(255,255,255,.04); pointer-events: none;
+}
+.proj-card::after {
+  content: ''; position: absolute; bottom: -30px; left: -30px;
+  width: 100px; height: 100px; border-radius: 50%;
+  background: rgba(255,255,255,.03); pointer-events: none;
+}
+.proj-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.proj-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: .55; margin-bottom: 3px; }
+.proj-subtitle { font-size: 11px; opacity: .45; line-height: 1.5; }
+.proj-badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.proj-badge.ok   { background: rgba(74,222,128,.2); color: #4ade80; }
+.proj-badge.warn { background: rgba(251,191,36,.2);  color: #fbbf24; }
+.proj-badge.over { background: rgba(248,113,113,.2); color: #f87171; }
+
+.proj-metrics { display: flex; align-items: stretch; background: rgba(255,255,255,.07); border-radius: 12px; padding: 14px 8px; margin-bottom: 16px; }
+.proj-metric { flex: 1; text-align: center; }
+.proj-m-label { font-size: 10px; opacity: .5; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
+.proj-m-val { font-size: 16px; font-weight: 800; line-height: 1; }
+.proj-m-sub { font-size: 9px; opacity: .45; margin-top: 3px; }
+.proj-m-sep { width: 1px; background: rgba(255,255,255,.12); margin: 0 6px; flex-shrink: 0; }
+
+.proj-barras { margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.proj-brow { display: flex; align-items: center; gap: 10px; }
+.proj-blabel { font-size: 10px; opacity: .5; width: 40px; flex-shrink: 0; letter-spacing: .3px; text-transform: uppercase; }
+.proj-bbg { flex: 1; height: 8px; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; }
+.proj-bfill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.proj-bfill-tempo { background: rgba(255,255,255,.4); }
+.proj-bpct { font-size: 10px; font-weight: 700; width: 32px; text-align: right; opacity: .75; }
+
+.proj-footer { border-top: 1px solid rgba(255,255,255,.1); padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.proj-fitem-label { font-size: 10px; opacity: .45; margin-bottom: 5px; line-height: 1.3; }
+.proj-fitem-val { font-size: 15px; font-weight: 800; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; top: 16px; left: 12px; right: 12px;
+  background: #1e293b; color: white; border-radius: 14px;
+  padding: 14px 16px; font-size: 14px; font-weight: 600;
+  z-index: 999; transform: translateY(-120px); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  display: flex; align-items: center; gap: 10px; pointer-events: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  border-left: 4px solid #22c55e;
+}
+.toast.visivel { transform: translateY(0); opacity: 1; }
+.toast.toast-erro { border-left-color: #ef4444; }
+.toast.toast-aviso { border-left-color: #f59e0b; }
+
+/* ── MODAL DUPLICATA ── */
+.dup2-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 900; display: none; align-items: flex-end; justify-content: center; }
+.dup2-overlay.show { display: flex; }
+.dup2-modal { background: #fff; border-radius: 24px 24px 0 0; padding: 24px 18px calc(28px + env(safe-area-inset-bottom)); width: 100%; max-width: 480px; animation: dup2-up .22s cubic-bezier(.34,1.56,.64,1); }
+@keyframes dup2-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.dup2-handle { width: 36px; height: 4px; background: #e5e7eb; border-radius: 2px; margin: 0 auto 18px; }
+.dup2-icon { font-size: 36px; text-align: center; margin-bottom: 6px; }
+.dup2-title { font-size: 18px; font-weight: 900; color: #92400e; text-align: center; margin-bottom: 4px; }
+.dup2-desc { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 14px; }
+.dup2-info { background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 13px; padding: 13px 15px; font-size: 14px; color: #111827; margin-bottom: 18px; line-height: 1.75; }
+.dup2-info strong { color: #92400e; }
+.dup2-btns { display: flex; gap: 10px; }
+.dup2-btn-cancel { flex: 1; padding: 14px; border-radius: 13px; border: 1.5px solid #e5e7eb; background: #f9fafb; color: #374151; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.dup2-btn-confirm { flex: 1; padding: 14px; border-radius: 13px; border: none; background: #f59e0b; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; }
+
+/* ── MODAL EDIÇÃO ── */
+.edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 800; display: flex; align-items: flex-end; justify-content: center; }
+.edit-modal { background: #fff; border-radius: 24px 24px 0 0; padding: 22px 16px calc(32px + env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; }
+.edit-modal h3 { font-size: 17px; font-weight: 800; color: #111827; margin: 0 0 18px; }
+.edit-group { margin-bottom: 14px; }
+.edit-group label { display: block; font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+.edit-group input, .edit-group select {
+  width: 100%; padding: 11px 13px;
+  border: 1.5px solid #e5e7eb; border-radius: 11px;
+  font-size: 15px; font-family: inherit; outline: none; background: #fafafa; color: #111827;
+  transition: border-color .2s;
+}
+.edit-group input:focus, .edit-group select:focus { border-color: #1d4ed8; background: white; }
+.edit-btns { display: flex; gap: 10px; margin-top: 20px; }
+.edit-btn-save { flex: 1; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: none; border-radius: 13px; padding: 14px; font-size: 16px; font-weight: 800; cursor: pointer; font-family: inherit; }
+.edit-btn-cancel { flex: 1; background: #f3f4f6; color: #374151; border: none; border-radius: 13px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.lanc-edit { background: none; border: none; color: #d1d5db; font-size: 14px; cursor: pointer; padding: 4px; }
+.lanc-edit:hover { color: #1d4ed8; }
+
+
+/* ══════ MinhaCasa — complementos ══════ */
+.hv-tabs { display:flex; background:#f3f4f6; border-radius:10px; padding:3px; margin-bottom:18px; }
+.hv-tabs button { flex:1; border:0; background:none; padding:9px; border-radius:8px; font-size:14px; font-weight:600; color:#6b7280; cursor:pointer; font-family:inherit; }
+.hv-tabs button.on { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+.login-campo select { width:100%; padding:13px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:16px; background:#fff; }
+.login-link { display:block; width:100%; background:none; border:0; color:#1d4ed8; font-size:13px; font-weight:600; margin-top:12px; cursor:pointer; font-family:inherit; }
+.login-aviso { background:#fffbeb; border:1.5px solid #f59e0b; color:#92400e; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.4; margin:4px 0 12px; }
+.login-check { display:flex; gap:8px; align-items:flex-start; font-size:13px; color:#374151; margin-bottom:6px; }
+.login-check input { margin-top:2px; width:18px; height:18px; flex:none; }
+.login-card { max-height: calc(100vh - 48px); overflow-y:auto; }
+.login-nota { text-align:center; font-size:11.5px; color:rgba(255,255,255,.7); margin-top:16px; max-width:340px; line-height:1.45; }
+.btn-acao-registrar.full { grid-column: 1 / -1; justify-content:center; }
+.grid-orc label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.orc-saldo { font-size:12.5px; line-height:1.4; padding:8px 10px; border-radius:9px; margin:0 0 8px; background:rgba(255,255,255,.08); color:rgba(255,255,255,.85); }
+.orc-saldo.livre { background:rgba(59,130,246,.18); }
+.orc-saldo.cheio { background:rgba(16,185,129,.2); }
+.orc-saldo.passou { background:rgba(239,68,68,.25); color:#fff; }
+.campo-orc input.orc-excede { border-color:#f87171; background:rgba(239,68,68,.2); }
+.ed-orc-info { font-size:12.5px; color:#4b5563; margin:4px 0 8px; line-height:1.4; }
+.ed-orc-info.passou { color:#dc2626; }
+.cfg-sec { font-size:10px; color:rgba(255,255,255,.6); text-transform:uppercase; margin:4px 0 6px; letter-spacing:.4px; }
+.cfg-actions { flex-wrap:wrap; }
+.cfg-action-btn { min-width: calc(33% - 6px); }
+.lanc-autor { font-size:10px; color:#6b7280; }
+/* Ajustes */
+.aj-sec { font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:1px; margin:16px 2px 8px; }
+.aj-linha { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f3f4f6; }
+.aj-linha:last-child { border-bottom:0; }
+.aj-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px; flex:none; }
+.aj-nm { flex:1; min-width:0; font-weight:700; font-size:14px; color:#111827; }
+.aj-nm small { display:block; font-weight:500; font-size:11.5px; color:#6b7280; margin-top:1px; }
+.aj-btn { border:1.5px solid #e5e7eb; background:#f9fafb; border-radius:9px; padding:7px 11px; font-size:12.5px; font-weight:700; color:#374151; cursor:pointer; font-family:inherit; }
+.aj-btn.perigo { color:#dc2626; border-color:#fecaca; background:#fef2f2; }
+.aj-btn.pri { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+.aj-full { width:100%; padding:12px; margin-top:10px; }
+.aj-input { width:100%; padding:11px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:16px; font-family:inherit; background:#fff; }
+.aj-label { display:block; font-size:12px; font-weight:700; color:#6b7280; margin:10px 0 5px; }
+.codigo { font-family: ui-monospace, Menlo, monospace; font-size:13.5px; word-break:break-all; background:#f3f4f6; padding:12px; border-radius:10px; user-select:all; -webkit-user-select:all; color:#111827; }
+/* Folha (modal inferior) */
+.hv-sheet { position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:3000; display:none; align-items:flex-end; justify-content:center; }
+.hv-sheet.on { display:flex; }
+.hv-sheet-box { background:#f8fafc; width:100%; max-width:560px; max-height:92vh; overflow-y:auto; border-radius:22px 22px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); }
+.hv-sheet-box h3 { margin:0 0 6px; font-size:18px; font-weight:800; color:#111827; }
+.emo-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.emo-grid button { width:42px; height:42px; border-radius:10px; border:2px solid #e5e7eb; background:#fff; font-size:20px; cursor:pointer; }
+.emo-grid button.on { border-color:#1d4ed8; background:#eff6ff; }
+.cor-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.cor-grid button { width:32px; height:32px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 1.5px #e5e7eb; cursor:pointer; }
+.cor-grid button.on { box-shadow:0 0 0 3px #111827; }
+.sub-ed { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.sub-ed input { flex:1; }
+.hv-erro { color:#ef4444; font-size:13px; min-height:18px; margin-top:8px; }
+.add-select:disabled { opacity:.5; }
+.sem-tab { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+.sem-tab th { font-size:9.5px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; text-align:right; padding:6px 4px; border-bottom:1.5px solid #e5e7eb; }
+.sem-tab td { padding:8px 4px; border-bottom:1px solid #f3f4f6; text-align:right; white-space:nowrap; }
+.sem-tab th:first-child, .sem-tab td:first-child { text-align:left; white-space:normal; }
+.sem-acoes { margin:4px 0 0; padding-left:20px; font-size:14px; line-height:1.45; color:#374151; }
+.sem-acoes li { margin:9px 0; }
+.sem-st { border-left:5px solid; }
+.sync-off #sync-dot { background:#f59e0b !important; }
+
+/* ── Rodada 1 (14/11/2026): sem rolagem lateral e botão Salvar sempre visível ── */
+html, body { overflow-x: clip; }
+.grid-cat, .acao-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card-cat { min-width: 0; }
+.card-cat .cat-header { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 8px; row-gap: 1px; align-items: center; }
+.card-cat .cat-icon { grid-row: span 2; }
+.card-cat .cat-nome { min-width: 0; letter-spacing: .2px; font-size: clamp(9.5px, 2.8vw, 11px); overflow-wrap: anywhere; line-height: 1.2; align-self: end; }
+.card-cat .cat-qtd { background: none; padding: 0; border-radius: 0; font-size: 10.5px; font-weight: 600; justify-self: start; align-self: start; white-space: nowrap; }
+.card-cat .cat-linha-vals { flex-direction: column; align-items: flex-start; gap: 6px; }
+.card-cat .cat-linha-vals > div { text-align: left !important; }
+.card-cat .cat-valor { font-size: clamp(14px, 4.1vw, 16px); }
+body.na-tela-add .nav { display: none; }
+body.na-tela-add { padding-bottom: env(safe-area-inset-bottom); }
+body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+
+/* ── Rodada 3a (14/11/2026): 5 abas com ícones desenhados e Relatórios como central ── */
+.nav button { font-size: 10.5px; gap: 2px; min-height: 56px; }
+.nav button .ico { display: flex; height: 24px; align-items: center; }
+.nav button#nb-add { justify-content: flex-end; padding-bottom: 11px; }
+.nav button#nb-add .nav-fab-circle { display: flex; align-items: center; justify-content: center; color: #fff; }
+.nav-fab-lbl2 { font-size: 10.5px; font-weight: 600; color: #cbd5e1; }
+.btn-voltar { font-size: 26px; line-height: 1; }
+.rel-hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.rel-tile { text-align: left; padding: 14px 12px; border-radius: 14px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-family: inherit; display: flex; flex-direction: column; gap: 4px; min-height: 76px; box-shadow: 0 1px 2px rgba(15,23,42,.05); }
+.rel-tile b { font-size: 14.5px; color: #0f172a; }
+.rel-tile span { font-size: 12.5px; color: #4b5563; line-height: 1.35; }
+.rel-tile:active { transform: scale(.98); background: #f8fafc; }
+.rel-sec-tit { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #4b5563; margin: 4px 2px 8px; }
+
+.nav button#nb-add .nav-fab-circle { top: -20px; width: 50px; height: 48px; border-radius: 14px; }
+.nav-fab-lbl2 { position: relative; z-index: 1; }
+.hero-pill.sem-orc { cursor: pointer; background: rgba(251,191,36,.18); border-color: rgba(251,191,36,.6); }
+.hero-pill.sem-orc #txt-disponivel { color: #fde68a !important; font-size: 17px; }
+.hero-pill.sem-orc .hero-pill-label { display: none; }
+.hero-pill.sem-orc #txt-restante { opacity: .9 !important; font-size: 11px !important; }
+/* ── Rodada 3d (14/11/2026): zoom liberado sem o iPhone ampliar sozinho ao tocar num campo ── */
+@media (max-width: 719px) { input, select, textarea { font-size: 16px !important; } }
+/* ── Rodada 3b (14/11/2026): no computador, o app vira uma coluna central em vez de esticar ── */
+@media (min-width: 720px) {
+  html { background: #e2e8f0; }
+  body { max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f0f2f5; box-shadow: 0 0 0 1px #cbd5e1, 0 20px 60px rgba(15,23,42,.12); }
+  .nav { left: calc(50% - 300px); right: calc(50% - 300px); }
+  .toast { left: calc(50% - 288px); right: calc(50% - 288px); }
+  .dup2-overlay, .edit-overlay { align-items: center; }
+  .hv-sheet { align-items: center; }
+  .hv-sheet-box { border-radius: 22px; }
+  .rel-hub { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ── Rodada 3e: marca + ícones ── */
+.ic { width: 1.15em; height: 1.15em; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.brand-logo { width: 68px; height: 68px; display: inline-block; border-radius: 16px; box-shadow: 0 6px 18px rgba(15,23,42,.18); }
+#app-loading .ld-icon .brand-logo { width: 64px; height: 64px; }
+.login-logo { font-size: 0; margin-bottom: 10px; }
+.topo-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topo-title #txt-casa { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo-logo { width: 26px; height: 26px; border-radius: 7px; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+.topo-config-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; }
+.btn-acao-icon .ic { width: 26px; height: 26px; }
+.add-hdr-icon .ic { width: 28px; height: 28px; }
+.btn-salvar-pro, #hist-pdf, #btn-excluir-edit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.aj-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.rel-tile b { display: flex; align-items: center; gap: 7px; }
+.rel-tile b .ic { color: #1d4ed8; }
+.lanc-edit, .lanc-del { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; color: #9ca3af; font-size: 17px; }
+.lanc-edit:active, .lanc-del:active { background: #f3f4f6; }
+</style>
+</head>
+<body>
+
+<div id="app-loading"><div class="ld-icon"><img src="icon.svg" alt="" class="brand-logo"></div><div class="ld-txt" id="ld-txt">Carregando…</div></div>
+
+<!-- ════════ ENTRADA: login, casa, desbloqueio ════════ -->
+<div id="tela-login">
+  <!-- Configuração pendente -->
+  <div class="login-card" id="card-semconfig" style="display:none">
+    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-title">MinhaCasa</div>
+    <div class="login-sub">Configuração pendente: preencha o arquivo config.js com os dados do Firebase (veja o README).</div>
+  </div>
+
+  <!-- Login / cadastro -->
+  <div class="login-card" id="card-auth" style="display:none">
+    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-title">MinhaCasa</div>
+    <div class="login-sub">Finanças da casa, privadas e criptografadas</div>
+    <div class="hv-tabs"><button id="tab-entrar" class="on">Entrar</button><button id="tab-criar">Criar conta</button></div>
+    <div class="login-campo" id="campo-nome" style="display:none">
+      <label for="au-nome">Seu nome</label>
+      <input id="au-nome" autocomplete="name" placeholder="Ex.: Ana">
+    </div>
+    <div class="login-campo">
+      <label for="au-email">E-mail</label>
+      <input type="email" id="au-email" placeholder="seu@email.com" inputmode="email" autocomplete="email" autocapitalize="off">
+    </div>
+    <div class="login-campo">
+      <label for="au-senha">Senha</label>
+      <input type="password" id="au-senha" placeholder="mínimo 8 caracteres" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="au-btn">Entrar</button>
+    <div class="login-erro" id="au-erro"></div>
+    <button class="login-link" id="au-esqueci">Esqueci minha senha</button>
+  </div>
+
+  <!-- Criar casa / convite -->
+  <div class="login-card" id="card-casa" style="display:none">
+    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-title">Sua casa</div>
+    <div class="login-sub">A "casa" guarda os lançamentos. Quem mora junto usa a mesma casa e a mesma senha da casa.</div>
+    <div class="hv-tabs"><button id="tab-nova" class="on">Criar casa</button><button id="tab-convite">Tenho convite</button></div>
+    <div id="box-nova">
+      <div class="login-aviso" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">🔒 O Minha Casa está em <b>fase de testes</b>. Para criar uma casa, use o código de acesso que você recebeu. Se foi convidado para uma casa, toque em <b>Tenho convite</b>.</div>
+      <div class="login-campo"><label for="nc-acesso">Código de acesso</label><input id="nc-acesso" autocapitalize="characters" autocomplete="off" placeholder="CASA-…"></div>
+      <div class="login-campo"><label for="nc-nome">Nome da casa</label><input id="nc-nome" placeholder="Ex.: Casa da Ana e do João"></div>
+      <div class="login-campo"><label for="nc-moeda">Moeda</label>
+        <select id="nc-moeda"><option value="CAD">Dólar canadense (CA$)</option><option value="BRL">Real (R$)</option><option value="USD">Dólar americano (US$)</option><option value="EUR">Euro (€)</option></select></div>
+      <div class="login-campo"><label for="nc-senha">Senha da casa</label><input id="nc-senha" type="password" autocomplete="new-password" placeholder="mínimo 8 caracteres"></div>
+      <div class="login-campo"><label for="nc-senha2">Repita a senha da casa</label><input id="nc-senha2" type="password" autocomplete="new-password"></div>
+      <div class="login-aviso">⚠️ A senha da casa tranca os seus dados. <b>Se for esquecida, ninguém consegue recuperar os lançamentos</b>, nem o suporte. Anote em lugar seguro.</div>
+      <label class="login-check"><input type="checkbox" id="nc-ciente"> Entendi e anotei a senha da casa.</label>
+      <button class="login-btn" id="nc-btn">Criar casa</button>
+      <div class="login-erro" id="nc-erro"></div>
+    </div>
+    <div id="box-convite" style="display:none">
+      <div class="login-campo"><label for="cv-codigo">Código de convite</label><input id="cv-codigo" autocapitalize="off" autocomplete="off" placeholder="HV-…"></div>
+      <div class="login-campo"><label for="cv-senha">Senha da casa</label><input id="cv-senha" type="password" autocomplete="off"></div>
+      <div class="login-sub" style="margin-bottom:12px">Peça os dois para quem criou a casa (fica em Ajustes → Convidar).</div>
+      <button class="login-btn" id="cv-btn">Entrar na casa</button>
+      <div class="login-erro" id="cv-erro"></div>
+    </div>
+    <button class="login-link" data-acao="sair">Sair da conta</button>
+  </div>
+
+  <!-- Desbloquear -->
+  <div class="login-card" id="card-unlock" style="display:none">
+    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-title">Desbloquear</div>
+    <div class="login-sub">Digite a senha da casa para abrir os dados neste aparelho.</div>
+    <div class="login-campo"><label for="ul-senha">Senha da casa</label><input id="ul-senha" type="password" autocomplete="off"></div>
+    <label class="login-check"><input type="checkbox" id="ul-lembrar" checked> Lembrar neste aparelho</label>
+    <button class="login-btn" id="ul-btn">Desbloquear</button>
+    <div class="login-erro" id="ul-erro"></div>
+    <button class="login-link" data-acao="sair">Sair da conta</button>
+  </div>
+  <div class="login-nota">🔐 Os lançamentos são criptografados no seu aparelho com a senha da casa. Nem o administrador do sistema consegue lê-los.</div>
+</div>
+
+<div class="toast" id="toast"><span id="ti"></span><span id="tm"></span></div>
+
+<!-- ════════ INÍCIO ════════ -->
+<div class="tela" id="tela-inicio">
+  <div class="topo">
+    <div class="topo-bar">
+      <div class="topo-title"><img src="icon.svg" alt="" class="topo-logo"><span id="txt-casa">MinhaCasa</span></div>
+      <div class="topo-bar-right">
+        <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:4px">
+          <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#aaa;display:inline-block"></span>
+          <span id="sync-txt">...</span>
+        </div>
+        <button class="topo-config-btn" id="btn-config-top" aria-label="Período e orçamento"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Orçamento</button>
+      </div>
+    </div>
+    <div class="topo-hero">
+      <div class="hero-label">Total Gasto no Período</div>
+      <div id="hero-periodo" style="font-size:11px;font-weight:700;opacity:.5;letter-spacing:.5px;margin-bottom:6px;text-transform:uppercase"></div>
+      <div class="hero-total-wrap">
+        <div class="hero-amount" id="txt-total">—</div>
+        <div class="hero-parc-wrap" id="hero-parc-wrap" style="display:none">
+          <div class="hero-parc-line"><span class="hero-parc-ic">📦</span><span class="hero-parc-lbl">Parcelados</span><span class="hero-parc-val" id="txt-total-parc"></span></div>
+        </div>
+      </div>
+      <div class="hero-bar-outer"><div class="hero-bar-inner" id="barra" style="width:0%;background:#22c55e"></div></div>
+      <div class="hero-pcts"><span id="txt-pct">0% utilizado</span><span id="txt-hoje">Hoje: —</span></div>
+      <div class="hero-pills">
+        <div class="hero-pill">
+          <div class="hero-pill-label">Disponível</div>
+          <div class="hero-pill-val" id="txt-disponivel">—</div>
+          <div id="txt-restante" style="font-size:10px;opacity:.6;margin-top:2px"></div>
+        </div>
+      </div>
+    </div>
+    <button class="topo-cfg-toggle" id="cfg-toggle">Período e orçamento <span class="cfg-arrow">▼</span></button>
+    <div class="topo-config" id="topo-config">
+      <div class="cfg-row">
+        <div class="campo-topo" style="flex:1"><label>Valor para gastar no período</label><input type="text" id="inp-limite" placeholder="Ex: 2500" inputmode="decimal"></div>
+        <div class="campo-topo" style="width:80px;flex:none"><label>% Alerta</label><input type="number" id="inp-alerta" placeholder="80" inputmode="numeric"></div>
+      </div>
+      <div class="cfg-row">
+        <div class="campo-topo"><label>Período — Data Início</label><input type="date" id="inp-inicio"></div>
+        <div class="campo-topo"><label>Período — Data Fim</label><input type="date" id="inp-fim"></div>
+      </div>
+      <div class="cfg-sec">Orçamento por Categoria</div>
+      <div class="orc-saldo" id="orc-saldo"></div>
+      <div class="cfg-row grid-orc" id="grid-orc"></div>
+      <div class="cfg-actions" style="margin-top:12px">
+        <button class="cfg-action-btn" id="cfg-cats">🏷️ Categorias</button>
+        <button class="cfg-action-btn" id="cfg-backup">☁️ Backup</button>
+        <button class="cfg-action-btn" id="cfg-restaurar">📂 Restaurar</button>
+        <button class="cfg-action-btn" id="cfg-ajustes" style="background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4)">👪 Convidar</button>
+        <button class="cfg-action-btn" data-acao="sair" style="background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.4)">✕ Sair</button>
+      </div>
+    </div>
+  </div>
+  <div id="alerta" class="alerta"></div>
+  <div class="conteudo">
+    <div id="sem-card-wrap"></div>
+    <div class="acao-grid">
+      <button class="btn-acao btn-acao-registrar" data-ir="add">
+        <div class="btn-acao-icon"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div><div class="btn-acao-text">Registrar</div><div class="btn-acao-sub">Novo gasto</div></div>
+      </button>
+      <button class="btn-acao btn-acao-foto" data-ir="semana" style="background:#7c3aed">
+        <div class="btn-acao-icon"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <div><div class="btn-acao-text">Semana</div><div class="btn-acao-sub">Desvios e ações</div></div>
+      </button>
+    </div>
+    <div class="grid-cat" id="grid-cat"></div>
+    <div class="card"><div class="card-titulo">Distribuição por Categoria</div><div class="pizza-wrap" id="pizza-wrap"></div></div>
+    <div class="card"><div class="card-titulo">Gastos por Dia no Período</div><div class="barras" id="barras-div"></div></div>
+    <div class="card"><div class="card-titulo">Últimos Lançamentos</div><div id="lista-recentes"></div></div>
+  </div>
+</div>
+
+<!-- ════════ REGISTRAR ════════ -->
+<div class="tela" id="tela-add">
+  <div class="add-header" id="add-header">
+    <div class="add-hdr-left">
+      <div class="add-hdr-icon" id="add-hdr-icon"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div><div class="add-hdr-title" id="add-hdr-title">Registrar Gasto</div><div class="add-hdr-sub" id="add-hdr-sub">Selecione a categoria</div></div>
+    </div>
+    <button class="btn-voltar" data-ir="inicio">✕</button>
+  </div>
+  <div class="add-body">
+    <div class="add-card">
+      <div class="add-card-title"><span class="add-step-n">1</span>Categoria</div>
+      <div class="cat-grid-pro" id="add-cats"></div>
+    </div>
+    <div class="add-card" id="grupo-sub" style="display:none">
+      <div class="add-card-title"><span class="add-step-n" id="sub-step">↳</span><span id="sub-titulo">Subcategoria</span></div>
+      <select id="sel-sub" class="add-select"></select>
+    </div>
+    <div class="add-card">
+      <div class="add-card-title"><span class="add-step-n">2</span>Valor Gasto</div>
+      <div class="valor-big-wrap"><span class="valor-big-pre" id="valor-pre">CA$</span><input type="text" id="inp-valor" class="valor-big-input" placeholder="0.00" inputmode="decimal" autocomplete="off"></div>
+    </div>
+    <div class="add-card">
+      <div class="add-card-title"><span class="add-step-n">3</span>Data do Gasto</div>
+      <div class="data-row-pro"><button class="btn-hoje" type="button" id="btn-hoje">Hoje</button><input type="date" id="inp-data"></div>
+    </div>
+    <div class="add-card" id="card-parc">
+      <div class="add-card-title"><span class="add-step-n">4</span>Parcelamento</div>
+      <div class="parc-toggle"><button type="button" class="parc-toggle-btn" id="btn-parcela-toggle">💳 À vista</button></div>
+      <span class="parcela-preview" id="parcela-preview" style="display:block;margin-top:8px;font-size:13px;color:#6366f1;font-weight:600"></span>
+      <select class="sel-parcelas" id="sel-parcelas" style="display:none;margin-top:10px"></select>
+      <div id="grupo-parc-ini" style="display:none;margin-top:10px">
+        <label style="font-size:12px;color:#6366f1;font-weight:600;display:block;margin-bottom:4px">De qual parcela começa?</label>
+        <select class="sel-parcelas" id="sel-parcela-ini"></select>
+      </div>
+    </div>
+    <div class="add-card">
+      <div class="add-card-title"><span class="add-step-n">5</span>Descrição<span class="opt-badge">opcional</span></div>
+      <textarea id="inp-desc" class="add-textarea" maxlength="140" placeholder="Ex: Gasolina no posto, compras da semana…"></textarea>
+    </div>
+    <div id="add-edit-extra" style="display:none;text-align:center">
+      <button class="aj-btn perigo" id="btn-excluir-edit" style="padding:12px 20px"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>Excluir lançamento</button>
+    </div>
+  </div>
+  <div class="add-sticky-footer"><button class="btn-salvar-pro" id="btn-salvar-pro"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Salvar lançamento</button></div>
+</div>
+
+<!-- ════════ DETALHE CATEGORIA ════════ -->
+<div class="tela" id="tela-categoria">
+  <div class="topo-add" id="topo-categoria"><h2 id="titulo-categoria">Categoria</h2><button class="btn-voltar" data-ir="inicio">✕</button></div>
+  <div class="conteudo"><div class="card" id="resumo-categoria"></div><div class="card" id="lista-categoria"></div></div>
+</div>
+
+<!-- ════════ HISTÓRICO ════════ -->
+<div class="tela" id="tela-historico">
+  <div class="topo-add"><h2>Histórico</h2></div>
+  <div class="conteudo">
+    <div class="card" style="padding:10px 14px">
+      <div class="rel-periodo-btns" style="margin-bottom:0" data-per="hist">
+        <button class="rel-per-btn ativo" data-tipo="periodo">Período atual</button>
+        <button class="rel-per-btn" data-tipo="mes">Este mês</button>
+        <button class="rel-per-btn" data-tipo="custom">Personalizado</button>
+      </div>
+      <div id="hist-nav-mes" style="display:none"><div class="nav-mes" style="padding:8px 0 0"><button id="hist-mes-ant">‹</button><span id="label-hist">—</span><button id="hist-mes-prox">›</button></div></div>
+      <div id="hist-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="hist-ini" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px"><span style="color:#6b7280">→</span>
+          <input type="date" id="hist-fim" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-whatsapp" id="hist-wa" style="flex:1;margin-top:0;padding:10px;font-size:16px">📱 WhatsApp</button>
+        <button id="hist-pdf" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>PDF</button>
+      </div>
+    </div>
+    <div id="hist-total" style="display:none"></div>
+    <div id="corpo-historico"></div>
+  </div>
+</div>
+
+<!-- ════════ RELATÓRIO ════════ -->
+<div class="tela" id="tela-relatorio">
+  <div class="topo-add"><h2>Relatórios</h2></div>
+  <div class="conteudo">
+    <div class="rel-hub">
+      <button type="button" class="rel-tile" data-ir="semana"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Semanal</b><span>Onde vazou e o que fazer</span></button>
+      <button type="button" class="rel-tile" data-ir="relcat"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>Por categoria</b><span>Gasto e orçamento de cada uma</span></button>
+      <button type="button" class="rel-tile" data-ir="projecao"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção</b><span>Como o período vai fechar</span></button>
+      <button type="button" class="rel-tile" id="btn-rel-completo"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Completo</b><span>Vários ciclos, filtros e PDF</span></button>
+    </div>
+    <div class="rel-sec-tit">Resumo do período</div>
+    <div class="card rel-periodo-card">
+      <div class="card-titulo">Período do Relatório</div>
+      <div class="rel-periodo-btns" data-per="rel">
+        <button class="rel-per-btn ativo" data-tipo="periodo">Período atual</button>
+        <button class="rel-per-btn" data-tipo="mes">Este mês</button>
+        <button class="rel-per-btn" data-tipo="custom">Personalizado</button>
+      </div>
+      <div id="rel-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="rel-ini" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px"><span style="color:#6b7280">→</span>
+          <input type="date" id="rel-fim" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px">
+        </div>
+      </div>
+    </div>
+    <div id="corpo-relatorio"></div>
+  </div>
+</div>
+
+<!-- ════════ POR CATEGORIA ════════ -->
+<div class="tela" id="tela-relcat">
+  <div class="topo-add"><h2>Por categoria</h2><button class="btn-voltar" data-ir="relatorio" aria-label="Voltar para Relatórios">‹</button></div>
+  <div class="conteudo">
+    <div class="relcat-tabs" id="relcat-tabs"></div>
+    <div class="card rel-periodo-card" id="relcat-per-card">
+      <div class="rel-periodo-btns" data-per="relcat">
+        <button class="rel-per-btn ativo" data-tipo="periodo">Período</button>
+        <button class="rel-per-btn" data-tipo="mes">Mês atual</button>
+        <button class="rel-per-btn" data-tipo="custom">Personalizado</button>
+      </div>
+      <div id="relcat-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="relcat-ini" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px"><span style="color:#6b7280">→</span>
+          <input type="date" id="relcat-fim" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px">
+        </div>
+      </div>
+    </div>
+    <div id="corpo-relcat"></div>
+  </div>
+</div>
+
+<!-- ════════ PROJEÇÃO ════════ -->
+<div class="tela" id="tela-projecao">
+  <div class="add-header" style="background:linear-gradient(150deg,#0f172a,#1e3a8a)">
+    <div class="add-hdr-left"><div class="add-hdr-icon">📈</div><div><div class="add-hdr-title">Projeção do Período</div><div class="add-hdr-sub" id="proj-subtitle">—</div></div></div>
+    <div style="display:flex;align-items:center;gap:8px"><div class="proj-badge" id="proj-badge" style="margin-top:0"></div><button class="btn-voltar" data-ir="relatorio" aria-label="Voltar para Relatórios">‹</button></div>
+  </div>
+  <div class="conteudo">
+    <div class="card rel-periodo-card" style="margin-bottom:10px">
+      <div class="rel-periodo-btns" data-per="proj">
+        <button class="rel-per-btn ativo" data-tipo="periodo">Período atual</button>
+        <button class="rel-per-btn" data-tipo="mes">Este mês</button>
+        <button class="rel-per-btn" data-tipo="custom">Personalizado</button>
+      </div>
+      <div id="proj-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="proj-ini" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px"><span style="color:#6b7280">→</span>
+          <input type="date" id="proj-fim" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px">
+        </div>
+      </div>
+    </div>
+    <div id="proj-sem-limite" class="card" style="display:none;text-align:center;color:#6b7280;font-size:14px">Defina o <b>valor para gastar no período</b> em Início → <b>Orçamento</b> para ver a projeção.</div>
+    <div id="proj-conteudo">
+    <div class="proj-card" style="margin-top:0">
+      <div class="proj-metrics">
+        <div class="proj-metric"><div class="proj-m-label">Padrão/dia</div><div class="proj-m-val" id="proj-padrao">—</div><div class="proj-m-sub">meta/dia restante</div></div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric"><div class="proj-m-label">Real/dia</div><div class="proj-m-val" id="proj-real">—</div><div class="proj-m-sub">média atual</div></div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric"><div class="proj-m-label">Desvio</div><div class="proj-m-val" id="proj-desvio">—</div><div class="proj-m-sub" id="proj-desvio-sub"></div></div>
+      </div>
+      <div class="proj-barras" style="margin-top:16px">
+        <div class="proj-brow"><span class="proj-blabel">Tempo</span><div class="proj-bbg"><div class="proj-bfill proj-bfill-tempo" id="proj-btempo" style="width:0%"></div></div><span class="proj-bpct" id="proj-ptempo">0%</span></div>
+        <div class="proj-brow"><span class="proj-blabel">Gasto</span><div class="proj-bbg"><div class="proj-bfill" id="proj-bgasto" style="width:0%"></div></div><span class="proj-bpct" id="proj-pgasto">0%</span></div>
+      </div>
+      <div class="proj-footer">
+        <div><div class="proj-fitem-label">Saldo real agora</div><div class="proj-fitem-val" id="proj-saldo-atual">—</div><div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-saldo-atual-sub"></div></div>
+        <div><div class="proj-fitem-label">Saldo no fim do período</div><div class="proj-fitem-val" id="proj-final">—</div><div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div></div>
+      </div>
+    </div>
+    <div class="proj-card" style="padding-bottom:14px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:12px">Gasto acumulado vs Orçamento</div>
+      <div id="proj-grafico"></div>
+      <div style="display:flex;gap:16px;margin-top:10px;justify-content:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-dasharray="4,2"/></svg>Orçamento previsto</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2"/></svg>Gasto real</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,2"/></svg>Limite livre</div>
+      </div>
+    </div>
+    </div>
+    <div id="proj-termometro"></div>
+    <div id="proj-parcelados"></div>
+  </div>
+</div>
+
+<!-- ════════ RELATÓRIO SEMANAL ════════ -->
+<div class="tela" id="tela-semana">
+  <div class="topo-add" style="background:linear-gradient(150deg,#3b0764,#7c3aed)"><h2>Relatório semanal</h2><button class="btn-voltar" data-ir="relatorio" aria-label="Voltar para Relatórios">‹</button></div>
+  <div class="conteudo">
+    <div class="card" style="padding:10px 14px">
+      <div class="nav-mes" style="padding:2px 0"><button id="sem-ant">‹</button><span id="sem-label" style="min-width:170px">—</span><button id="sem-prox">›</button></div>
+    </div>
+    <div id="corpo-semana"></div>
+  </div>
+</div>
+
+<!-- ════════ AJUSTES ════════ -->
+<div class="tela" id="tela-ajustes">
+  <div class="topo-add"><h2>Ajustes</h2></div>
+  <div class="conteudo">
+    <div class="aj-sec">Casa</div>
+    <div class="card">
+      <label class="aj-label" for="aj-nome" style="margin-top:0">Nome da casa</label><input class="aj-input" id="aj-nome" maxlength="60">
+      <label class="aj-label" for="aj-moeda">Moeda</label>
+      <select class="aj-input" id="aj-moeda"><option value="CAD">Dólar canadense (CA$)</option><option value="BRL">Real (R$)</option><option value="USD">Dólar americano (US$)</option><option value="EUR">Euro (€)</option></select>
+      <button class="aj-btn pri aj-full" id="aj-salvar">Salvar</button>
+    </div>
+
+    <div class="aj-sec">Categorias e orçamentos</div>
+    <div class="card" id="aj-cats"></div>
+    <button class="aj-btn aj-full" id="aj-novacat" style="margin-top:0">+ Nova categoria</button>
+
+    <div class="aj-sec">Convidar alguém da casa</div>
+    <div class="card">
+      <div style="font-size:12.5px;color:#6b7280;margin-bottom:10px">Envie o código abaixo e, <b>separadamente</b> (de preferência pessoalmente ou por ligação), a senha da casa.</div>
+      <div class="codigo" id="aj-codigo"></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="aj-btn" style="flex:1" id="aj-copiar">Copiar código</button><button class="aj-btn" style="flex:1" id="aj-compart">Compartilhar</button></div>
+      <button class="aj-btn aj-full" id="aj-novocod" style="display:none">Gerar novo código (o anterior deixa de valer)</button>
+    </div>
+
+    <div id="aj-admin" style="display:none">
+      <div class="aj-sec">🔑 Administrador · só você vê</div>
+      <div class="card">
+        <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:8px">Código para <b>novos testadores</b> criarem a casa deles. Quem você convida para a <b>sua</b> casa não precisa dele.</div>
+        <div class="codigo" id="adm-codigo">…</div>
+        <div style="display:flex;gap:8px;margin-top:10px"><button class="aj-btn" style="flex:1" id="adm-copiar">Copiar código</button><button class="aj-btn" style="flex:1" id="adm-compart">Enviar convite</button></div>
+        <button class="aj-btn aj-full" id="adm-novo">Trocar código de acesso</button>
+        <div class="login-erro" id="adm-erro" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="aj-sec">Membros</div>
+    <div class="card" id="aj-membros"></div>
+
+    <div class="aj-sec">Backup</div>
+    <div class="card">
+      <div style="font-size:12.5px;color:#6b7280;margin-bottom:10px">O arquivo de backup sai <b>sem criptografia</b>. Guarde em lugar seguro.</div>
+      <div style="display:flex;gap:8px"><button class="aj-btn" style="flex:1" id="aj-exp-json"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Backup (JSON)</button><button class="aj-btn" style="flex:1" id="aj-exp-csv"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>Planilha (CSV)</button></div>
+      <button class="aj-btn aj-full" id="aj-imp"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 21h16"/></svg>Restaurar backup…</button>
+    </div>
+
+    <div class="aj-sec">Conta</div>
+    <div class="card">
+      <div style="font-size:13px;color:#374151" id="aj-conta"></div>
+      <button class="aj-btn aj-full" id="aj-bloquear"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloquear este aparelho</button>
+      <button class="aj-btn perigo aj-full" data-acao="sair"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>Sair da conta</button>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#6b7280;margin:14px 0">MinhaCasa <span id="aj-versao"></span></div>
+  </div>
+</div>
+<input type="file" id="inp-restaurar" accept=".json,application/json" style="display:none">
+
+<!-- Folha: editar categoria -->
+<div class="hv-sheet" id="sheet"><div class="hv-sheet-box" id="sheet-box"></div></div>
+
+<nav class="nav" id="nav" style="display:none">
+  <button id="nb-inicio" class="active" data-ir="inicio"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg></span>Início</button>
+  <button id="nb-historico" data-ir="historico"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></span>Histórico</button>
+  <button id="nb-add" data-ir="add" aria-label="Registrar gasto"><div class="nav-fab-circle"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span></div><div class="nav-fab-lbl2">Registrar</div></button>
+  <button id="nb-relatorio" data-ir="relatorio"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg></span>Relatórios</button>
+  <button id="nb-ajustes" data-ir="ajustes"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Ajustes</button>
+</nav>
+
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
