@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.21.0';
+var VERSAO = '2.21.1';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1033,7 +1033,7 @@ function renderizarRelcat() {
     '<div class="relcat-stat"><div class="relcat-stat-val" style="color:' + cor + '">' + formatar(mediaDia) + '</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>' +
     '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + diasCom + '</div><div class="relcat-stat-lbl">Dias com gasto</div></div>' +
     (maior.valor ? '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#e53935">' + formatar(maior.valor) + '</div><div class="relcat-stat-lbl">Maior gasto · ' + formatarData(maior.data) + '</div></div>' : '') +
-    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + formatar(total / lista.length) + '</div><div class="relcat-stat-lbl">Ticket médio</div></div></div>';
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + formatar(total / lista.length) + '</div><div class="relcat-stat-lbl">Média por compra</div></div></div>';
   var subs = '<div class="card" style="margin-bottom:10px"><div class="card-titulo">' + (c.id === PARC ? 'Por Plano' : 'Por Subcategoria') + '</div>' + subKeys.map(function (k) {
     var v = subTots[k];
     return '<div class="relcat-sub-row"><div class="relcat-sub-nome">' + esc(k) + '</div><div class="relcat-sub-bar-wrap"><div class="relcat-sub-bar-fill" style="width:' + (v / maxSub * 100).toFixed(1) + '%;background:' + cor + '"></div></div>' +
@@ -1689,7 +1689,7 @@ function motorRelatorio(D) {
         (restam > 0 ? ' Para fechar dentro do limite, sobram <b class="' + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre)) + '</b> para ' + restam + ' dias: <b>' + m0(Math.max(0, livre) / restam) + ' por dia</b> (até agora a média foi ' + m0(atual.comum / Math.max(1, atual.decorridos)) + ' por dia).' : '') + '</p>' : '') +
       acumulado(fech.filter(function (c) { return !c.parcial; }).slice(-3).concat([atual]), lim) + '</section>';
 
-    html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Ticket médio</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
+    html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
       subsTop.slice(0, 15).map(function (s) {
         var vr = s.ant > 0 ? (s.ult - s.ant) / s.ant : NaN;
         return '<tr><td class="t"><b>' + esc(s.nome) + '</b></td><td><span class="sw" style="background:' + corCat(s.cat) + '"></span>' + esc(nomeCat(s.cat)) + '</td><td>' + s.n + '</td><td>' + m0(s.tot) + '</td><td>' + m0(s.porCiclo) + '</td><td>' + money(s.tot / s.n) + '</td><td>' + pct(s.share) + '</td><td class="' + (vr > .1 ? 'bad' : vr < -.1 ? 'good' : '') + '">' + (isFinite(vr) ? (vr > 0 ? '▲ ' : '▼ ') + pct(Math.abs(vr)) : '—') + '</td></tr>';
@@ -1705,7 +1705,7 @@ function motorRelatorio(D) {
     var fds = comuns.filter(function (l) { var w = dt(l.data).getDay(); return w === 0 || w === 6; }).reduce(function (s, l) { return s + val(l); }, 0);
     html += '<section class="card"><div class="ch"><h2>Índices de comportamento</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>' +
       linhaI('Gastos pequenos (abaixo de ' + D.simb + ' ' + PEQUENO + ')', peq.length + ' compras · ' + m0(peqT) + ' (' + pct(peqT / totC) + ')', 'O "vazamento": cada um parece nada, somados viram ' + m0(peqT / nEq) + ' por ciclo.') +
-      (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo · ticket ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
+      (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo · média por compra ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
       linhaI('Dias com gasto', nDias + ' de ' + diasTot + ' dias (' + pct(nDias / diasTot) + ')', 'Dias "sem gasto" são o jeito mais simples de cortar sem sentir.') +
       linhaI('Gasto médio por dia', money(totC / diasTot), lim > 0 ? 'O limite permite ' + money(lim / atual.dias) + ' por dia.' : '') +
       linhaI('Fim de semana', m0(fds) + ' (' + pct(fds / totC) + ')', 'Sáb e dom são 29% dos dias; acima disso, o fim de semana pesa.') +
