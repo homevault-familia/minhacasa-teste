@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.27.3';
+var VERSAO = '2.27.4';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2615,9 +2615,11 @@ function mostrarConferencia() {
   if (D.ok.length) html += '<div class="cf-grupo">Devoluções que batem (' + D.ok.length + ')</div>' + D.ok.map(function (l) {
     return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + (l.status === 'data' ? ' (app ' + formatarData(l.app.data) + ')' : l.status === 'valor' ? ' (app ' + formatar(l.app.valor) + ')' : ''), '+' + formatar(l.banco.valor));
   }).join('');
+  // mesmo valor, data diferente: corrigir a data do app para a do banco, um a um ou todos (16/11/2026)
   if (por.data.length) html += '<div class="cf-grupo">Mesmo valor, data diferente</div>' + por.data.map(function (l) {
-    return item('cf-data', esc(l.banco.desc || '(sem descrição)'), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')', formatar(l.banco.valor));
-  }).join('');
+    var i = c.linhas.indexOf(l);
+    return item('cf-data', esc(l.banco.desc || '(sem descrição)'), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')', formatar(l.banco.valor), '<button class="aj-btn" data-cfdata="' + i + '">Corrigir data</button>');
+  }).join('') + (por.data.length > 1 ? '<button class="aj-btn aj-full" id="cf-datas">Corrigir as ' + por.data.length + ' datas para as do banco</button>' : '');
   if (por.ok.length) html += '<div class="cf-grupo">Batem (' + por.ok.length + ')</div>' + (_conf.verOk ? por.ok.map(function (l) {
     return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app), formatar(l.banco.valor));
   }).join('') : '<button class="aj-btn aj-full" id="cf-verok">Mostrar os ' + por.ok.length + ' que batem</button>');
@@ -2644,6 +2646,19 @@ function mostrarConferencia() {
     if (!$('inp-desc').value.trim()) $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
     mostrarToast('↩️', o ? 'Confira a compra e salve. Depois o app volta para a conferência.' : 'Escolha a compra ou a categoria e salve.', 4000);
   }; });
+  var corrigirDatas = function (linhas) {
+    var ps = [], n = 0;
+    linhas.forEach(function (l) {
+      var reg = S.raw[l.app.id]; if (!reg || !l.banco.data) return;
+      var novo = Object.assign({}, reg); novo.dt = l.banco.data;
+      ps.push(gravarLanc(l.app.id, novo)); n++;
+    });
+    if (!n) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
+    Promise.all(ps).then(function () { mostrarToast('📅', n === 1 ? 'Data corrigida para ' + formatarData(linhas[0].banco.data) : n + ' datas corrigidas para as do banco'); }, function () { mostrarToast('⚠️', 'Erro ao salvar'); });
+    recalcularConferencia();
+  };
+  qsa('#sheet-box [data-cfdata]').forEach(function (bt) { bt.onclick = function () { corrigirDatas([c.linhas[+bt.dataset.cfdata]]); }; });
+  if ($('cf-datas')) $('cf-datas').onclick = function () { corrigirDatas(por.data); };
   qsa('#sheet-box [data-cfcorrigir]').forEach(function (bt) { bt.onclick = function () {
     var l = c.linhas[+bt.dataset.cfcorrigir], reg = S.raw[l.app.id];
     if (!reg) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
