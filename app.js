@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.25.3';
+var VERSAO = '2.26.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -705,7 +705,7 @@ function novoLancamento() {
     tipo: 'compra', orig: null, lj: false, cl: null };
   $('inp-valor').value = ''; $('inp-desc').value = ''; $('inp-data').value = hoje(); $('orig-busca').value = '';
   $('valor-pre').textContent = SIMB[moeda()];
-  $('add-edit-extra').style.display = 'none';
+  $('add-edit-extra').style.display = 'none'; $('pag-aviso').style.display = 'none';
   atualizarParcUI();
   pintarTipoAdd();
 }
@@ -716,7 +716,7 @@ function editarLancamento(id) {
   $('inp-valor').value = numTxt(Math.abs(l.valor).toFixed(2));
   $('inp-data').value = l.data; $('inp-desc').value = l.desc || ''; $('orig-busca').value = '';
   $('valor-pre').textContent = SIMB[moeda()];
-  $('add-edit-extra').style.display = '';
+  $('add-edit-extra').style.display = ''; $('pag-aviso').style.display = 'none';
   irPara('add');
   pintarTipoAdd();
 }
@@ -2191,6 +2191,7 @@ function renderAjustes() {
   renderAdmin();
   renderLimparTeste();
   $('aj-conferir').onclick = abrirConferencia;
+  $('aj-applepay').onclick = abrirApplePay;
   $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
 }
@@ -2650,6 +2651,91 @@ function mostrarConferencia() {
   }; });
 }
 
+// ═════════════════ LANÇAR AO PAGAR (Apple Pay, 16/11/2026) ═════════════════
+// O atalho do iPhone (automação "Carteira"/"Transação") abre  …/#lancar=<valor>|<loja>|<cartão>
+// (a parte depois do "=" vem codificada). O app abre o Registrar já preenchido e sugere a categoria pela loja.
+var CHAVE_PAG = 'mc_pag_pend';
+function capturarPagamentoDoLink() {
+  var m = /[#&]lancar=([^&]*)/i.exec(location.hash || '');
+  if (!m) return false;
+  var t = m[1];
+  try { t = decodeURIComponent(t); } catch (e) {}
+  try { t = decodeURIComponent(t); } catch (e) {} // se o atalho codificou duas vezes
+  var partes = t.split('|'), v = MCBanco.numero(partes[0]);
+  var pag = { valor: isFinite(v) ? Math.abs(v) : 0, loja: txtCurto((partes[1] || '').replace(/\s+/g, ' ').trim(), 140), cartao: txtCurto((partes[2] || '').trim(), 60), em: Date.now() };
+  S.pagPend = pag;
+  try { sessionStorage.setItem(CHAVE_PAG, JSON.stringify(pag)); } catch (e) {} // sobrevive ao login
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  return true;
+}
+// Categoria e subcategoria mais usadas nessa loja; se não houver histórico, uma subcategoria com o nome da loja
+function sugerirCatLoja(loja) {
+  if (!loja) return null;
+  var pt = {}, hist = {}, hj = hoje();
+  lancamentos().forEach(function (l) {
+    if (l.dev || l.cat === PARC || !catPorId(l.cat)) return;
+    if (!MCBanco.mesmaLoja(loja, (l.desc || '') + ' ' + (nomeSub(l.cat, l.sub) || ''))) return;
+    var k = l.cat + '|' + (l.sub || ''), idade = Math.max(0, diasEntre(l.data, hj));
+    pt[k] = (pt[k] || 0) + 1 + 1 / (1 + idade / 30); hist[k] = 1; // mais vezes e mais recente pesa mais
+  });
+  catsComuns().forEach(function (c) { c.subs.forEach(function (s) { if (MCBanco.mesmaLoja(loja, s.nome)) { var k = c.id + '|' + s.id; pt[k] = (pt[k] || 0) + 0.5; } }); });
+  var melhor = Object.keys(pt).sort(function (a, b) { return pt[b] - pt[a]; })[0];
+  if (!melhor) return null;
+  var x = melhor.split('|');
+  return { cat: x[0], sub: x[1] || null, peloNome: !hist[melhor] };
+}
+function aplicarPagamento() {
+  if (!S.pagPend) { try { S.pagPend = JSON.parse(sessionStorage.getItem(CHAVE_PAG) || 'null'); } catch (e) {} }
+  var p = S.pagPend;
+  if (!p || !S.chave || !S.cfg) return;
+  S.pagPend = null; try { sessionStorage.removeItem(CHAVE_PAG); } catch (e) {}
+  if (Date.now() - (p.em || 0) > 6 * 3600000) return; // link velho (ex.: aba reaberta no dia seguinte)
+  // o mesmo pagamento aberto duas vezes seguidas: não abre de novo
+  var assin = p.valor.toFixed(2) + '|' + normNome(p.loja), ult = null;
+  try { ult = JSON.parse(lsGet('mc_pag_ult') || 'null'); } catch (e) {}
+  if (ult && ult.a === assin && Date.now() - ult.t < 120000) return;
+  lsSet('mc_pag_ult', JSON.stringify({ a: assin, t: Date.now() }));
+  fecharSheet();
+  S.add.editId = null;
+  irPara('add');
+  if (p.valor > 0) $('inp-valor').value = numTxt(p.valor.toFixed(2));
+  $('inp-desc').value = p.loja;
+  $('inp-data').value = hoje();
+  var sg = sugerirCatLoja(p.loja);
+  S.add.cat = sg ? sg.cat : null; S.add.sub = sg ? sg.sub : null;
+  renderAdd(); renderCreditoAdd(); atualizarAvisoValor();
+  // já existe um gasto igual hoje? (lançou à mão antes de o atalho abrir)
+  var dup = p.valor > 0 && lancamentos().filter(function (l) { return !l.dev && l.data === hoje() && Math.abs(l.valor - p.valor) < 0.005; })[0];
+  var av = $('pag-aviso');
+  av.innerHTML = '📲 <b>Pagamento ' + (p.cartao ? 'no ' + esc(p.cartao) : 'com Apple Pay') + '</b>: ' + (p.loja ? esc(p.loja) + ' · ' : '') + (p.valor > 0 ? formatar(p.valor) : 'valor não veio, digite abaixo') + '<br>' +
+    (sg ? (sg.peloNome ? 'Categoria sugerida pelo nome da subcategoria. ' : 'Categoria sugerida pelas suas compras anteriores nessa loja. ') : 'Escolha a categoria. Da próxima vez nessa loja o app já sugere. ') + 'Confira e toque em salvar.' +
+    (dup ? '<span class="pag-dup">⚠️ Já existe um lançamento de ' + formatar(dup.valor) + ' hoje (' + esc(descLanc(dup)) + '). Se for o mesmo, não salve: toque no ✕.</span>' : '');
+  av.style.display = '';
+}
+function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
+function abrirApplePay() {
+  var url = linkPagamento();
+  abrirSheet('<h3>📲 Lançar ao pagar com Apple Pay</h3>' +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45">Uma vez configurado, cada pagamento por aproximação com o iPhone ou o relógio abre o MinhaCasa já com o valor e a loja. Leva uns 3 minutos e é feito no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Precisa do iOS 17 ou mais novo.</div>' +
+    '<ol class="cf-passos ap-passos">' +
+    '<li>Abra o app <b>Atalhos</b>, toque em <b>Automação</b> (embaixo) e no <b>+</b>.</li>' +
+    '<li>Escolha <b>Carteira</b> (em alguns iPhones aparece como <b>Transação</b>). Marque os cartões que você usa, escolha <b>Executar Imediatamente</b> e toque em <b>Seguinte</b> → <b>Nova Automação em Branco</b>.</li>' +
+    '<li>Adicione a ação <b>Texto</b>. Dentro dela, toque em <b>Entrada do Atalho</b> (fica acima do teclado), depois toque na variável e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo a Entrada do Atalho e escolha <b>Comerciante</b> (Merchant). Se quiser que o app mostre qual cartão foi usado, digite <code>|</code> e insira a Entrada do Atalho como <b>Cartão ou Passe</b> (Card or Pass). Fica assim: <code>Valor|Comerciante|Cartão ou Passe</code>.</li>' +
+    '<li>Adicione a ação <b>Codificar URL</b> (URL Encode). Ela já pega o Texto de cima.</li>' +
+    '<li>Adicione a ação <b>Abrir URLs</b> (Open URLs). Cole o endereço abaixo e, logo depois dele, insira a variável <b>URL Codificado</b>:<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
+    '<li>Toque em <b>OK</b>. Pronto.</li></ol>' +
+    '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:10px"><b>Na primeira vez</b>, o link abre no Safari. Se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>; depois não pede mais. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua em "Executar Imediatamente".</div>' +
+    '<button class="aj-btn pri aj-full" id="ap-testar">Testar agora (simula um pagamento)</button>' +
+    '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
+  $('ap-copiar').onclick = function () { copiar(url); };
+  $('ap-testar').onclick = function () {
+    lsSet('mc_pag_ult', '');
+    S.pagPend = { valor: 12.34, loja: 'Teste do atalho', cartao: '', em: Date.now() };
+    aplicarPagamento();
+    mostrarToast('📲', 'Assim abre depois de um pagamento. Este é só um teste: toque no ✕ para não salvar.', 4500);
+  };
+}
+
 // ── Só no ambiente de teste (14/11/2026): apagar todos os lançamentos da casa ──
 // Escondido em produção pelo config.js (MINHACASA_AMBIENTE). Pede dois toques.
 var _limparConf = false;
@@ -2745,6 +2831,8 @@ function gravarLanc(id, reg) {
 function iniciar() {
   var cfg = window.HOMEVAULT_FIREBASE;
   capturarConviteDoLink();
+  capturarPagamentoDoLink();
+  window.addEventListener('hashchange', function () { if (capturarPagamentoDoLink()) aplicarPagamento(); });
   ligarEventos();
   if (!cfg || !cfg.apiKey || /COLE_AQUI/.test(cfg.apiKey) || typeof firebase === 'undefined') { mostrarEntrada('card-semconfig'); return; }
   firebase.initializeApp(cfg);
@@ -2824,7 +2912,7 @@ function escutar() {
       var n = normalizarCfg(c || { cats: catsPadrao(), nome: 'Minha casa', moeda: 'CAD' });
       S.cfg = n.cfg;
       if (n.mudou || !c) salvarCfg();
-      if (primeiro) { primeiro = false; irPara('inicio'); }
+      if (primeiro) { primeiro = false; irPara('inicio'); setTimeout(aplicarPagamento, 1200); } // espera os lançamentos para sugerir a categoria
       else renderLogo();
     });
   }, negado);

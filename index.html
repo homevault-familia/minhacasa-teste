@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.25.3">
+<meta name="app-version" content="2.26.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -841,6 +841,12 @@ body {
 .cf-item .cf-tx small { display:block; color:#6b7280; font-size:12px; }
 .cf-item .cf-v { font-weight:800; font-size:14px; white-space:nowrap; }
 .cf-item button { flex:none; padding:7px 10px; font-size:12px; margin:0; }
+.pag-aviso { background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:10px 12px; margin-bottom:10px; font-size:13px; color:#1e3a8a; line-height:1.45; }
+.pag-aviso b { color:#1e40af; }
+.pag-aviso .pag-dup { display:block; margin-top:6px; color:#b45309; }
+.ap-url { font-family:ui-monospace,Menlo,monospace; font-size:12px; background:#f3f4f6; border-radius:8px; padding:8px; word-break:break-all; margin:6px 0; }
+.ap-passos li { margin-bottom:6px; }
+.ap-passos code { font-family:ui-monospace,Menlo,monospace; font-size:12px; background:#f3f4f6; padding:1px 4px; border-radius:4px; }
 .cf-passos { margin:8px 0 12px; padding-left:20px; font-size:13px; color:#374151; line-height:1.5; }
 .cf-map { width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; display:block; overflow-x:auto; }
 .cf-map td, .cf-map th { border:1px solid #e5e7eb; padding:4px 6px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
@@ -1105,6 +1111,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     <button class="btn-voltar" data-ir="inicio">✕</button>
   </div>
   <div class="add-body">
+    <div class="pag-aviso" id="pag-aviso" style="display:none"></div>
     <div class="add-tipo" id="add-tipo" role="group" aria-label="Tipo de lançamento">
       <button type="button" data-addtipo="compra" class="on">🛒 Compra</button>
       <button type="button" data-addtipo="dev">↩️ Devolução</button>
@@ -1362,6 +1369,12 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     <div class="card">
       <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Baixe o extrato do seu banco (OFX ou CSV) e o app mostra o que está no banco e falta aqui, o que tem valor ou data diferente e o que bate. O arquivo é lido <b>só neste aparelho</b>, não vai para a internet.</div>
       <button class="aj-btn pri aj-full" id="aj-conferir">Conferir com o extrato do banco</button>
+    </div>
+
+    <div class="aj-sec">📲 Lançar ao pagar</div>
+    <div class="card">
+      <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Pagou com <b>Apple Pay</b> no iPhone ou no relógio? O app abre na hora, já com o valor e a loja, e sugere a categoria. É só conferir e salvar.</div>
+      <button class="aj-btn pri aj-full" id="aj-applepay">Configurar no iPhone</button>
     </div>
 
     <div id="aj-limpar-teste" style="display:none">
