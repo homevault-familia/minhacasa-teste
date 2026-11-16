@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.27.4';
+var VERSAO = '2.28.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -734,7 +734,7 @@ function pintarTipoAdd() {
   $('inp-valor').placeholder = numTxt('0.00');
   $('inp-desc').placeholder = dev ? 'Ex: Devolvi a calça, troca do presente…' : 'Ex: Gasolina no posto, compras da semana…';
   $('card-orig').style.display = dev ? '' : 'none';
-  $('card-forma').style.display = dev ? '' : 'none';
+  $('card-forma').style.display = 'none'; // opção "crédito na loja" retirada a pedido (16/11/2026); devoluções antigas com crédito continuam valendo
   $('card-parc').style.display = !dev && !ed && COM_PARCELADOS ? '' : 'none'; // parcelamento retirado do app (13/11/2026)
   qsa('#card-forma [data-addlj]').forEach(function (b) { b.classList.toggle('on', (b.dataset.addlj === '1') === !!a.lj); });
   $('forma-dica').textContent = a.lj ? 'O dinheiro não volta para o banco: a loja guarda o valor para você usar lá. O app anota esse crédito, e na próxima compra nessa loja é só escolher "Pagou com crédito da loja".'
@@ -795,6 +795,8 @@ function escolherOrig(id, manter) {
 }
 function renderCreditoAdd() {
   var a = S.add, card = $('card-credito');
+  // "pagar com crédito da loja" retirado (16/11/2026): só aparece ao editar uma compra antiga que já usou crédito
+  if (!(a.editId && a.cl)) { card.style.display = 'none'; a.cl = null; return; }
   if (a.tipo !== 'compra' || a.parc) { card.style.display = 'none'; return; }
   var cs = creditosLoja(a.editId).filter(function (c) { return c.saldo > 0.005 || c.id === a.cl; });
   if (!cs.length) { card.style.display = 'none'; a.cl = null; return; }
