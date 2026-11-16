@@ -702,6 +702,12 @@ body {
 .proj-badge.warn { background: rgba(251,191,36,.2);  color: #fbbf24; }
 .proj-badge.over { background: rgba(248,113,113,.2); color: #f87171; }
 
+.proj-freq-txt{font-size:12.5px;line-height:1.45;opacity:.85;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)}
+.proj-freq-tit{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin:12px 0 4px}
+.proj-freq-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.proj-freq-row:last-child{border-bottom:0}
+.proj-freq-row small{display:block;font-size:10.5px;opacity:.55;font-weight:400}
+.proj-freq-row>span:last-child{font-weight:800;white-space:nowrap}
 .proj-metrics { display: flex; align-items: stretch; background: rgba(255,255,255,.07); border-radius: 12px; padding: 14px 8px; margin-bottom: 16px; }
 .proj-metric { flex: 1; text-align: center; }
 .proj-m-label { font-size: 10px; opacity: .5; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
@@ -1225,6 +1231,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
         <div><div class="proj-fitem-label">Saldo real agora</div><div class="proj-fitem-val" id="proj-saldo-atual">—</div><div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-saldo-atual-sub"></div></div>
         <div><div class="proj-fitem-label">Saldo no fim do período</div><div class="proj-fitem-val" id="proj-final">—</div><div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div></div>
       </div>
+      <div id="proj-freq"></div>
     </div>
     <div class="proj-card" style="padding-bottom:14px">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:12px">Gasto acumulado vs Orçamento</div>
@@ -1232,6 +1239,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
       <div style="display:flex;gap:16px;margin-top:10px;justify-content:center;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-dasharray="4,2"/></svg>Orçamento previsto</div>
         <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2"/></svg>Gasto real</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="1.8" stroke-dasharray="4,3"/></svg>Projeção (frequência)</div>
         <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55"><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,2"/></svg>Limite livre</div>
       </div>
     </div>

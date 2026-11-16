@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.22.0';
+var VERSAO = '2.23.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -892,10 +892,10 @@ function renderizarRelatorio() {
   var maiorDia = '', maiorVal = 0;
   dias.forEach(function (d) { if (T.porDia[d] > maiorVal) { maiorVal = T.porDia[d]; maiorDia = d; } });
   var diasPeriodo = diasEntre(per.inicio, per.fim) + 1;
-  // mesma conta da tela Projeção: média por dia corrido × dias do período (14/11/2026)
+  // mesma conta da tela Projeção: já gasto + o que ainda deve entrar pela frequência (16/11/2026)
   var hjR = hoje(), passadosR = hjR < per.inicio ? 0 : Math.min(diasPeriodo, diasEntre(per.inicio, hjR) + 1);
   var mediaCorrida = passadosR ? grand / passadosR : 0;
-  var projecao = hjR > per.fim ? grand : mediaCorrida * diasPeriodo;
+  var projecao = hjR > per.fim ? grand : hjR < per.inicio ? 0 : grand + projecaoFreq(per).aindaVem; // pela frequência de compras (16/11/2026)
   mediaDia = hjR > per.fim ? grand / diasPeriodo : mediaCorrida;
   var corLim = pctLim > 100 ? '#f44336' : pctLim >= 80 ? '#ff9800' : '#1565c0';
   var excede = projecao > 0 && lim > 0 && projecao > lim, dentro = projecao > 0 && lim > 0 && !excede;
@@ -1080,6 +1080,57 @@ function cancelarPlano(gid) {
   apagar(fut.map(function (l) { return l.id; }));
 }
 
+// ═════════════════════════ PROJEÇÃO PELA FREQUÊNCIA (16/11/2026) ═════════════════════════
+// Em vez de "gasto por dia × dias do período": para cada lugar (subcategoria ou
+// descrição), quantas vezes você vai por período e quanto gasta por ida, nos
+// períodos anteriores do mesmo tamanho (até 6). Nos dias que faltam conta o MENOR entre
+//   • frequência × (dias que faltam ÷ dias do período)  (o ritmo normal) e
+//   • frequência − idas que já fez neste período        (o que falta para o normal).
+// Ex.: Costco 2×/período e já foi 2× → não conta mais nenhuma ida.
+// Compra sem histórico não é repetida. Sem histórico nenhum, usa o ritmo por dia.
+function lugarDe(l) {
+  var nome = nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat);
+  return { chave: l.cat + '|' + nome.toLowerCase(), nome: nome };
+}
+function periodosAnteriores(p, qtd) {
+  var N = diasEntre(p.inicio, p.fim) + 1, mensal = N >= 28 && N <= 31, out = [];
+  for (var j = 1; j <= qtd; j++) {
+    var ini, fim;
+    if (mensal) { ini = addMeses(p.inicio, -j); var prox = addMeses(p.inicio, -j + 1), d = dataObj(prox); d.setDate(d.getDate() - 1); fim = isoDe(d); }
+    else { var a = dataObj(p.inicio); a.setDate(a.getDate() - N * j); ini = isoDe(a); var b = dataObj(ini); b.setDate(b.getDate() + N - 1); fim = isoDe(b); }
+    out.push({ inicio: ini, fim: fim });
+  }
+  return out;
+}
+function projecaoFreq(p) {
+  var todos = lancamentos().filter(function (l) { return l.cat !== PARC && l.data; }), hj = hoje();
+  var N = diasEntre(p.inicio, p.fim) + 1;
+  var ate = hj < p.fim ? hj : p.fim;
+  var passados = hj < p.inicio ? 0 : diasEntre(p.inicio, ate) + 1, rest = Math.max(0, N - passados);
+  var prim = todos.reduce(function (m, l) { return l.data < m ? l.data : m; }, hj);
+  // períodos anteriores com dados (para no primeiro de antes do 1º lançamento)
+  var H = [];
+  periodosAnteriores(p, 6).some(function (h) {
+    if (h.fim < prim || diasEntre(h.inicio < prim ? prim : h.inicio, h.fim) + 1 < 0.8 * (diasEntre(h.inicio, h.fim) + 1)) return true;
+    H.push(h); return false;
+  });
+  var m = {}, gasto = 0;
+  function pega(l) { var g = lugarDe(l); if (!m[g.chave]) m[g.chave] = { chave: g.chave, nome: g.nome, cat: l.cat, nH: 0, vH: 0, n: 0, v: 0 }; return m[g.chave]; }
+  H.forEach(function (h) { todos.forEach(function (l) { if (l.data < h.inicio || l.data > h.fim) return; var s = pega(l); s.nH++; s.vH += l.valor; }); });
+  todos.forEach(function (l) { if (l.data < p.inicio || l.data > ate) return; var s = pega(l); s.n++; s.v += l.valor; gasto += l.valor; });
+  var R = { gasto: gasto, aindaVem: 0, cat: {}, lugares: [], nHist: H.length, linear: !H.length, rest: rest, passados: passados, N: N };
+  Object.keys(m).forEach(function (k) {
+    var s = m[k];
+    if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = passados ? s.v * rest / passados : 0; }
+    else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperV = Math.min(s.freq * rest / N, Math.max(0, s.freq - s.n)) * s.ticket; }
+    R.aindaVem += s.esperV; R.cat[s.cat] = (R.cat[s.cat] || 0) + s.esperV; R.lugares.push(s);
+  });
+  R.lugares.sort(function (a, b) { return b.esperV - a.esperV; });
+  R.final = gasto + R.aindaVem;
+  return R;
+}
+function vezesF(x) { var r = Math.round((+x || 0) * 10) / 10; return String(r).replace('.', ',') + '×'; }
+
 // ═════════════════════════ PROJEÇÃO ═════════════════════════
 function atualizarProjecao() {
   var p = getPer('proj');
@@ -1092,7 +1143,8 @@ function atualizarProjecao() {
   var T = totaisPeriodo(p), hj = hoje(), gasto = T.comum;
   var totalDias = Math.max(1, diasEntre(p.inicio, p.fim) + 1);
   var passados = Math.min(totalDias, Math.max(1, diasEntre(p.inicio, hj) + 1)), restantes = Math.max(0, totalDias - passados);
-  var realDia = gasto / passados, projFinal = realDia * totalDias, orcRest = lim - gasto;
+  var PF = projecaoFreq(p);
+  var realDia = gasto / passados, projFinal = hj > p.fim ? gasto : gasto + PF.aindaVem, orcRest = lim - gasto;
   var metaDia = restantes > 0 ? orcRest / restantes : 0, desvio = realDia - metaDia;
   var pctTempo = passados / totalDias * 100, pctGasto = Math.min(120, gasto / lim * 100);
   function fmtD(v) { return formatar(Math.abs(v)); }
@@ -1116,16 +1168,38 @@ function atualizarProjecao() {
   $('proj-saldo-atual-sub').textContent = sa >= 0 ? 'disponível' : 'acima do limite';
   var sf = lim - projFinal;
   $('proj-final').textContent = (sf >= 0 ? '+ ' : '− ') + formatar(Math.abs(sf)); $('proj-final').style.color = sf >= 0 ? '#4ade80' : '#f87171';
-  $('proj-final-sub').textContent = sf >= 0 ? 'sobrando se mantiver o ritmo' : 'excedendo se mantiver o ritmo';
-  renderizarGraficoProjecao(T, p, lim, hj);
+  $('proj-final-sub').textContent = hj > p.fim ? (sf >= 0 ? 'sobrou' : 'excedeu') : (sf >= 0 ? 'sobrando' : 'excedendo') + (PF.linear ? ' se mantiver o ritmo por dia' : ' pela sua frequência de compras');
+  renderizarFreqProjecao(PF, gasto, projFinal, lim, hj > p.fim);
+  renderizarGraficoProjecao(T, p, lim, hj, projFinal);
 }
-function renderizarGraficoProjecao(T, p, lim, hj) {
+// o que ainda deve entrar e onde você foi mais vezes que o normal (16/11/2026)
+function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
+  var el = $('proj-freq'); if (!el) return;
+  if (acabou) { el.innerHTML = ''; return; }
+  var base = PF.linear ? 'no ritmo por dia (ainda não há período anterior para medir a sua frequência)' : 'pela sua frequência nos ' + PF.nHist + ' períodos anteriores';
+  var h = '<div class="proj-freq-txt">' + (PF.rest > 0 ? 'Faltam <b>' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + '</b>. ' + (PF.aindaVem >= 1 ? 'Ainda devem entrar cerca de <b>' + formatar(PF.aindaVem) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
+    ' → fecha em <b style="color:' + (projFinal > lim ? '#f87171' : '#4ade80') + '">' + formatar(projFinal) + '</b> (' + Math.round(projFinal / lim * 100) + '% do limite).' : 'Último dia do período.') + '</div>';
+  if (!PF.linear) {
+    var vem = PF.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 5);
+    if (PF.rest > 0 && vem.length) h += '<div class="proj-freq-tit">O que ainda deve entrar</div>' + vem.map(function (s) {
+      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b><small>você vai ' + vezesF(s.freq) + ' por período, ' + formatar(s.ticket) + ' por ida · neste foi ' + s.n + '×</small></span><span>≈ ' + formatar(s.esperV) + '</span></div>'; }).join('');
+    var mais = PF.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
+      .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 5);
+    if (mais.length) h += '<div class="proj-freq-tit">Neste período você foi mais vezes que o normal</div>' + mais.map(function (s) {
+      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b><small>' + s.n + ' idas, ' + formatar(s.v) + ' · o normal é ' + vezesF(s.freq) + '</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
+    var novos = PF.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
+    if (novos.length) h += '<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)</div>' + novos.map(function (s) {
+      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b></span><span>' + formatar(s.v) + '</span></div>'; }).join('');
+  }
+  el.innerHTML = h;
+}
+function renderizarGraficoProjecao(T, p, lim, hj, projFinal) {
   var dias = [];
   for (var d = p.inicio; d <= p.fim; d = proxDia(d)) { dias.push(d); if (dias.length > 400) break; }
   var N = dias.length, acum = 0;
   var cumReal = dias.map(function (dt) { if (dt <= hj) { acum += T.porDia[dt] || 0; return acum; } return null; });
   var cumOrc = dias.map(function (dt, i) { return lim * (i + 1) / N; });
-  var maxY = Math.max(lim * 1.08, acum * 1.08, 1), todayIdx = dias.indexOf(hj);
+  var maxY = Math.max(lim * 1.08, acum * 1.08, (projFinal || 0) * 1.08, 1), todayIdx = dias.indexOf(hj);
   var W = 320, H = 190, pL = 46, pR = 14, pT = 14, pB = 28, cW = W - pL - pR, cH = H - pT - pB;
   function xp(i) { return pL + (N > 1 ? i / (N - 1) * cW : cW / 2); }
   function yp(v) { return pT + cH - (v / maxY * cH); }
@@ -1141,6 +1215,7 @@ function renderizarGraficoProjecao(T, p, lim, hj) {
     (area ? '<path d="' + area + '" fill="' + corA + '"/>' : '') +
     '<path d="' + orcPath + '" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5" stroke-dasharray="5,3"/>' +
     (realPath ? '<path d="' + realPath + '" fill="none" stroke="' + corR + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+    (todayIdx >= 0 && todayIdx < N - 1 && projFinal > 0 ? '<line x1="' + xp(todayIdx).toFixed(1) + '" y1="' + yp(cumReal[todayIdx]).toFixed(1) + '" x2="' + xp(N - 1).toFixed(1) + '" y2="' + yp(projFinal).toFixed(1) + '" stroke="' + (projFinal > lim ? '#f87171' : '#4ade80') + '" stroke-width="1.8" stroke-dasharray="4,3" opacity=".8"/><circle cx="' + xp(N - 1).toFixed(1) + '" cy="' + yp(projFinal).toFixed(1) + '" r="3" fill="' + (projFinal > lim ? '#f87171' : '#4ade80') + '"/>' : '') +
     (todayIdx >= 0 ? '<line x1="' + xp(todayIdx).toFixed(1) + '" y1="' + pT + '" x2="' + xp(todayIdx).toFixed(1) + '" y2="' + (pT + cH) + '" stroke="rgba(255,255,255,.2)" stroke-dasharray="3,3"/>' +
       '<circle cx="' + xp(todayIdx).toFixed(1) + '" cy="' + yp(cumReal[todayIdx]).toFixed(1) + '" r="4.5" fill="' + corR + '" stroke="#0f172a" stroke-width="2"/>' +
       '<text x="' + xp(todayIdx).toFixed(1) + '" y="' + (pT - 3) + '" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.5)" font-family="system-ui,sans-serif">hoje</text>' : '') +
@@ -1520,9 +1595,67 @@ function motorRelatorio(D) {
       c.comum = 0; c.n = 0;
       c.l.forEach(function (l) { if (c.cat[l.cat] === undefined) c.cat[l.cat] = 0; c.cat[l.cat] += val(l); c.comum += val(l); c.n++; });
       c.fator = c.emCurso ? c.dias / Math.max(1, c.decorridos) : 1;
-      c.proj = c.comum * c.fator;
+      c.projCat = {}; Object.keys(c.cat).forEach(function (k) { c.projCat[k] = c.cat[k]; });
+      c.proj = c.comum;
+      if (c.emCurso) {
+        var R = restanteCiclo(); c.R = R;
+        Object.keys(R.cat).forEach(function (k) { c.projCat[k] = (c.projCat[k] || 0) + R.cat[k]; });
+        c.proj = c.comum + R.tot;
+      }
     });
     return C;
+  }
+  /* Projeção pela FREQUÊNCIA (16/11/2026), não por dia: para cada lugar, quantas
+     vezes você vai por ciclo e quanto gasta por ida (últimos ciclos fechados, até 6).
+     Nos dias que faltam conta o MENOR entre frequência × dias que faltam ÷ dias do
+     ciclo e frequência − idas já feitas no ciclo. Compra sem histórico não se repete.
+     Sem ciclo fechado no app, cai no ritmo por dia. */
+  function chaveLugar(l) { return l.cat + '|' + subDe(l).toLowerCase(); }
+  function historico() {
+    var p = d.periodo, h = hojeIso(), k = idxAtual(p, h), L = d.lancamentos;
+    var prim = L.reduce(function (m, l) { return l.data && l.data < m ? l.data : m; }, h), H = [];
+    for (var j = k - 1; j >= k - 24 && H.length < 6; j--) {
+      var c = cicloK(p, j);
+      if (c.fim < prim || dias(c.inicio < prim ? prim : c.inicio, c.fim) < 0.8 * c.cheio) break;
+      H.push(c);
+    }
+    return H;
+  }
+  function restanteCiclo() {
+    var h = hojeIso(), at = prepara(cicloK(d.periodo, idxAtual(d.periodo, h)), h), L = d.lancamentos;
+    var rest = Math.max(0, at.dias - at.decorridos), H = historico();
+    var R = { cat: {}, tot: 0, lugares: [], porChave: {}, nHist: H.length, rest: rest, linear: !H.length, ciclo: at }, m = {};
+    function pega(l) { var k = chaveLugar(l); if (!m[k]) m[k] = { chave: k, nome: subDe(l), cat: l.cat, nH: 0, vH: 0, n: 0, v: 0 }; return m[k]; }
+    H.forEach(function (c) { L.forEach(function (l) { if (l.data < c.inicio || l.data > c.fim) return; var s = pega(l); s.nH++; s.vH += val(l); }); });
+    L.forEach(function (l) { if (l.data < at.inicio || l.data > h) return; var s = pega(l); s.n++; s.v += val(l); });
+    Object.keys(m).forEach(function (k) {
+      var s = m[k];
+      if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = at.decorridos ? s.v * rest / at.decorridos : 0; }
+      else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperV = Math.min(s.freq * rest / at.dias, Math.max(0, s.freq - s.n)) * s.ticket; }
+      R.cat[s.cat] = (R.cat[s.cat] || 0) + s.esperV; R.tot += s.esperV; R.porChave[k] = s; R.lugares.push(s);
+    });
+    R.lugares.sort(function (a, b) { return b.esperV - a.esperV; });
+    return R;
+  }
+  function vezes(x) { var r = Math.round((+x || 0) * 10) / 10; return String(r).replace('.', ',') + '×'; }
+  function blocoFrequencia(at, lim) {
+    var R = at.R; if (!R) return '';
+    var base = R.linear ? 'no ritmo por dia (ainda não há ciclo fechado para medir a sua frequência)' : 'pela sua frequência nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos');
+    var cls = lim > 0 && at.proj > lim ? 'bad' : '';
+    var x = '<p style="margin:0 0 8px">' + (R.rest > 0 ? 'Faltam ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + '. ' + (R.tot >= 1 ? 'Ainda devem entrar cerca de <b>' + m0(R.tot) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
+      ' → o ciclo fecha em <b class="' + cls + '">' + m0(at.proj) + '</b>' + (lim > 0 ? ' (' + pct(at.proj / lim) + ' do limite)' : '') + '.' : 'O ciclo fecha hoje em <b class="' + cls + '">' + m0(at.proj) + '</b>.') + '</p>';
+    if (R.linear) return x;
+    var vem = R.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 6);
+    if (R.rest > 0 && vem.length) x += '<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ' + fD(R.ciclo.fim) + '</b></p><ul style="margin:0 0 10px;padding-left:20px">' +
+      vem.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ≈ ' + m0(s.esperV) + ' (você vai ' + vezes(s.freq) + ' por ciclo, ' + m0(s.ticket) + ' por ida; neste ciclo foi ' + s.n + '×)</li>'; }).join('') + '</ul>';
+    var mais = R.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
+      .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 6);
+    if (mais.length) x += '<p class="note" style="margin:0 0 4px"><b>Neste ciclo você foi mais vezes que o normal</b></p><ul style="margin:0 0 10px;padding-left:20px">' +
+      mais.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ' + s.n + ' idas, ' + m0(s.v) + ' (o normal é ' + vezes(s.freq) + ' por ciclo, ≈ ' + m0(s.vH / R.nHist) + ') → <span class="bad">' + m0(s.extraV) + ' a mais</span></li>'; }).join('') + '</ul>';
+    var novos = R.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
+    if (novos.length) x += '<p class="note" style="margin:0 0 4px"><b>Gastos que não aparecem nos ciclos anteriores</b> (não foram projetados de novo)</p><ul style="margin:0 0 10px;padding-left:20px">' +
+      novos.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ' + m0(s.v) + (s.n > 1 ? ' em ' + s.n + ' vezes' : '') + '</li>'; }).join('') + '</ul>';
+    return x;
   }
 
   var PRINT = false;
@@ -1531,14 +1664,14 @@ function motorRelatorio(D) {
   function barrasCiclo(C, lim, cats) {
     var W = largura(1000), H = 270, ml = 50, mr = 10, mt = 24, mb = 34, iw = W - ml - mr, ih = H - mt - mb;
     var tot = C.map(function (c) { return cats.reduce(function (s, k) { return s + (c.cat[k] || 0); }, 0); });
-    var projs = C.map(function (c, i) { return c.emCurso ? tot[i] * c.fator : tot[i]; });
+    var projs = C.map(function (c, i) { return c.emCurso ? cats.reduce(function (s, k) { return s + (c.projCat[k] || 0); }, 0) : tot[i]; });
     var mx = niceMax(Math.max.apply(null, projs.concat([lim * 1.05, 1])));
     var n = C.length, bw = iw / n, w = Math.min(150, bw * .5);
     var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gasto por ciclo">';
     for (var i = 0; i <= 4; i++) { var y = mt + ih - ih * i / 4; g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y + '" y2="' + y + '" stroke="var(--grid)"/><text x="' + (ml - 6) + '" y="' + (y + 3.5) + '" text-anchor="end">' + semS(mx * i / 4) + '</text>'; }
     C.forEach(function (c, i) {
       var x = ml + i * bw + (bw - w) / 2, y = mt + ih;
-      if (c.emCurso && projs[i] > tot[i]) {
+      if (c.emCurso && projs[i] - tot[i] > mx * 0.04) {
         var hp = ih * projs[i] / mx;
         g += '<rect x="' + x + '" y="' + (mt + ih - hp) + '" width="' + w + '" height="' + hp + '" fill="none" stroke="var(--tx3)" stroke-dasharray="4 3" rx="4"/>';
         g += '<text x="' + (x + w / 2) + '" y="' + (mt + ih - hp - 6) + '" text-anchor="middle" style="font-weight:600;fill:var(--tx2)">proj. ' + semS(projs[i]) + '</text>';
@@ -1595,7 +1728,7 @@ function motorRelatorio(D) {
   }
   function kpi(l, v, s) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
   function linhaI(a, b, c) { return '<tr><td class="t"><b>' + a + '</b></td><td>' + b + '</td><td class="t note">' + c + '</td></tr>'; }
-  function topSubs(C, nEq) {
+  function topSubs(C, nEq, RF) {
     var m = {}, comumT = 0, ult = C[C.length - 1], ant = C[C.length - 2];
     C.forEach(function (c) {
       c.l.forEach(function (l) {
@@ -1605,7 +1738,7 @@ function motorRelatorio(D) {
         if (c === ult) m[k].ult += val(l); if (c === ant) m[k].ant += val(l);
       });
     });
-    return Object.keys(m).map(function (k) { var s = m[k]; s.porCiclo = s.tot / (nEq || C.length || 1); s.share = comumT ? s.tot / comumT : 0; return s; }).sort(function (a, b) { return b.tot - a.tot; });
+    return Object.keys(m).map(function (k) { var s = m[k]; s.porCiclo = RF ? s.tot + ((RF.porChave[k] || {}).esperV || 0) : s.tot / (nEq || C.length || 1); s.share = comumT ? s.tot / comumT : 0; return s; }).sort(function (a, b) { return b.tot - a.tot; });
   }
 
   function render() {
@@ -1620,13 +1753,14 @@ function motorRelatorio(D) {
     fech.forEach(function (c) { c.naMedia = c.peso >= MIN_PESO; });
     var curtos = fech.filter(function (c) { return !c.naMedia; });
     var F = fech.filter(function (c) { return c.naMedia; }), usaAtual = !F.length;
-    if (usaAtual) { atual.peso = Math.max(1, atual.decorridos) / atual.dias; atual.naMedia = true; F = [atual]; }
+    if (usaAtual) { atual.peso = 1; atual.naMedia = true; F = [atual]; }
+    var R = atual.R, restam = atual.dias - atual.decorridos;
     var nC = F.length || 1, nEq = F.reduce(function (s, c) { return s + c.peso; }, 0) || 1;
-    var RP = usaAtual ? 'no ritmo do ciclo atual (' + esc(atual.rot) + ', dia ' + atual.decorridos + ' de ' + atual.dias + ')' : rotPeriodo(F.length);
+    var RP = usaAtual ? 'ciclo atual (' + esc(atual.rot) + ', dia ' + atual.decorridos + ' de ' + atual.dias + ')' : rotPeriodo(F.length);
     var notaCurtos = curtos.length ? 'Ciclos cortados com menos da metade dos dias (' + curtos.map(function (c) { return esc(c.rot); }).join(', ') + ') aparecem só como referência e não entram nas médias. ' : '';
-    var notaBase = usaAtual ? 'Não há ciclo fechado no período escolhido: médias e "onde atacar" são a projeção do ciclo atual, com só ' + atual.decorridos + ' dias de dados. Para comparar com ciclos inteiros, escolha "3 ciclos". ' : '';
-    function mediaCat(k) { return F.reduce(function (s, c) { return s + (c.cat[k] || 0); }, 0) / nEq; }
-    var mediaComum = F.reduce(function (s, c) { return s + c.comum; }, 0) / nEq;
+    var notaBase = usaAtual ? 'Não há ciclo fechado no período escolhido: a base é o ciclo atual (o que já gastou + o que ainda deve entrar pela sua frequência). Para comparar com ciclos inteiros, escolha "3 ciclos". ' : '';
+    function mediaCat(k) { return usaAtual ? (atual.projCat[k] || 0) : F.reduce(function (s, c) { return s + (c.cat[k] || 0); }, 0) / nEq; }
+    var mediaComum = usaAtual ? atual.proj : F.reduce(function (s, c) { return s + c.comum; }, 0) / nEq;
     var acima = F.filter(function (c) { return lim > 0 && c.comum / c.peso > lim; }).length;
     var cats = COMUNS.concat(Object.keys(C.reduce(function (m, c) { Object.keys(c.cat).forEach(function (k) { if (COMUNS.indexOf(k) < 0 && c.cat[k]) m[k] = 1; }); return m; }, {})));
 
@@ -1648,16 +1782,28 @@ function motorRelatorio(D) {
     }).filter(function (a) { return a.med > 0; });
     var ruins = alvos.filter(function (a) { return a.orc > 0 && a.exc > 0; }).sort(function (a, b) { return b.exc - a.exc; });
     var semOrc = alvos.filter(function (a) { return !a.orc; });
-    var subsTop = topSubs(F, nEq);
+    var subsTop = topSubs(F, nEq, usaAtual ? R : null);
     html += '<div class="grid" style="margin-top:12px">';
     if (ruins.length) {
       html += '<section class="card alvo"><div class="ch"><h2>Onde atacar primeiro</h2><span class="note">' + (usaAtual ? 'projeção' : 'média por ciclo') + ', ' + RP + ' × orçamento da categoria</span></div><ol>' +
         ruins.map(function (a) {
           var sub = subsTop.filter(function (s) { return s.cat === a.k; }).slice(0, 2);
-          return '<li><b>' + esc(nomeCat(a.k)) + '</b>: ' + (usaAtual ? 'no ritmo atual vai gastar <b class="v">' + m0(a.med) + '</b> no ciclo' : 'gasta em média <b class="v">' + m0(a.med) + '</b> por ciclo') + ', orçamento <b class="v">' + m0(a.orc) + '</b> → <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>.' + (usaAtual ? '' : ' Estourou em ' + a.estouros + ' de ' + nC + ' ciclos.') +
-            (sub.length ? ' O peso maior está em ' + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + '/ciclo)'; }).join(' e ') + '.' : '') + '</li>';
+          if (usaAtual) {
+            var ja = atual.cat[a.k] || 0, vem = R.cat[a.k] || 0;
+            return '<li><b>' + esc(nomeCat(a.k)) + '</b>: já gastou <b class="v">' + m0(ja) + '</b> de <b class="v">' + m0(a.orc) + '</b>' +
+              (restam > 0 ? (vem >= 1 ? '; pela sua frequência ainda devem entrar <b class="v">' + m0(vem) + '</b>' : '; pela sua frequência não deve entrar mais nada') + ' → fecha em <b class="v">' + m0(a.med) + '</b>' : '') +
+              ', <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>.' +
+              (sub.length ? ' O peso maior está em ' + sub.map(function (s) {
+                var f = R.porChave[s.cat + '|' + s.nome.toLowerCase()];
+                return '<b>' + esc(s.nome) + '</b> (' + m0(s.tot) + ' em ' + s.n + (s.n === 1 ? ' ida' : ' idas') + (f && f.nH ? '; o normal é ' + vezes(f.freq) + ' por ciclo' : '') + ')';
+              }).join(' e ') + '.' : '') + '</li>';
+          }
+          return '<li><b>' + esc(nomeCat(a.k)) + '</b>: gasta em média <b class="v">' + m0(a.med) + '</b> por ciclo, orçamento <b class="v">' + m0(a.orc) + '</b> → <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>. Estourou em ' + a.estouros + ' de ' + nC + ' ciclos.' +
+            (sub.length ? ' O peso maior está em ' + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + '/ciclo, ' + vezes(s.n / nEq) + ' por ciclo de ' + m0(s.tot / s.n) + ')'; }).join(' e ') + '.' : '') + '</li>';
         }).join('') +
-        '</ol>' + (lim > 0 && mediaComum > lim ? '<p class="note" style="margin:8px 0 0">Para voltar ao limite, o gasto precisa cair <b class="bad">' + m0(mediaComum - lim) + ' por ciclo</b> (cerca de ' + m0((mediaComum - lim) / (atual.dias / 7)) + ' por semana).</p>' : '') + '</section>';
+        '</ol>' + (lim > 0 && mediaComum > lim ? '<p class="note" style="margin:8px 0 0">' + (usaAtual ?
+          (restam > 0 ? 'Faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '. ' + (atual.comum >= lim ? 'O limite de ' + m0(lim) + ' já foi passado em <b class="bad">' + m0(atual.comum - lim) + '</b>: o que dá para fazer agora é não somar mais, só o essencial até ' + fD(atual.fim) + '.' : 'Sobram <b>' + m0(lim - atual.comum) + '</b> do limite, mas pela sua frequência devem entrar ' + m0(R.tot) + '. Corte ou adie ' + m0(mediaComum - lim) + ' disso.') : 'O ciclo fecha hoje.') + ' Para o próximo ciclo, veja no Ritmo onde você foi mais vezes que o normal.'
+          : 'Para voltar ao limite, o gasto precisa cair <b class="bad">' + m0(mediaComum - lim) + ' por ciclo</b> (cerca de ' + m0((mediaComum - lim) / (atual.dias / 7)) + ' por semana).') + '</p>' : '') + '</section>';
     } else {
       html += '<section class="card ok-msg"><div class="ch"><h2>Onde atacar primeiro</h2></div><p style="margin:0">' + (alvos.some(function (a) { return a.orc > 0; }) ? 'Nenhuma categoria com orçamento está acima na média, ' + RP + '.' : 'Nenhuma categoria tem orçamento definido no app, então não há com o que comparar.') +
         (lim > 0 && mediaComum > lim ? ' Mas o <b>total</b> está ' + m0(mediaComum - lim) + ' acima do limite por ciclo: o limite é menor que a soma dos orçamentos, ou há gasto em categoria sem orçamento.' : '') + '</p></section>';
@@ -1667,11 +1813,11 @@ function motorRelatorio(D) {
       '<div class="legend">' + cats.filter(function (k) { return C.some(function (c) { return c.cat[k]; }); }).map(function (k) { return '<span><i style="background:' + corCat(k) + '"></i>' + esc(nomeCat(k)) + '</span>'; }).join('') + (lim > 0 ? '<span><i style="background:none;border-top:2px dashed var(--bad);border-radius:0;height:0;vertical-align:3px"></i>Limite ' + m0(lim) + '</span>' : '') + '<span><i style="background:none;border:1px dashed var(--tx3)"></i>Projeção do ciclo atual</span></div>' +
       barrasCiclo(C, lim, cats) + '</section>';
 
-    html += '<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção</span></div><div class="tw"><table><thead><tr><th>Categoria</th>' +
-      C.map(function (c) { return '<th>' + esc(c.rot) + (c.emCurso ? ' *' : c.parcial ? ' (parcial)' : '') + '</th>'; }).join('') + (temAtual ? '<th>Projeção atual</th>' : '') + '<th>' + (usaAtual ? 'Base (projeção)' : 'Média por ciclo') + '</th><th>Orçamento</th><th>' + (usaAtual ? 'Base' : 'Média') + ' × orç.</th></tr></thead><tbody>' +
+    html += '<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção pela sua frequência</span></div><div class="tw"><table><thead><tr><th>Categoria</th>' +
+      C.map(function (c) { return '<th>' + esc(c.rot) + (c.emCurso ? ' *' : c.parcial ? ' (parcial)' : '') + '</th>'; }).join('') + (temAtual ? '<th>Projeção do atual</th>' : '') + '<th>' + (usaAtual ? 'Base (projeção)' : 'Média por ciclo') + '</th><th>Orçamento</th><th>' + (usaAtual ? 'Base' : 'Média') + ' × orç.</th></tr></thead><tbody>' +
       cats.map(function (k) {
         var orc = ORC[k] || 0, vals = C.map(function (c) { return c.cat[k] || 0; });
-        var proj = (atual.cat[k] || 0) * atual.fator, med = mediaCat(k);
+        var proj = atual.projCat[k] || 0, med = mediaCat(k);
         if (!vals.some(Boolean) && !orc) return '';
         var r = orc ? med / orc : NaN;
         return '<tr><td><span class="sw" style="background:' + corCat(k) + '"></span>' + esc(nomeCat(k)) + '</td>' +
@@ -1682,11 +1828,12 @@ function motorRelatorio(D) {
       (temAtual ? '<td' + (lim && atual.proj > lim ? ' class="bad"' : '') + '>' + m0(atual.proj) + '</td>' : '') + '<td>' + m0(mediaComum) + '</td><td>' + (lim ? m0(lim) : '—') + '</td><td class="' + (lim && mediaComum > lim ? 'bad' : 'good') + '">' + (lim ? pct(mediaComum / lim) : '—') + '</td></tr>' +
       '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (temAtual ? '* ciclo em curso, até ' + fD(h) + '. ' : '') + notaBase + notaCurtos + (F.some(function (c) { return c.parcial && !c.emCurso; }) ? 'Ciclos cortados nas datas escolhidas contam proporcionalmente na média. ' : '') + 'Vermelho = acima do orçamento.' + (semOrc.length ? ' Sem orçamento no app: ' + semOrc.map(function (a) { return esc(nomeCat(a.k)); }).join(', ') + '.' : '') + '</p></section>';
 
-    var restam = atual.dias - atual.decorridos, livre = lim - atual.comum, idealHoje = lim * atual.decorridos / atual.dias;
+    var livre = lim - atual.comum, idealHoje = lim * atual.decorridos / atual.dias;
     html += '<section class="card"><div class="ch"><h2>Ritmo do ciclo atual</h2><span class="note">' + esc(atual.rot) + ' · dia ' + atual.decorridos + ' de ' + atual.dias + '</span></div>' +
       (lim > 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>; no ritmo do limite seriam <b>' + m0(idealHoje) + '</b> ' +
         (atual.comum > idealHoje ? '→ <b class="bad">' + m0(atual.comum - idealHoje) + ' adiantado</b>.' : '→ <b class="good">' + m0(idealHoje - atual.comum) + ' de folga</b>.') +
         (restam > 0 ? ' Para fechar dentro do limite, sobram <b class="' + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre)) + '</b> para ' + restam + ' dias: <b>' + m0(Math.max(0, livre) / restam) + ' por dia</b> (até agora a média foi ' + m0(atual.comum / Math.max(1, atual.decorridos)) + ' por dia).' : '') + '</p>' : '') +
+      blocoFrequencia(atual, lim) +
       acumulado(fech.filter(function (c) { return !c.parcial; }).slice(-3).concat([atual]), lim) + '</section>';
 
     html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
@@ -1694,7 +1841,7 @@ function motorRelatorio(D) {
         var vr = s.ant > 0 ? (s.ult - s.ant) / s.ant : NaN;
         return '<tr><td class="t"><b>' + esc(s.nome) + '</b></td><td><span class="sw" style="background:' + corCat(s.cat) + '"></span>' + esc(nomeCat(s.cat)) + '</td><td>' + s.n + '</td><td>' + m0(s.tot) + '</td><td>' + m0(s.porCiclo) + '</td><td>' + money(s.tot / s.n) + '</td><td>' + pct(s.share) + '</td><td class="' + (vr > .1 ? 'bad' : vr < -.1 ? 'good' : '') + '">' + (isFinite(vr) ? (vr > 0 ? '▲ ' : '▼ ') + pct(Math.abs(vr)) : '—') + '</td></tr>';
       }).join('') +
-      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (usaAtual ? 'Total = ciclo atual até hoje; "por ciclo" = projeção até o fim do ciclo. ' : 'Total = soma dos ciclos usados na média; "por ciclo" = total ÷ ciclos. ') + '"Último × anterior" compara os dois últimos ciclos fechados' + (F.length < 2 || usaAtual ? ' (precisa de 2 ciclos fechados)' : '') + '.</p></section>';
+      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (usaAtual ? 'Total = ciclo atual até hoje; "por ciclo" = total + o que ainda deve entrar pela sua frequência. ' : 'Total = soma dos ciclos usados na média; "por ciclo" = total ÷ ciclos. ') + '"Último × anterior" compara os dois últimos ciclos fechados' + (F.length < 2 || usaAtual ? ' (precisa de 2 ciclos fechados)' : '') + '.</p></section>';
 
     var comuns = []; F.forEach(function (c) { c.l.forEach(function (l) { comuns.push(l); }); });
     var totC = comuns.reduce(function (s, l) { return s + val(l); }, 0) || 1;
@@ -1704,8 +1851,8 @@ function motorRelatorio(D) {
     var diasTot = F.reduce(function (s, c) { return s + c.decorridos; }, 0) || 1, nDias = Object.keys(diasCom).length;
     var fds = comuns.filter(function (l) { var w = dt(l.data).getDay(); return w === 0 || w === 6; }).reduce(function (s, l) { return s + val(l); }, 0);
     html += '<section class="card"><div class="ch"><h2>Índices de comportamento</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>' +
-      linhaI('Gastos pequenos (abaixo de ' + D.simb + ' ' + PEQUENO + ')', peq.length + ' compras · ' + m0(peqT) + ' (' + pct(peqT / totC) + ')', 'O "vazamento": cada um parece nada, somados viram ' + m0(peqT / nEq) + ' por ciclo.') +
-      (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo · média por compra ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
+      linhaI('Gastos pequenos (abaixo de ' + D.simb + ' ' + PEQUENO + ')', peq.length + ' compras · ' + m0(peqT) + ' (' + pct(peqT / totC) + ')', 'O "vazamento": cada um parece nada, somados ' + (usaAtual ? 'já são ' + m0(peqT) + ' neste ciclo.' : 'viram ' + m0(peqT / nEq) + ' por ciclo.')) +
+      (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (usaAtual ? merc.length + ' neste ciclo até hoje' + (R && R.nHist ? ' (normal: ' + vezes(R.lugares.filter(function (s) { return s.cat === catMerc.id; }).reduce(function (t, s) { return t + s.freq; }, 0)).replace('×', '') + ' por ciclo)' : '') : (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo') + ' · média por compra ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
       linhaI('Dias com gasto', nDias + ' de ' + diasTot + ' dias (' + pct(nDias / diasTot) + ')', 'Dias "sem gasto" são o jeito mais simples de cortar sem sentir.') +
       linhaI('Gasto médio por dia', money(totC / diasTot), lim > 0 ? 'O limite permite ' + money(lim / atual.dias) + ' por dia.' : '') +
       linhaI('Fim de semana', m0(fds) + ' (' + pct(fds / totC) + ')', 'Sáb e dom são 29% dos dias; acima disso, o fim de semana pesa.') +
@@ -1720,7 +1867,7 @@ function motorRelatorio(D) {
     html += '<section class="card c6"><div class="ch"><h2>10 maiores gastos</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Data</th><th>Onde</th><th>Valor</th></tr></thead><tbody>' +
       comuns.slice().sort(function (a, b) { return val(b) - val(a); }).slice(0, 10).map(function (l) { return '<tr><td>' + fD(l.data) + '</td><td class="t"><span class="sw" style="background:' + corCat(l.cat) + '"></span>' + esc(l.desc || subDe(l)) + '</td><td>' + money(val(l)) + '</td></tr>'; }).join('') +
       '</tbody></table></div></section>';
-    html += '</div><p class="foot">Total = soma de todas as categorias do app (sem parcelados). Ciclos = o Período do app (' + fD(d.periodo.inicio) + ' → ' + fD(d.periodo.fim) + '), repetido mês a mês. Projeção do ciclo atual = gasto até hoje ÷ dias decorridos × dias do ciclo. Médias, índices e "onde atacar" usam os ciclos fechados do período escolhido (' + RP + '); ciclo cortado com menos da metade dos dias fica fora; sem nenhum ciclo fechado, a base é a projeção do ciclo atual. O Ritmo mostra sempre o ciclo de hoje.</p>';
+    html += '</div><p class="foot">Total = soma de todas as categorias do app (sem parcelados). Ciclos = o Período do app (' + fD(d.periodo.inicio) + ' → ' + fD(d.periodo.fim) + '), repetido mês a mês. Projeção do ciclo atual = o que já gastou + o que ainda deve entrar pela sua frequência: para cada lugar, quantas vezes você vai por ciclo e quanto gasta por ida (últimos ciclos fechados, até 6); nos dias que faltam conta só as idas que ainda cabem no seu normal (se já foi as vezes de sempre, não conta mais). Compra sem histórico não é repetida. Médias, índices e "onde atacar" usam os ciclos fechados do período escolhido (' + RP + '); ciclo cortado com menos da metade dos dias fica fora; sem nenhum ciclo fechado, a base é o ciclo atual com essa projeção. O Ritmo mostra sempre o ciclo de hoje.</p>';
     el.innerHTML = html;
   }
 
