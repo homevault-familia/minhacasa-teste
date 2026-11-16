@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.1';
+var VERSAO = '2.23.2';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1331,8 +1331,7 @@ function analisarSemana(hojeRef, parcial) {
   var acabou = cicAtual && lim > 0 && livre <= 0;
   function teto(nome, normal, nVezes) {
     var vz = nVezes ? 'no máximo <b>' + nVezes + (nVezes === 1 ? ' vez' : ' vezes') + '</b>, com ' : '';
-    if (acabou) return 'O limite do ciclo já acabou: até ' + semFD(cic.fim) + ', <b>nada</b> em ' + esc(nome) + '.' +
-      (novoCic ? ' No ciclo novo, a partir de ' + semFD(novoCic) + ', ' + vz + 'teto de <b>' + m0(normal) + ' por semana</b>.' : '');
+    if (acabou) return 'O limite do ciclo já acabou: até ' + semFD(cic.fim) + ', <b>nada</b> em ' + esc(nome) + '.';
     var t = cicAtual && lim > 0 ? Math.min(normal, livre) : normal;
     return 'Esta semana, ' + vz + 'teto de <b>' + m0(t) + '</b>' + (t < normal ? ' (é tudo o que sobra do limite até ' + semFD(cic.fim) + ', para todas as compras)' : '') + '.';
   }
