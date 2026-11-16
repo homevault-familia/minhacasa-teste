@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.28.2';
+var VERSAO = '2.28.3';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -535,7 +535,7 @@ function renderizarBarras(lista, p) {
 
 // Selo de devolução / crédito na loja ao lado da descrição (16/11/2026)
 function seloDev(l, devMap) {
-  if (l.dev) return '<span class="lanc-dev">' + (l.lj ? '🎟️ crédito na loja' : '↩ devolução') + '</span>';
+  if (l.dev) return ''; // a seta ↩ já vai na etiqueta do valor, que nunca é cortada (16/11/2026)
   var h = '';
   var dv = (devMap || devolvidoPorCompra())[l.id];
   if (dv) h += '<span class="lanc-dev">' + (dv >= l.valor - 0.005 ? 'devolvido' : 'devolvido ' + formatar(dv)) + '</span>';
@@ -547,7 +547,7 @@ function linhaLanc(l, pagasMap, comData, classe, devMap) {
     '<div class="lanc-ponto" style="background:' + COR(l.cat) + ';flex-shrink:0"></div>' +
     '<div class="lanc-info"><div class="lanc-desc">' + esc(descLanc(l)) + parcelaBadgeHtml(l, pagasMap) + seloDev(l, devMap) + '</div>' +
     '<div class="lanc-meta">' + metaLanc(l, comData) + '</div></div>' +
-    (l.dev ? '<div class="lanc-valor lanc-valor-dev">' : '<div class="lanc-valor" style="color:' + COR(l.cat) + '">') + formatar(l.valor) + '</div>' +
+    (l.dev ? '<div class="lanc-valor lanc-valor-dev"><span class="lvd-seta">\u21A9\uFE0E</span>' : '<div class="lanc-valor" style="color:' + COR(l.cat) + '">') + formatar(l.valor) + '</div>' +
     '<button class="lanc-edit" data-editar="' + l.id + '" aria-label="Editar lançamento">' + ICO('edit') + '</button>' +
     '<button class="lanc-del" data-excluir="' + l.id + '" aria-label="Excluir lançamento">' + ICO('trash') + '</button></div>';
 }
