@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.6';
+var VERSAO = '2.23.7';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1088,9 +1088,11 @@ function cancelarPlano(gid) {
 //   • frequência − idas que já fez neste período        (o que falta para o normal).
 // Ex.: Costco 2×/período e já foi 2× → não conta mais nenhuma ida.
 // Compra sem histórico não é repetida. Sem histórico nenhum, usa o ritmo por dia.
+// nome comparável: sem acento, emoji, espaço ou apóstrofo (McDonald's = McDonalds = Mc Donalds) (16/11/2026)
+function normNome(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function lugarDe(l) {
   var nome = nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat);
-  return { chave: l.cat + '|' + nome.toLowerCase(), nome: nome };
+  return { chave: l.cat + '|' + (normNome(nome) || nome.toLowerCase()), nome: nome };
 }
 function periodosAnteriores(p, qtd) {
   var N = diasEntre(p.inicio, p.fim) + 1, mensal = N >= 28 && N <= 31, out = [];
@@ -1116,8 +1118,9 @@ function projecaoFreq(p) {
   });
   var m = {}, gasto = 0;
   function pega(l) { var g = lugarDe(l); if (!m[g.chave]) m[g.chave] = { chave: g.chave, nome: g.nome, cat: l.cat, nH: 0, vH: 0, n: 0, v: 0 }; return m[g.chave]; }
-  H.forEach(function (h) { todos.forEach(function (l) { if (l.data < h.inicio || l.data > h.fim) return; var s = pega(l); s.nH++; s.vH += l.valor; }); });
-  todos.forEach(function (l) { if (l.data < p.inicio || l.data > ate) return; var s = pega(l); s.n++; s.v += l.valor; gasto += l.valor; });
+  // idas = DIAS em que comprou ali (várias peças no mesmo dia = 1 ida)
+  H.forEach(function (h) { todos.forEach(function (l) { if (l.data < h.inicio || l.data > h.fim) return; var s = pega(l); s.vH += l.valor; s.dH = s.dH || {}; if (!s.dH[l.data]) { s.dH[l.data] = 1; s.nH++; } }); });
+  todos.forEach(function (l) { if (l.data < p.inicio || l.data > ate) return; var s = pega(l); s.v += l.valor; gasto += l.valor; s.dA = s.dA || {}; if (!s.dA[l.data]) { s.dA[l.data] = 1; s.n++; } });
   var R = { gasto: gasto, aindaVem: 0, cat: {}, lugares: [], nHist: H.length, linear: !H.length, rest: rest, passados: passados, N: N };
   Object.keys(m).forEach(function (k) {
     var s = m[k];
@@ -1320,9 +1323,15 @@ function analisarSemana(hojeRef, parcial) {
   var tot = Sx.reduce(function (s, l) { return s + l.valor; }, 0);
   var normalTot = B.reduce(function (s, l) { return s + l.valor; }, 0) / semBase * frac;
   var m = {};
-  function k(l) { return l.cat + '|' + semSub(l).toLowerCase(); }
-  Sx.forEach(function (l) { var x = m[k(l)] || (m[k(l)] = { nome: semSub(l), cat: l.cat, sem: 0, n: 0, base: 0, nb: 0 }); x.sem += l.valor; x.n++; });
-  B.forEach(function (l) { var x = m[k(l)] || (m[k(l)] = { nome: semSub(l), cat: l.cat, sem: 0, n: 0, base: 0, nb: 0 }); x.base += l.valor; x.nb++; });
+  // mesmo lugar com nomes escritos diferente vira um só; "compras" = DIAS em que comprou ali (16/11/2026)
+  function k(l) { return l.cat + '|' + (normNome(semSub(l)) || semSub(l).toLowerCase()); }
+  function pegaS(l) {
+    var q = k(l), x = m[q] || (m[q] = { nome: semSub(l), cat: l.cat, sem: 0, n: 0, base: 0, nb: 0, dS: {}, dB: {}, gr: {} });
+    var g = semSub(l); x.gr[g] = (x.gr[g] || 0) + 1; if (x.gr[g] > (x.gr[x.nome] || 0)) x.nome = g; // mostra a grafia mais usada
+    return x;
+  }
+  Sx.forEach(function (l) { var x = pegaS(l); x.sem += l.valor; if (!x.dS[l.data]) { x.dS[l.data] = 1; x.n++; } });
+  B.forEach(function (l) { var x = pegaS(l); x.base += l.valor; if (!x.dB[l.data]) { x.dB[l.data] = 1; x.nb++; } });
   var lugares = Object.keys(m).map(function (q) { var x = m[q]; x.normal = x.base / semBase * frac; x.nNormal = x.nb / semBase * frac; x.exc = x.sem - x.normal; return x; });
   // compra "de vez em quando" (menos de 1 por semana): uma compra só, no valor de costume, não é vazamento (16/11/2026)
   lugares.forEach(function (x) { x.raro = x.nb > 0 && x.nb / semBase < 0.75; x.ticket = x.nb ? x.base / x.nb : 0; });
@@ -1648,7 +1657,8 @@ function motorRelatorio(D) {
      Nos dias que faltam conta o MENOR entre frequência × dias que faltam ÷ dias do
      ciclo e frequência − idas já feitas no ciclo. Compra sem histórico não se repete.
      Sem ciclo fechado no app, cai no ritmo por dia. */
-  function chaveLugar(l) { return l.cat + '|' + subDe(l).toLowerCase(); }
+  function normNome(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function chaveLugar(l) { return l.cat + '|' + (normNome(subDe(l)) || subDe(l).toLowerCase()); }
   function historico() {
     var p = d.periodo, h = hojeIso(), k = idxAtual(p, h), L = d.lancamentos;
     var prim = L.reduce(function (m, l) { return l.data && l.data < m ? l.data : m; }, h), H = [];
@@ -1664,8 +1674,8 @@ function motorRelatorio(D) {
     var rest = Math.max(0, at.dias - at.decorridos), H = historico();
     var R = { cat: {}, tot: 0, lugares: [], porChave: {}, nHist: H.length, rest: rest, linear: !H.length, ciclo: at }, m = {};
     function pega(l) { var k = chaveLugar(l); if (!m[k]) m[k] = { chave: k, nome: subDe(l), cat: l.cat, nH: 0, vH: 0, n: 0, v: 0 }; return m[k]; }
-    H.forEach(function (c) { L.forEach(function (l) { if (l.data < c.inicio || l.data > c.fim) return; var s = pega(l); s.nH++; s.vH += val(l); }); });
-    L.forEach(function (l) { if (l.data < at.inicio || l.data > h) return; var s = pega(l); s.n++; s.v += val(l); });
+    H.forEach(function (c) { L.forEach(function (l) { if (l.data < c.inicio || l.data > c.fim) return; var s = pega(l); s.vH += val(l); s.dH = s.dH || {}; if (!s.dH[l.data]) { s.dH[l.data] = 1; s.nH++; } }); });
+    L.forEach(function (l) { if (l.data < at.inicio || l.data > h) return; var s = pega(l); s.v += val(l); s.dA = s.dA || {}; if (!s.dA[l.data]) { s.dA[l.data] = 1; s.n++; } });
     Object.keys(m).forEach(function (k) {
       var s = m[k];
       if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = at.decorridos ? s.v * rest / at.decorridos : 0; s.esperN = s.ticket ? s.esperV / s.ticket : 0; }
@@ -1783,9 +1793,9 @@ function motorRelatorio(D) {
     var m = {}, comumT = 0, ult = C[C.length - 1], ant = C[C.length - 2];
     C.forEach(function (c) {
       c.l.forEach(function (l) {
-        var nome = subDe(l), k = l.cat + '|' + nome.toLowerCase(); comumT += val(l);
-        if (!m[k]) m[k] = { nome: nome, cat: l.cat, tot: 0, n: 0, ult: 0, ant: 0 };
-        m[k].tot += val(l); m[k].n++;
+        var nome = subDe(l), k = l.cat + '|' + (normNome(nome) || nome.toLowerCase()); comumT += val(l);
+        if (!m[k]) m[k] = { nome: nome, cat: l.cat, tot: 0, n: 0, ult: 0, ant: 0, d: {} };
+        m[k].tot += val(l); if (!m[k].d[l.data]) { m[k].d[l.data] = 1; m[k].n++; } // compras = dias com compra ali
         if (c === ult) m[k].ult += val(l); if (c === ant) m[k].ant += val(l);
       });
     });
@@ -1846,7 +1856,7 @@ function motorRelatorio(D) {
               (restam > 0 ? (vem >= 1 ? '; pela sua frequência ainda devem entrar <b class="v">' + m0(vem) + '</b>' : '; pela sua frequência não deve entrar mais nada') + ' → fecha em <b class="v">' + m0(a.med) + '</b>' : '') +
               ', <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>.' +
               (sub.length ? ' O peso maior está em ' + sub.map(function (s) {
-                var f = R.porChave[s.cat + '|' + s.nome.toLowerCase()];
+                var f = R.porChave[s.cat + '|' + (normNome(s.nome) || s.nome.toLowerCase())];
                 return '<b>' + esc(s.nome) + '</b> (' + m0(s.tot) + ' em ' + s.n + (s.n === 1 ? ' ida' : ' idas') + (f && f.nH ? '; você costuma ir ' + vezes(f.freq) + ' por ciclo' : '') + ')';
               }).join(' e ') + '.' : '') + '</li>';
           }
