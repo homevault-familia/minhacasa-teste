@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.28.0';
+var VERSAO = '2.28.1';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2735,7 +2735,7 @@ function aplicarPagamento() {
 }
 function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
 // Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
-var ATALHO_ICLOUD = { teste: '', producao: 'https://www.icloud.com/shortcuts/22eb3031468b449784b8740226cc7088' }; // teste: sem link próprio por enquanto (o atalho oficial abre o app oficial)
+var ATALHO_ICLOUD = { teste: '', producao: 'https://www.icloud.com/shortcuts/86d83d8583ee4be29e97973ceb3ca3a3' }; // teste: sem link próprio por enquanto (o atalho oficial abre o app oficial)
 function linkAtalho() { return ATALHO_ICLOUD[window.MINHACASA_AMBIENTE === 'teste' ? 'teste' : 'producao'] || ''; }
 var FRASE_IA = {
   pt: 'Quando eu pagar com qualquer cartão da Carteira, execute o atalho "MinhaCasa" imediatamente, sem perguntar.',
