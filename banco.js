@@ -281,8 +281,8 @@
     passo(function (b, a) { return cents(b.valor) === cents(a.valor) && b.data === a.data; }, 'ok');
     passo(function (b, a) { return cents(b.valor) === cents(a.valor) && Math.abs(dias(b.data, a.data)) <= (op.janela || 7); }, 'data');
     passo(function (b, a) { var df = Math.abs(cents(b.valor) - cents(a.valor)); return df > 0 && df <= 100 && df <= cents(b.valor) * 0.05 && Math.abs(dias(b.data, a.data)) <= 2; }, 'valor');
-    var ini = banco.reduce(function (m, x) { return !m || x.data < m ? x.data : m; }, null);
-    var fim = banco.reduce(function (m, x) { return !m || x.data > m ? x.data : m; }, null);
+    var ini = op.inicio || banco.reduce(function (m, x) { return !m || x.data < m ? x.data : m; }, null);
+    var fim = op.fim || banco.reduce(function (m, x) { return !m || x.data > m ? x.data : m; }, null);
     return {
       inicio: ini, fim: fim,
       linhas: B.map(function (b) { return { banco: b.x, app: b.par ? b.par.app : null, status: b.par ? b.par.status : 'falta' }; }),
@@ -290,5 +290,30 @@
     };
   }
 
-  raiz.MCBanco = { BANCOS: BANCOS, ler: ler, adivinhar: adivinhar, aplicar: aplicar, numero: numero, data: data, ordemDatas: ordemDatas, conferir: conferir, linhasCSV: linhasCSV, separador: separador };
+  // ── Devoluções (16/11/2026) ──
+  // Nome da loja numa descrição de extrato: primeira palavra que diz algo ("WINNERS #213 MONCTON NB" → WINNERS).
+  var VAZIAS = /^(ESTORNO|ESTORNADO|REFUND|RETURN|RETURNS|CREDIT|CREDITO|VOUCHER|DEVOLUCAO|DEVOL|REEMBOLSO|REMBOURSEMENT|REMB|COMPRA|COMPRAS|PURCHASE|POS|DEB|DEBITO|CARTAO|CARD|VISA|MASTERCARD|MC|ELO|PAG|PAGTO|SQ|SQU|TST|THE|LES|DE|DO|DA|DOS|DAS|E|EM|NO|NA|LOJA|LOJAS|INC|LTD|LTDA|SA|ME|EIRELI|CO|COM|WWW|HTTP|HTTPS)$/;
+  function palavras(t) {
+    return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(' ')
+      .filter(function (w) { return w.length >= 3 && !/^\d+$/.test(w) && !VAZIAS.test(w); });
+  }
+  function loja(t) { return palavras(t)[0] || ''; }
+  function mesmaLoja(a, b) {
+    var la = loja(a), lb = loja(b); if (!la || !lb) return false;
+    if (la === lb) return true;
+    var pa = palavras(a), pb = palavras(b);
+    return pb.indexOf(la) >= 0 || pa.indexOf(lb) >= 0 || (la.length >= 5 && lb.length >= 5 && (la.indexOf(lb) === 0 || lb.indexOf(la) === 0));
+  }
+  // Crédito que NÃO é devolução: pagamento da fatura, salário, transferência, juros, cashback…
+  var NAO_DEV = /PAYMENT|PAIEMENT|PAGAMENTO|PAGTO|PGTO|PAG FATURA|FATURA|THANK YOU|MERCI|TRANSFER|TRANSF|VIREMENT|E TRANSFER|INTERAC|\bTED\b|\bDOC\b|\bPIX\b|SALARIO|PAYROLL|PAIE|DEPOSIT|DEPOSITO|DEPOT|INTEREST|INTERET|JUROS|RENDIMENTO|CASHBACK|REWARD|RECOMPENSA|BONUS|RESGATE|APLICACAO|DIVIDEND|SAQUE/;
+  var E_DEV = /ESTORNO|ESTORNADO|REFUND|RETURN|REMBOURSEMENT|DEVOLUCAO|DEVOL|REEMBOLSO|CREDIT VOUCHER|CHARGEBACK|CANCELAMENTO|CANCELAD/;
+  // credito: {desc, data, valor}; outras: lista de {desc} (débitos do extrato e compras do app)
+  function pareceDevolucao(credito, outras) {
+    var d = String(credito.desc || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ');
+    if (E_DEV.test(d)) return true;
+    if (NAO_DEV.test(d)) return false;
+    return (outras || []).some(function (o) { return mesmaLoja(credito.desc, o.desc); });
+  }
+
+  raiz.MCBanco = { loja: loja, mesmaLoja: mesmaLoja, pareceDevolucao: pareceDevolucao, BANCOS: BANCOS, ler: ler, adivinhar: adivinhar, aplicar: aplicar, numero: numero, data: data, ordemDatas: ordemDatas, conferir: conferir, linhasCSV: linhasCSV, separador: separador };
 })(typeof window !== 'undefined' ? window : globalThis);

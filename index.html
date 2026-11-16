@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.24.0">
+<meta name="app-version" content="2.25.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -350,6 +350,23 @@ body {
 .lanc-valor { font-size: 14px; font-weight: 800; flex-shrink: 0; color: #111827; font-variant-numeric: tabular-nums; }
 .lanc-del { background: none; border: none; color: #d1d5db; font-size: 15px; cursor: pointer; padding: 4px; }
 .lanc-del:hover { color: #ef4444; }
+.lanc-dev { font-size: 10px; font-weight: 700; background: rgba(22,163,74,.1); color: #15803d; border: 1px solid rgba(22,163,74,.25); border-radius: 9px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.add-tipo { display: flex; gap: 6px; background: #eef0f4; padding: 4px; border-radius: 14px; margin-bottom: 12px; }
+.add-tipo button { flex: 1; border: 0; background: transparent; padding: 10px 6px; border-radius: 11px; font-size: 14px; font-weight: 700; color: #4b5563; cursor: pointer; }
+.add-tipo button.on { background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.add-opcoes { display: flex; flex-direction: column; gap: 8px; }
+.add-opcoes button { text-align: left; padding: 12px 14px; border-radius: 12px; border: 2px solid #e5e7eb; background: #f9fafb; font-size: 14px; font-weight: 700; color: #374151; cursor: pointer; }
+.add-opcoes button.on { border-color: #16a34a; background: #f0fdf4; color: #166534; }
+.add-dica { font-size: 12.5px; color: #6b7280; line-height: 1.45; margin-top: 8px; }
+.add-dica:empty, .valor-aviso:empty { display: none; }
+.valor-aviso { font-size: 12.5px; font-weight: 600; color: #b45309; margin-top: 8px; }
+.orig-lista { margin-top: 8px; max-height: 280px; overflow-y: auto; }
+.orig-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; margin-bottom: 6px; cursor: pointer; font: inherit; }
+.orig-item .oi-tx { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #111827; }
+.orig-item small { display: block; font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px; }
+.orig-item .oi-v { font-weight: 800; font-size: 14px; white-space: nowrap; }
+.orig-item.on { border: 2px solid #16a34a; background: #f0fdf4; }
+.orig-item .oi-x { font-size: 12px; font-weight: 700; color: #1d4ed8; white-space: nowrap; }
 .lanc-parcela { font-size: 10px; font-weight: 700; background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.25); border-radius: 9px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
 .vazio { text-align: center; padding: 28px 16px; color: #6b7280; font-size: 14px; line-height: 1.5; }
 /* ── PARCELAMENTO ── */
@@ -819,6 +836,7 @@ body {
 .cf-grupo { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#6b7280; margin:14px 0 6px; }
 .cf-item { background:#fff; border:1px solid #e5e7eb; border-left:4px solid #e5e7eb; border-radius:10px; padding:9px 10px; margin-bottom:6px; display:flex; gap:8px; align-items:center; }
 .cf-item.cf-falta { border-left-color:#ef4444; background:#fff; } .cf-item.cf-valor { border-left-color:#f59e0b; background:#fff; } .cf-item.cf-data { border-left-color:#3b82f6; background:#fff; } .cf-item.cf-ok { border-left-color:#22c55e; background:#fff; } .cf-item.cf-soapp { border-left-color:#a855f7; background:#fff; }
+.cf-item.cf-dev { border-left-color:#16a34a; background:#fff; } .cf-item.cf-dev .cf-v { color:#15803d; }
 .cf-item .cf-tx { flex:1; min-width:0; font-size:13px; line-height:1.35; color:#111827; }
 .cf-item .cf-tx small { display:block; color:#6b7280; font-size:12px; }
 .cf-item .cf-v { font-weight:800; font-size:14px; white-space:nowrap; }
@@ -1087,6 +1105,16 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     <button class="btn-voltar" data-ir="inicio">✕</button>
   </div>
   <div class="add-body">
+    <div class="add-tipo" id="add-tipo" role="group" aria-label="Tipo de lançamento">
+      <button type="button" data-addtipo="compra" class="on">🛒 Compra</button>
+      <button type="button" data-addtipo="dev">↩️ Devolução</button>
+    </div>
+    <div class="add-card" id="card-orig" style="display:none">
+      <div class="add-card-title"><span class="add-step-n">↩</span>De qual compra?<span class="opt-badge">opcional</span></div>
+      <div id="orig-escolhida"></div>
+      <div id="orig-busca-box"><input type="search" id="orig-busca" class="add-select" placeholder="Buscar pela loja, descrição ou valor" autocomplete="off">
+      <div id="orig-lista" class="orig-lista"></div></div>
+    </div>
     <div class="add-card">
       <div class="add-card-title"><span class="add-step-n">1</span>Categoria</div>
       <div class="cat-grid-pro" id="add-cats"></div>
@@ -1096,11 +1124,22 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
       <select id="sel-sub" class="add-select"></select>
     </div>
     <div class="add-card">
-      <div class="add-card-title"><span class="add-step-n">2</span>Valor Gasto</div>
+      <div class="add-card-title"><span class="add-step-n">2</span><span id="lbl-valor">Valor Gasto</span></div>
       <div class="valor-big-wrap"><span class="valor-big-pre" id="valor-pre">CA$</span><input type="text" id="inp-valor" class="valor-big-input" placeholder="0.00" inputmode="decimal" autocomplete="off"></div>
+      <div id="valor-aviso" class="valor-aviso"></div>
+    </div>
+    <div class="add-card" id="card-forma" style="display:none">
+      <div class="add-card-title"><span class="add-step-n">↩</span>Como o dinheiro voltou?</div>
+      <div class="add-opcoes"><button type="button" data-addlj="0" class="on">💳 No cartão ou na conta</button><button type="button" data-addlj="1">🎟️ Crédito na loja</button></div>
+      <div class="add-dica" id="forma-dica"></div>
+    </div>
+    <div class="add-card" id="card-credito" style="display:none">
+      <div class="add-card-title"><span class="add-step-n">🎟️</span>Pagou com crédito da loja?</div>
+      <select id="sel-credito" class="add-select"></select>
+      <div class="add-dica" id="credito-dica"></div>
     </div>
     <div class="add-card">
-      <div class="add-card-title"><span class="add-step-n">3</span>Data do Gasto</div>
+      <div class="add-card-title"><span class="add-step-n">3</span><span id="lbl-data">Data do Gasto</span></div>
       <div class="data-row-pro"><button class="btn-hoje" type="button" id="btn-hoje">Hoje</button><input type="date" id="inp-data"></div>
     </div>
     <div class="add-card" id="card-parc">
