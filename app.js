@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.26.1';
+var VERSAO = '2.27.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -211,6 +211,7 @@ function limparReg(id, r) {
   // compra paga com crédito da loja: cl = devolução usada, clv = centavos tirados do crédito.
   if (ID_OK.test(r.o)) o.o = r.o;
   if (r.lj) o.lj = 1;
+  if (r.ap) o.ap = 1; // veio de um pagamento com Apple Pay (atalho do iPhone)
   if (ID_OK.test(r.cl)) { o.cl = r.cl; o.clv = Math.max(0, Math.min(o.v, Math.round(+r.clv || 0))); }
   if (r.p && typeof r.p === 'object') o.p = { n: Math.max(1, Math.round(+r.p.n || 1)), total: Math.max(1, Math.round(+r.p.total || 1)), g: ID_OK.test(r.p.g) ? r.p.g : 'g', vt: Math.max(0, Math.round(+r.p.vt || 0)) };
   if (!o.dt || !(o.v > 0) || o.v > VALOR_MAX * 100) return null;
@@ -246,7 +247,7 @@ function lancamentos() {
       id: id, data: r.dt, valor: (r.t === 'dev' ? -1 : 1) * (r.v || 0) / 100, cat: r.p ? PARC : r.c, sub: r.s || null, desc: r.d || '',
       por: r.por, ts: r.ts || 0,
       dev: r.t === 'dev', orig: r.t === 'dev' && r.o ? r.o : null, lj: !!(r.t === 'dev' && r.lj),
-      cl: r.cl || null, clv: (r.clv || 0) / 100,
+      cl: r.cl || null, clv: (r.clv || 0) / 100, ap: !!r.ap,
       parcela: r.p ? { n: r.p.n, total: r.p.total, grupoId: r.p.g, valorTotal: (r.p.vt || 0) / 100 } : null
     };
   }).filter(Boolean);
@@ -889,6 +890,7 @@ function salvarLancamento() {
     delete r.t; delete r.o; delete r.lj; delete r.cl; delete r.clv;
     if (dev) { r.t = 'dev'; if (o) r.o = o.id; if (a.lj) r.lj = 1; }
     else if (u && u.usa > 0) { r.cl = u.c.id; r.clv = Math.round(u.usa * 100); }
+    if (a.viaPag && !a.editId && !dev) r.ap = 1;
     return r;
   };
   var ps = [];
@@ -917,7 +919,7 @@ function salvarLancamento() {
   Promise.all(ps).catch(function () { mostrarToast('⚠️', 'Erro ao salvar. Verifique a conexão.'); });
   var voltar = a.editId ? (S.voltarPara || 'inicio') : (a.voltarConf ? 'ajustes' : 'inicio');
   var reabrirConf = !!a.voltarConf;
-  S.add.editId = null; S.add.voltarConf = false; S.add.tipo = 'compra'; S.add.orig = null; S.add.lj = false; S.add.cl = null; S.add.parc = false;
+  S.add.editId = null; S.add.voltarConf = false; S.add.tipo = 'compra'; S.add.orig = null; S.add.lj = false; S.add.cl = null; S.add.parc = false; S.add.viaPag = false;
   irPara(voltar);
   if (reabrirConf) setTimeout(recalcularConferencia, 250);
 }
@@ -2191,7 +2193,7 @@ function renderAjustes() {
   renderAdmin();
   renderLimparTeste();
   $('aj-conferir').onclick = abrirConferencia;
-  $('aj-applepay').onclick = abrirApplePay;
+  $('aj-applepay').onclick = abrirApplePay; renderStatusApplePay();
   $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
 }
@@ -2703,6 +2705,8 @@ function aplicarPagamento() {
   $('inp-data').value = hoje();
   var sg = sugerirCatLoja(p.loja);
   S.add.cat = sg ? sg.cat : null; S.add.sub = sg ? sg.sub : null;
+  S.add.viaPag = !p.teste;
+  if (!p.teste) lsSet('mc_pag_ok', JSON.stringify({ t: Date.now(), valor: p.valor, loja: p.loja }));
   renderAdd(); renderCreditoAdd(); atualizarAvisoValor();
   // já existe um gasto igual hoje? (lançou à mão antes de o atalho abrir)
   var dup = p.valor > 0 && lancamentos().filter(function (l) { return !l.dev && l.data === hoje() && Math.abs(l.valor - p.valor) < 0.005; })[0];
@@ -2713,26 +2717,76 @@ function aplicarPagamento() {
   av.style.display = '';
 }
 function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
+// Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
+var ATALHO_ICLOUD = { teste: '', producao: '' };
+function linkAtalho() { return ATALHO_ICLOUD[window.MINHACASA_AMBIENTE === 'teste' ? 'teste' : 'producao'] || ''; }
+var FRASE_IA = {
+  pt: 'Quando eu pagar com qualquer cartão da Carteira, execute o atalho "MinhaCasa" imediatamente, sem perguntar.',
+  en: 'When I pay with any card in Wallet, run the shortcut "MinhaCasa" immediately, without asking.'
+};
+function eIPhone() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+// Funciona? 1) algum lançamento salvo a partir do Apple Pay (vale para a casa toda, em qualquer aparelho);
+// 2) um pagamento que chegou neste aparelho, mesmo sem salvar.
+function statusApplePay() {
+  var ult = lancamentos().filter(function (l) { return l.ap; }).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) || b.data.localeCompare(a.data); })[0];
+  var loc = null; try { loc = JSON.parse(lsGet('mc_pag_ok') || 'null'); } catch (e) {}
+  if (ult) return { ok: true, txt: 'Funcionando. Último lançamento vindo do Apple Pay: ' + formatarData(ult.data) + ' · ' + descLanc(ult) + ' · ' + formatar(ult.valor) + '.' };
+  if (loc && loc.t) return { ok: true, txt: 'Funcionando. Último pagamento recebido neste aparelho em ' + formatarData(isoDe(new Date(loc.t))) + (loc.loja ? ' · ' + loc.loja : '') + (loc.valor ? ' · ' + formatar(loc.valor) : '') + '.' };
+  return { ok: false, txt: 'Ainda não chegou nenhum pagamento. Depois de configurar, pague algo pequeno por aproximação para testar.' };
+}
+function renderStatusApplePay() {
+  var el = $('aj-applepay-st'); if (!el) return;
+  var st = statusApplePay();
+  el.className = 'ap-st ' + (st.ok ? 'ok' : 'nao'); el.textContent = (st.ok ? '✅ ' : '⏳ ') + st.txt;
+}
 function abrirApplePay() {
-  var url = linkPagamento();
+  var url = linkPagamento(), lk = linkAtalho(), st = statusApplePay(), ios = eIPhone();
+  var fraseBtns = '<div class="ap-frase">' + esc(FRASE_IA.pt) + '</div><button class="aj-btn aj-full" data-apfrase="pt">Copiar frase em português</button>' +
+    '<div class="ap-frase">' + esc(FRASE_IA.en) + '</div><button class="aj-btn aj-full" data-apfrase="en">Copiar frase em inglês</button>';
   abrirSheet('<h3>📲 Lançar ao pagar com Apple Pay</h3>' +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45">Uma vez configurado, cada pagamento por aproximação com o iPhone ou o relógio abre o MinhaCasa já com o valor e a loja. Leva uns 3 minutos e é feito no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Precisa do iOS 17 ou mais novo.</div>' +
-    '<div style="font-size:12.5px;color:#6b7280;margin-top:6px">Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
-    '<ol class="cf-passos ap-passos">' +
-    '<li>Abra o app <b>Atalhos</b> (Shortcuts). Se estiver em "Todos os Atalhos" (All Shortcuts), toque na seta <b>‹</b> do canto e escolha <b>Automação</b> (Automation).</li>' +
-    '<li>Toque no <b>+</b>, procure e escolha <b>Carteira</b> (Wallet; em iPhones mais antigos, Transação/Transaction). Marque os cartões que você usa, escolha <b>Executar Imediatamente</b> (Run Immediately) e toque em <b>Seguinte</b> (Next) → <b>Nova Automação em Branco</b> (New Blank Automation).</li>' +
-    '<li>Adicione a ação <b>Texto</b> (Text). Dentro dela, toque em <b>Entrada do Atalho</b> (Shortcut Input), que fica acima do teclado; depois toque na bolinha azul e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo a Entrada do Atalho e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code>, insira de novo e escolha <b>Cartão ou Passe</b> (Card or Pass). Fica assim: <code>Amount|Merchant|Card or Pass</code>.</li>' +
-    '<li>Adicione a ação <b>Codificar URL</b> (URL Encode). Ela já pega o Texto de cima.</li>' +
-    '<li>Adicione outra ação <b>Texto</b> (Text). Cole o endereço abaixo e, logo depois dele, sem espaço, insira a variável <b>URL Codificado</b> (URL Encoded Text), que aparece acima do teclado:<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
-    '<li>Adicione a ação <b>Abrir URLs</b> (Open URLs). Ela já pega o Texto de cima.</li>' +
-    '<li>Toque em <b>OK</b> (Done). Pronto.</li></ol>' +
-    '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:10px"><b>Na primeira vez</b>, o link abre no Safari. Se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>; depois não pede mais. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua em "Executar Imediatamente".</div>' +
-    '<button class="aj-btn pri aj-full" id="ap-testar">Testar agora (simula um pagamento)</button>' +
+    '<div class="ap-st ' + (st.ok ? 'ok' : 'nao') + '">' + (st.ok ? '✅ ' : '⏳ ') + esc(st.txt) + '</div>' +
+    (ios ? '' : '<div class="ap-aviso">Este recurso é do <b>iPhone</b> (Apple Pay). No Android não existe um jeito de o celular avisar o app na hora do pagamento; use a <b>Conferência com o banco</b> para achar o que faltou lançar. Se você tem iPhone, abra o MinhaCasa nele para configurar.</div>') +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 2 partes, uns 3 minutos, no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
+
+    '<div class="ap-parte">1 · Instalar o atalho MinhaCasa</div>' +
+    (lk ? '<div class="ap-txt">Toque no botão, depois em <b>Adicionar Atalho</b> (Add Shortcut).</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
+        : '<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>') +
+    '<details class="ap-det"' + (lk ? '' : ' open') + '><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">' +
+    '<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>' +
+    '<li>Adicione a ação <b>Texto</b> (Text). Dentro dela, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado; toque na bolinha azul e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code>, insira de novo e escolha <b>Cartão ou Passe</b> (Card or Pass).</li>' +
+    '<li>Adicione <b>Codificar URL</b> (URL Encode).</li>' +
+    '<li>Adicione outro <b>Texto</b> (Text) com o endereço abaixo e, colado nele, a variável <b>URL Codificado</b> (URL Encoded Text):<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
+    '<li>Adicione <b>Abrir URLs</b> (Open URLs).</li>' +
+    '<li>Dê o nome <b>MinhaCasa</b> ao atalho (tocando no nome, em cima) e saia.</li></ol></details>' +
+
+    '<div class="ap-parte">2 · Ligar ao seu cartão</div>' +
+    '<div class="ap-txt">No app Atalhos, abra <b>Automação</b> (Automation) e toque no <b>+</b>. O que aparece?</div>' +
+    '<div class="ap-esc"><button type="button" class="aj-btn" data-apcam="a"><span>Uma caixa</span><b>"Descreva um atalho"</b></button><button type="button" class="aj-btn" data-apcam="b"><span>Uma lista</span><b>Hora, Chegar, Carteira…</b></button></div>' +
+    '<div id="ap-cam-a" class="ap-cam" style="display:none"><div class="ap-cam-t">Com a IA do iPhone</div><ol class="cf-passos ap-passos">' +
+    '<li>Copie uma das frases abaixo (a do idioma do seu iPhone), cole na caixa e envie.' + fraseBtns + '</li>' +
+    '<li>Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li>' +
+    '<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>' +
+    '<li>Toque na setinha desse bloco e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>' +
+    '<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA</div><ol class="cf-passos ap-passos">' +
+    '<li>Na lista, escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>' +
+    '<li>Marque <b>só o cartão</b> que você controla no MinhaCasa e escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
+    '<li>Na lista de atalhos, escolha <b>MinhaCasa</b>. Toque em <b>OK</b> (Done).</li></ol></div>' +
+
+    '<div class="ap-parte">3 · Testar</div>' +
+    '<div class="ap-txt">Pague algo pequeno por aproximação com esse cartão. O MinhaCasa deve abrir com o valor e a loja; confira a categoria e salve. Esta tela passa a mostrar <b>✅ Funcionando</b>.</div>' +
+    '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin:8px 0 10px"><b>Na primeira vez</b>, o link abre no Safari: se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua ligada.</div>' +
+    '<button class="aj-btn aj-full" id="ap-testar">Ver como fica (simula um pagamento)</button>' +
     '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
   $('ap-copiar').onclick = function () { copiar(url); };
+  qsa('#sheet-box [data-apfrase]').forEach(function (b) { b.onclick = function () { copiar(FRASE_IA[b.dataset.apfrase]); }; });
+  qsa('#sheet-box [data-apcam]').forEach(function (b) { b.onclick = function () {
+    var c = b.dataset.apcam;
+    qsa('#sheet-box [data-apcam]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    $('ap-cam-a').style.display = c === 'a' ? '' : 'none'; $('ap-cam-b').style.display = c === 'b' ? '' : 'none';
+  }; });
   $('ap-testar').onclick = function () {
     lsSet('mc_pag_ult', '');
-    S.pagPend = { valor: 12.34, loja: 'Teste do atalho', cartao: '', em: Date.now() };
+    S.pagPend = { valor: 12.34, loja: 'Teste do atalho', cartao: '', em: Date.now(), teste: true };
     aplicarPagamento();
     mostrarToast('📲', 'Assim abre depois de um pagamento. Este é só um teste: toque no ✕ para não salvar.', 4500);
   };
