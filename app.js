@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.26.0';
+var VERSAO = '2.26.1';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2717,13 +2717,15 @@ function abrirApplePay() {
   var url = linkPagamento();
   abrirSheet('<h3>📲 Lançar ao pagar com Apple Pay</h3>' +
     '<div style="font-size:13px;color:#4b5563;line-height:1.45">Uma vez configurado, cada pagamento por aproximação com o iPhone ou o relógio abre o MinhaCasa já com o valor e a loja. Leva uns 3 minutos e é feito no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Precisa do iOS 17 ou mais novo.</div>' +
+    '<div style="font-size:12.5px;color:#6b7280;margin-top:6px">Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
     '<ol class="cf-passos ap-passos">' +
-    '<li>Abra o app <b>Atalhos</b>, toque em <b>Automação</b> (embaixo) e no <b>+</b>.</li>' +
-    '<li>Escolha <b>Carteira</b> (em alguns iPhones aparece como <b>Transação</b>). Marque os cartões que você usa, escolha <b>Executar Imediatamente</b> e toque em <b>Seguinte</b> → <b>Nova Automação em Branco</b>.</li>' +
-    '<li>Adicione a ação <b>Texto</b>. Dentro dela, toque em <b>Entrada do Atalho</b> (fica acima do teclado), depois toque na variável e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo a Entrada do Atalho e escolha <b>Comerciante</b> (Merchant). Se quiser que o app mostre qual cartão foi usado, digite <code>|</code> e insira a Entrada do Atalho como <b>Cartão ou Passe</b> (Card or Pass). Fica assim: <code>Valor|Comerciante|Cartão ou Passe</code>.</li>' +
+    '<li>Abra o app <b>Atalhos</b> (Shortcuts). Se estiver em "Todos os Atalhos" (All Shortcuts), toque na seta <b>‹</b> do canto e escolha <b>Automação</b> (Automation).</li>' +
+    '<li>Toque no <b>+</b>, procure e escolha <b>Carteira</b> (Wallet; em iPhones mais antigos, Transação/Transaction). Marque os cartões que você usa, escolha <b>Executar Imediatamente</b> (Run Immediately) e toque em <b>Seguinte</b> (Next) → <b>Nova Automação em Branco</b> (New Blank Automation).</li>' +
+    '<li>Adicione a ação <b>Texto</b> (Text). Dentro dela, toque em <b>Entrada do Atalho</b> (Shortcut Input), que fica acima do teclado; depois toque na bolinha azul e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo a Entrada do Atalho e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code>, insira de novo e escolha <b>Cartão ou Passe</b> (Card or Pass). Fica assim: <code>Amount|Merchant|Card or Pass</code>.</li>' +
     '<li>Adicione a ação <b>Codificar URL</b> (URL Encode). Ela já pega o Texto de cima.</li>' +
-    '<li>Adicione a ação <b>Abrir URLs</b> (Open URLs). Cole o endereço abaixo e, logo depois dele, insira a variável <b>URL Codificado</b>:<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
-    '<li>Toque em <b>OK</b>. Pronto.</li></ol>' +
+    '<li>Adicione outra ação <b>Texto</b> (Text). Cole o endereço abaixo e, logo depois dele, sem espaço, insira a variável <b>URL Codificado</b> (URL Encoded Text), que aparece acima do teclado:<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
+    '<li>Adicione a ação <b>Abrir URLs</b> (Open URLs). Ela já pega o Texto de cima.</li>' +
+    '<li>Toque em <b>OK</b> (Done). Pronto.</li></ol>' +
     '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:10px"><b>Na primeira vez</b>, o link abre no Safari. Se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>; depois não pede mais. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua em "Executar Imediatamente".</div>' +
     '<button class="aj-btn pri aj-full" id="ap-testar">Testar agora (simula um pagamento)</button>' +
     '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
