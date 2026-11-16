@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.3';
+var VERSAO = '2.23.4';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1145,7 +1145,7 @@ function atualizarProjecao() {
   var passados = Math.min(totalDias, Math.max(1, diasEntre(p.inicio, hj) + 1)), restantes = Math.max(0, totalDias - passados);
   var PF = projecaoFreq(p);
   var realDia = gasto / passados, projFinal = hj > p.fim ? gasto : gasto + PF.aindaVem, orcRest = lim - gasto;
-  var metaDia = restantes > 0 ? orcRest / restantes : 0, desvio = realDia - metaDia;
+  var metaDia = restantes > 0 ? Math.max(0, orcRest) / restantes : 0, desvio = realDia - metaDia;
   var pctTempo = passados / totalDias * 100, pctGasto = Math.min(120, gasto / lim * 100);
   function fmtD(v) { return formatar(Math.abs(v)); }
   $('proj-subtitle').textContent = 'Limite ' + formatar(lim) + ' · Gasto: ' + formatar(gasto) + ' · Livre ' + formatar(lim - gasto);
@@ -1153,7 +1153,8 @@ function atualizarProjecao() {
   if (projFinal > lim) { badge.textContent = '⚠️ Vai exceder'; badge.className = 'proj-badge over'; }
   else if (desvio > metaDia * 0.15) { badge.textContent = '📈 Acima'; badge.className = 'proj-badge warn'; }
   else { badge.textContent = '✅ No controle'; badge.className = 'proj-badge ok'; }
-  $('proj-padrao').textContent = fmtD(metaDia);
+  $('proj-padrao').textContent = orcRest <= 0 ? formatar(0) : fmtD(metaDia);
+  $('proj-padrao').nextElementSibling.textContent = orcRest <= 0 ? 'limite já passado' : 'meta/dia restante';
   $('proj-real').textContent = fmtD(realDia);
   $('proj-desvio').textContent = (desvio >= 0 ? '+' : '−') + fmtD(desvio);
   $('proj-desvio').style.color = desvio > 0 ? '#f87171' : '#4ade80';
@@ -1786,7 +1787,8 @@ function motorRelatorio(D) {
         var rest = atual.dias - atual.decorridos, livre = lim - atual.comum;
         if (!(lim > 0)) return kpi('Pode gastar por dia', '—', 'defina o limite no app');
         if (rest <= 0) return kpi('Pode gastar por dia', '—', 'último dia do ciclo');
-        return kpi('Pode gastar por dia', '<span class="' + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre) / rest) + '</span>', (livre < 0 ? m0(-livre) + ' acima do limite' : m0(livre) + ' livres') + ' · ' + rest + ' dias até ' + fD(atual.fim));
+        if (livre <= 0) return kpi('Pode gastar por dia', '<span class="bad">' + m0(0) + '</span>', 'limite passado em ' + m0(-livre) + ' · só o essencial até ' + fD(atual.fim));
+        return kpi('Pode gastar por dia', m0(livre / rest), m0(livre) + ' livres · ' + rest + ' dias até ' + fD(atual.fim));
       })() + '</div>';
 
     var alvos = COMUNS.map(function (k) {
@@ -1843,7 +1845,9 @@ function motorRelatorio(D) {
 
     var livre = lim - atual.comum, idealHoje = lim * atual.decorridos / atual.dias;
     html += '<section class="card"><div class="ch"><h2>Ritmo do ciclo atual</h2><span class="note">' + esc(atual.rot) + ' · dia ' + atual.decorridos + ' de ' + atual.dias + '</span></div>' +
-      (lim > 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>; no ritmo do limite seriam <b>' + m0(idealHoje) + '</b> ' +
+      (lim > 0 && livre <= 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>. Você já passou do limite de ' + m0(lim) + ' em <b class="bad">' + m0(-livre) + '</b>.' +
+        (restam > 0 ? ' Até ' + fD(atual.fim) + ' (faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '), só o essencial.' : '') + '</p>' :
+      lim > 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>; no ritmo do limite seriam <b>' + m0(idealHoje) + '</b> ' +
         (atual.comum > idealHoje ? '→ <b class="bad">' + m0(atual.comum - idealHoje) + ' adiantado</b>.' : '→ <b class="good">' + m0(idealHoje - atual.comum) + ' de folga</b>.') +
         (restam > 0 ? ' Para fechar dentro do limite, sobram <b class="' + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre)) + '</b> para ' + restam + ' dias: <b>' + m0(Math.max(0, livre) / restam) + ' por dia</b> (até agora a média foi ' + m0(atual.comum / Math.max(1, atual.decorridos)) + ' por dia).' : '') + '</p>' : '') +
       blocoFrequencia(atual, lim) +
