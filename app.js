@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.25.1';
+var VERSAO = '2.25.2';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -753,13 +753,26 @@ function renderOrig() {
   $('orig-escolhida').innerHTML = o ? item(o, true) : '';
   $('orig-busca-box').style.display = o ? 'none' : '';
   if (o) return;
-  var q = normNome($('orig-busca').value), dt = $('inp-data').value || hoje();
+  // Lista fechada: só abre quando digita a loja, a descrição, o valor ou o dia (16/11/2026)
+  var bruto = $('orig-busca').value.trim(), dt = $('inp-data').value || hoje();
+  if (!bruto) { $('orig-lista').innerHTML = '<div class="add-dica">Digite a loja, a descrição, o valor (ex.: 78,20) ou o dia (ex.: 15/11) para achar a compra. Se não quiser ligar a uma compra, escolha só a categoria abaixo.</div>'; return; }
+  var termos = bruto.split(/\s+/);
+  var bate = function (l) {
+    var hay = normNome(descLanc(l) + ' ' + nomeSub(l.cat, l.sub) + ' ' + NOME(l.cat) + ' ' + l.valor.toFixed(2));
+    return termos.every(function (t) {
+      var d = t.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/); // dia só com barra: 78.20 e 12,50 são valores
+      if (d && +d[1] >= 1 && +d[1] <= 31 && +d[2] >= 1 && +d[2] <= 12) {
+        var dd = ('0' + d[1]).slice(-2), mm = ('0' + d[2]).slice(-2), aa = d[3] ? (d[3].length === 2 ? '20' + d[3] : d[3]) : null;
+        return l.data.slice(8, 10) === dd && l.data.slice(5, 7) === mm && (!aa || l.data.slice(0, 4) === aa);
+      }
+      var n = normNome(t); return !n || hay.indexOf(n) >= 0;
+    });
+  };
   var lista = lancamentos().filter(function (l) { return !l.dev && l.valor > 0 && l.cat !== PARC && l.data <= dt && (dm[l.id] || 0) < l.valor - 0.005; })
-    .filter(function (l) { return !q || normNome(descLanc(l) + ' ' + nomeSub(l.cat, l.sub) + ' ' + NOME(l.cat) + ' ' + l.valor.toFixed(2)).indexOf(q) >= 0; })
-    .sort(function (x, y) { return y.data.localeCompare(x.data) || y.ts - x.ts; }).slice(0, q ? 25 : 12);
-  $('orig-lista').innerHTML = lista.length ? lista.map(function (l) { return item(l, false); }).join('') +
-    '<div class="add-dica">Não achou? Pode deixar sem compra: escolha só a categoria abaixo.</div>'
-    : '<div class="add-dica">Nenhuma compra encontrada' + (q ? ' com esse nome' : '') + '. Pode registrar sem compra: escolha a categoria abaixo.</div>';
+    .filter(bate)
+    .sort(function (x, y) { return y.data.localeCompare(x.data) || y.ts - x.ts; }).slice(0, 25);
+  $('orig-lista').innerHTML = lista.length ? lista.map(function (l) { return item(l, false); }).join('')
+    : '<div class="add-dica">Nenhuma compra encontrada com "' + esc(bruto) + '". Tente outro nome, valor ou dia, ou registre sem compra escolhendo a categoria abaixo.</div>';
 }
 function escolherOrig(id) {
   var a = S.add, o = compraPorId(id); if (!o) return;
