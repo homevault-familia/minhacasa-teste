@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.8';
+var VERSAO = '2.24.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
