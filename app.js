@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.4';
+var VERSAO = '2.23.5';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1121,15 +1121,20 @@ function projecaoFreq(p) {
   var R = { gasto: gasto, aindaVem: 0, cat: {}, lugares: [], nHist: H.length, linear: !H.length, rest: rest, passados: passados, N: N };
   Object.keys(m).forEach(function (k) {
     var s = m[k];
-    if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = passados ? s.v * rest / passados : 0; }
-    else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperV = Math.min(s.freq * rest / N, Math.max(0, s.freq - s.n)) * s.ticket; }
+    if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = passados ? s.v * rest / passados : 0; s.esperN = s.ticket ? s.esperV / s.ticket : 0; }
+    else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperN = Math.min(s.freq * rest / N, Math.max(0, s.freq - s.n)); s.esperV = s.esperN * s.ticket; }
     R.aindaVem += s.esperV; R.cat[s.cat] = (R.cat[s.cat] || 0) + s.esperV; R.lugares.push(s);
   });
   R.lugares.sort(function (a, b) { return b.esperV - a.esperV; });
   R.final = gasto + R.aindaVem;
   return R;
 }
-function vezesF(x) { var r = Math.round((+x || 0) * 10) / 10; return String(r).replace('.', ',') + '×'; }
+// frequência em número inteiro ("17 vezes", "1 vez", "menos de 1 vez") e idas nos dias que faltam (16/11/2026)
+function vezesF(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? 'menos de 1 vez' : r === 1 ? '1 vez' : r + ' vezes'; }
+function idasFaltamF(e) {
+  if (e < 0.95) return 'talvez 1 (' + Math.round(e * 100) + '% de chance)';
+  var r = Math.round(e); return Math.abs(e - r) < 0.25 ? 'cerca de ' + r + (r === 1 ? ' vez' : ' vezes') : Math.floor(e) + ' a ' + Math.ceil(e) + ' vezes';
+}
 
 // ═════════════════════════ PROJEÇÃO ═════════════════════════
 function atualizarProjecao() {
@@ -1181,16 +1186,22 @@ function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
   var h = '<div class="proj-freq-txt">' + (PF.rest > 0 ? 'Faltam <b>' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + '</b>. ' + (PF.aindaVem >= 1 ? 'Ainda devem entrar cerca de <b>' + formatar(PF.aindaVem) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
     ' → fecha em <b style="color:' + (projFinal > lim ? '#f87171' : '#4ade80') + '">' + formatar(projFinal) + '</b> (' + Math.round(projFinal / lim * 100) + '% do limite).' : 'Último dia do período.') + '</div>';
   if (!PF.linear) {
+    var cont = {}; PF.lugares.forEach(function (s) { var k = s.nome.toLowerCase(); cont[k] = (cont[k] || 0) + 1; });
+    var nomeL = function (s) { return '<b>' + esc(s.nome) + '</b>' + (cont[s.nome.toLowerCase()] > 1 ? ' <span style="opacity:.6;font-weight:400">(' + esc(NOME(s.cat)) + ')</span>' : ''); };
     var vem = PF.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 5);
-    if (PF.rest > 0 && vem.length) h += '<div class="proj-freq-tit">O que ainda deve entrar</div>' + vem.map(function (s) {
-      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b><small>você vai ' + vezesF(s.freq) + ' por período, ' + formatar(s.ticket) + ' por ida · neste foi ' + s.n + '×</small></span><span>≈ ' + formatar(s.esperV) + '</span></div>'; }).join('');
+    if (PF.rest > 0 && vem.length) {
+      var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
+      h += '<div class="proj-freq-tit">O que ainda deve entrar (pelo seu costume)</div>' + vem.map(function (s) {
+        return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>costuma ir ' + vezesF(s.freq) + ' por período, ' + formatar(s.ticket) + ' cada · neste período: ' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + ' · nos ' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + ' que faltam: ' + idasFaltamF(s.esperN) + '</small></span><span>' + formatar(s.esperV) + '</span></div>'; }).join('') +
+        '<div style="font-size:10.5px;opacity:.55;margin-top:6px;line-height:1.4">Conta só as idas que ainda cabem no seu costume. ' + (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + formatar(ex.ticket) + ' ≈ ' + formatar(ex.esperV) + '. ' : '') + 'Se você não for, fecha abaixo disso.</div>';
+    }
     var mais = PF.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
       .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 5);
     if (mais.length) h += '<div class="proj-freq-tit">Neste período você foi mais vezes que o normal</div>' + mais.map(function (s) {
-      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b><small>' + s.n + ' idas, ' + formatar(s.v) + ' · o normal é ' + vezesF(s.freq) + '</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
+      return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>' + s.n + ' vezes, ' + formatar(s.v) + ' · o normal é ' + vezesF(s.freq) + ' por período</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
     var novos = PF.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
     if (novos.length) h += '<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)</div>' + novos.map(function (s) {
-      return '<div class="proj-freq-row"><span><b>' + esc(s.nome) + '</b></span><span>' + formatar(s.v) + '</span></div>'; }).join('');
+      return '<div class="proj-freq-row"><span>' + nomeL(s) + '</span><span>' + formatar(s.v) + '</span></div>'; }).join('');
   }
   el.innerHTML = h;
 }
@@ -1644,14 +1655,18 @@ function motorRelatorio(D) {
     L.forEach(function (l) { if (l.data < at.inicio || l.data > h) return; var s = pega(l); s.n++; s.v += val(l); });
     Object.keys(m).forEach(function (k) {
       var s = m[k];
-      if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = at.decorridos ? s.v * rest / at.decorridos : 0; }
-      else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperV = Math.min(s.freq * rest / at.dias, Math.max(0, s.freq - s.n)) * s.ticket; }
+      if (R.linear) { s.freq = 0; s.ticket = s.n ? s.v / s.n : 0; s.esperV = at.decorridos ? s.v * rest / at.decorridos : 0; s.esperN = s.ticket ? s.esperV / s.ticket : 0; }
+      else { s.freq = s.nH / H.length; s.ticket = s.nH ? s.vH / s.nH : 0; s.esperN = Math.min(s.freq * rest / at.dias, Math.max(0, s.freq - s.n)); s.esperV = s.esperN * s.ticket; }
       R.cat[s.cat] = (R.cat[s.cat] || 0) + s.esperV; R.tot += s.esperV; R.porChave[k] = s; R.lugares.push(s);
     });
     R.lugares.sort(function (a, b) { return b.esperV - a.esperV; });
     return R;
   }
-  function vezes(x) { var r = Math.round((+x || 0) * 10) / 10; return String(r).replace('.', ',') + '×'; }
+  function vezes(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? 'menos de 1 vez' : r === 1 ? '1 vez' : r + ' vezes'; }
+  function idasFaltam(e) {
+    if (e < 0.95) return 'talvez 1 (' + Math.round(e * 100) + '% de chance)';
+    var r = Math.round(e); return Math.abs(e - r) < 0.25 ? 'cerca de ' + r + (r === 1 ? ' vez' : ' vezes') : Math.floor(e) + ' a ' + Math.ceil(e) + ' vezes';
+  }
   function blocoFrequencia(at, lim) {
     var R = at.R; if (!R) return '';
     var base = R.linear ? 'no ritmo por dia (ainda não há ciclo fechado para medir a sua frequência)' : 'pela sua frequência nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos');
@@ -1659,16 +1674,25 @@ function motorRelatorio(D) {
     var x = '<p style="margin:0 0 8px">' + (R.rest > 0 ? 'Faltam ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + '. ' + (R.tot >= 1 ? 'Ainda devem entrar cerca de <b>' + m0(R.tot) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
       ' → o ciclo fecha em <b class="' + cls + '">' + m0(at.proj) + '</b>' + (lim > 0 ? ' (' + pct(at.proj / lim) + ' do limite)' : '') + '.' : 'O ciclo fecha hoje em <b class="' + cls + '">' + m0(at.proj) + '</b>.') + '</p>';
     if (R.linear) return x;
+    var cont = {}; R.lugares.forEach(function (s) { var k = s.nome.toLowerCase(); cont[k] = (cont[k] || 0) + 1; });
+    function nomeL(s) { return '<b>' + esc(s.nome) + '</b>' + (cont[s.nome.toLowerCase()] > 1 ? ' <span class="note">(' + esc(nomeCat(s.cat)) + ')</span>' : ''); }
     var vem = R.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 6);
-    if (R.rest > 0 && vem.length) x += '<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ' + fD(R.ciclo.fim) + '</b></p><ul style="margin:0 0 10px;padding-left:20px">' +
-      vem.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ≈ ' + m0(s.esperV) + ' (você vai ' + vezes(s.freq) + ' por ciclo, ' + m0(s.ticket) + ' por ida; neste ciclo foi ' + s.n + '×)</li>'; }).join('') + '</ul>';
+    if (R.rest > 0 && vem.length) {
+      var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
+      x += '<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ' + fD(R.ciclo.fim) + '</b> · pelo seu costume nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos') + '</p>' +
+        '<div class="tw"><table><thead><tr><th>Onde</th><th>Você costuma ir</th><th>Neste ciclo, até hoje</th><th>Nos ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + ' que faltam</th><th>Entra na projeção</th></tr></thead><tbody>' +
+        vem.map(function (s) { return '<tr><td class="t">' + nomeL(s) + '</td><td class="t">' + vezes(s.freq) + ' por ciclo, ' + m0(s.ticket) + ' cada</td><td>' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + '</td><td class="t">' + idasFaltam(s.esperN) + '</td><td><b>' + m0(s.esperV) + '</b></td></tr>'; }).join('') +
+        '</tbody></table></div><p class="note" style="margin:4px 0 10px">Como ler: nos dias que faltam, conta só as idas que ainda cabem no seu costume. ' +
+        (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + m0(ex.ticket) + ' por ida ≈ ' + m0(ex.esperV) + '. ' : '') +
+        'Se você não for, o ciclo fecha abaixo da projeção.</p>';
+    }
     var mais = R.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
       .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 6);
     if (mais.length) x += '<p class="note" style="margin:0 0 4px"><b>Neste ciclo você foi mais vezes que o normal</b></p><ul style="margin:0 0 10px;padding-left:20px">' +
-      mais.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ' + s.n + ' idas, ' + m0(s.v) + ' (o normal é ' + vezes(s.freq) + ' por ciclo, ≈ ' + m0(s.vH / R.nHist) + ') → <span class="bad">' + m0(s.extraV) + ' a mais</span></li>'; }).join('') + '</ul>';
+      mais.map(function (s) { return '<li>' + nomeL(s) + ': ' + s.n + ' vezes, ' + m0(s.v) + ' (o normal é ' + vezes(s.freq) + ' por ciclo, cerca de ' + m0(s.vH / R.nHist) + ') → <span class="bad">' + m0(s.extraV) + ' a mais</span></li>'; }).join('') + '</ul>';
     var novos = R.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
     if (novos.length) x += '<p class="note" style="margin:0 0 4px"><b>Gastos que não aparecem nos ciclos anteriores</b> (não foram projetados de novo)</p><ul style="margin:0 0 10px;padding-left:20px">' +
-      novos.map(function (s) { return '<li><b>' + esc(s.nome) + '</b>: ' + m0(s.v) + (s.n > 1 ? ' em ' + s.n + ' vezes' : '') + '</li>'; }).join('') + '</ul>';
+      novos.map(function (s) { return '<li>' + nomeL(s) + ': ' + m0(s.v) + (s.n > 1 ? ' em ' + s.n + ' vezes' : '') + '</li>'; }).join('') + '</ul>';
     return x;
   }
 
@@ -1814,7 +1838,7 @@ function motorRelatorio(D) {
               }).join(' e ') + '.' : '') + '</li>';
           }
           return '<li><b>' + esc(nomeCat(a.k)) + '</b>: gasta em média <b class="v">' + m0(a.med) + '</b> por ciclo, orçamento <b class="v">' + m0(a.orc) + '</b> → <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>. Estourou em ' + a.estouros + ' de ' + nC + ' ciclos.' +
-            (sub.length ? ' O peso maior está em ' + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + '/ciclo, ' + vezes(s.n / nEq) + ' por ciclo de ' + m0(s.tot / s.n) + ')'; }).join(' e ') + '.' : '') + '</li>';
+            (sub.length ? ' O peso maior está em ' + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + '/ciclo: ' + vezes(s.n / nEq) + ' por ciclo, ' + m0(s.tot / s.n) + ' cada)'; }).join(' e ') + '.' : '') + '</li>';
         }).join('') +
         '</ol>' + (lim > 0 && mediaComum > lim ? '<p class="note" style="margin:8px 0 0">' + (usaAtual ?
           (restam > 0 ? 'Faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '. ' + (atual.comum >= lim ? 'O limite de ' + m0(lim) + ' já foi passado em <b class="bad">' + m0(atual.comum - lim) + '</b>: o que dá para fazer agora é não somar mais, só o essencial até ' + fD(atual.fim) + '.' : 'Sobram <b>' + m0(lim - atual.comum) + '</b> do limite, mas pela sua frequência devem entrar ' + m0(R.tot) + '. Corte ou adie ' + m0(mediaComum - lim) + ' disso.') : 'O ciclo fecha hoje.') + ' Para o próximo ciclo, veja no Ritmo onde você foi mais vezes que o normal.'
