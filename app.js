@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.27.2';
+var VERSAO = '2.27.3';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2749,7 +2749,7 @@ function abrirApplePay() {
     '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 2 partes, uns 3 minutos, no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
 
     '<div class="ap-parte">1 · Instalar o atalho MinhaCasa</div>' +
-    (lk ? '<div class="ap-txt">Toque no botão, depois em <b>Adicionar Atalho</b> (Add Shortcut).</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
+    (lk ? '<div class="ap-txt">Toque no botão. Na página que abrir, toque em <b>Obter Atalho</b> (Get Shortcut) e, no app Atalhos, em <b>Adicionar Atalho</b> (Add Shortcut).</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
         : '<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>') +
     '<details class="ap-det"' + (lk ? '' : ' open') + '><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">' +
     '<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>' +
