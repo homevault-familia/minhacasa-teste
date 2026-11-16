@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.23.7';
+var VERSAO = '2.23.8';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1291,11 +1291,10 @@ function semFD(s) { var d = dataObj(s); return d.getDate() + ' ' + MESC[d.getMon
 function m0(n) { return formatar(Math.round(+n || 0)).replace(/[.,]00$/, ''); }
 function semSub(l) { return nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat) + ' sem tipo'; }
 // com que frequência compra ali nas semanas da base: "2 vezes por semana", "1 vez a cada 4 semanas" (16/11/2026)
-function semFreq(nb, semBase) {
-  if (!nb) return 'não comprou nas ' + semBase + ' semanas antes';
-  var p = nb / semBase, r = Math.round(p);
-  return p >= 0.75 ? (r <= 1 ? 'cerca de 1 vez' : r + ' vezes') + ' por semana' : '1 vez a cada ' + Math.max(2, Math.round(semBase / nb)) + ' semanas';
-}
+// o que aconteceu ali nas semanas da base, como DADO (não como "costume") (16/11/2026)
+function semHist(x, semBase) { return x.nb ? 'comprou em ' + x.sb + ' das ' + semBase + ' semanas (' + m0(x.base) + ' no total)' : 'não comprou nas ' + semBase + ' semanas'; }
+// compras que são esporádicas por natureza: nunca viram "vazamento" só por acontecerem
+var SEM_ESPOR = /roup|vestu|cal[cç]ad|sapat|t[eê]nis|presente|eletr[oô]n|m[oó]ve(l|is)|decora/i;
 function semOutros(nome) { return /^outros?$|^outras( despesas)?$|sem (tipo|categoria)$/i.test(String(nome).trim()); }
 // fim do ciclo k: período que termina no último dia do mês continua terminando no último dia
 function fimCicloK(fim, k) { var d1 = semAdd(fim, 1); return d1.slice(8) === '01' ? semAdd(addMeses(d1, k), -1) : addMeses(fim, k); }
@@ -1331,11 +1330,17 @@ function analisarSemana(hojeRef, parcial) {
     return x;
   }
   Sx.forEach(function (l) { var x = pegaS(l); x.sem += l.valor; if (!x.dS[l.data]) { x.dS[l.data] = 1; x.n++; } });
-  B.forEach(function (l) { var x = pegaS(l); x.base += l.valor; if (!x.dB[l.data]) { x.dB[l.data] = 1; x.nb++; } });
+  B.forEach(function (l) {
+    var x = pegaS(l), w = Math.floor((semND(iniBase, l.data) - 1) / 7); x.base += l.valor; if (!x.dB[l.data]) { x.dB[l.data] = 1; x.nb++; }
+    x.wB = x.wB || {}; if (!x.wB[w]) { x.wB[w] = 1; x.sb = (x.sb || 0) + 1; }
+  });
   var lugares = Object.keys(m).map(function (q) { var x = m[q]; x.normal = x.base / semBase * frac; x.nNormal = x.nb / semBase * frac; x.exc = x.sem - x.normal; return x; });
   // compra "de vez em quando" (menos de 1 por semana): uma compra só, no valor de costume, não é vazamento (16/11/2026)
-  lugares.forEach(function (x) { x.raro = x.nb > 0 && x.nb / semBase < 0.75; x.ticket = x.nb ? x.base / x.nb : 0; });
-  var vaz = lugares.filter(function (x) { return x.exc > Math.max(10, x.normal * .15) && !(x.raro && x.n <= 1 && x.sem <= x.ticket * 1.15); }).sort(function (a, b) { return b.exc - a.exc; });
+  // Compra esporádica (roupas e parecidos, ou o que apareceu em menos de 3 de cada 4 semanas): compara com o que você
+  // gasta numa semana em que compra ali, não com a média das 12 semanas. Só vira vazamento se passar disso.
+  lugares.forEach(function (x) { x.sb = x.sb || 0; x.esp = SEM_ESPOR.test(x.nome); x.raro = x.esp || (x.nb > 0 && x.sb / semBase < 0.75); x.ticketSem = x.sb ? x.base / x.sb : 0; });
+  var vaz = lugares.filter(function (x) { return !x.esp && x.exc > Math.max(10, x.normal * .15) && !(x.raro && (!x.sb || x.sem <= x.ticketSem * 1.15)); }).sort(function (a, b) { return b.exc - a.exc; });
+  var esporSem = lugares.filter(function (x) { return x.esp && x.sem > 0; }).sort(function (a, b) { return b.sem - a.sem; });
   var cats = catsComuns().map(function (c) {
     var sm = Sx.filter(function (l) { return l.cat === c.id; }).reduce(function (a, l) { return a + l.valor; }, 0);
     var o = (+c.orc || 0) * 7 / diasCic * frac;
@@ -1373,7 +1378,7 @@ function analisarSemana(hojeRef, parcial) {
     else if (semOutros(x.nome) || / sem tipo$/.test(x.nome))
       acoes.push('<b>' + esc(nome) + ' (' + esc(NOME(x.cat)) + ')</b> subiu para ' + m0(x.sem) + '. Ao lançar, escolha a subcategoria certa: sem saber onde foi, não dá para cortar.');
     else if (x.raro)
-      acoes.push('<b>' + esc(nome) + '</b>: ' + m0(x.sem) + ' em ' + x.n + (x.n === 1 ? ' compra' : ' compras') + '. Você costuma comprar ' + semFreq(x.nb, semBase) + ', ' + m0(x.ticket) + ' cada: ' + (x.n > 1 ? 'desta vez foram mais compras' : 'desta vez foi mais caro') + ' que o costume. ' +
+      acoes.push('<b>' + esc(nome) + '</b>: ' + m0(x.sem) + (parcial ? ' nesta semana, até agora' : ' na semana') + '. Nas ' + semBase + ' semanas antes, você comprou ali em ' + x.sb + (x.sb === 1 ? ' semana' : ' semanas') + ', cerca de ' + m0(x.ticketSem) + ' em cada: desta vez foi mais. ' +
         (acabou ? 'O limite do ciclo já acabou: até ' + semFD(cic.fim) + ', <b>nada</b> em ' + esc(nome) + '.' : 'Evite comprar de novo nas próximas semanas.'));
     else
       acoes.push('<b>' + esc(nome) + '</b>: ' + m0(x.sem) + ' em ' + x.n + (x.n === 1 ? ' compra' : ' compras') + ', ' + m0(x.exc) + ' acima da sua média por semana ali. ' + teto(nome, Math.max(parcial ? x.base / semBase : x.normal, 0)));
@@ -1392,7 +1397,7 @@ function analisarSemana(hojeRef, parcial) {
   if (!parcial && Object.keys(dias).length >= 6) acoes.push('Houve gasto em <b>' + Object.keys(dias).length + ' dos 7 dias</b>. Marque 2 dias sem gasto nesta semana.');
   if (!acoes.length) acoes.push('Semana dentro da sua média. Mantenha o ritmo.');
   return { parcial: !!parcial, ate: ate, diasDec: diasDec, seg: seg, dom: dom, semBase: semBase, poucoHist: histDias < 14, tot: tot, n: Sx.length, normalTot: normalTot, alvoSem: alvoSem, lim: lim,
-    vaz: vaz.slice(0, 3), cats: cats, peq: peq.length, peqT: peqT, merc: merc, mercNormal: mercNormal, diasGasto: Object.keys(dias).length,
+    vaz: vaz.slice(0, 3), esporSem: esporSem, cats: cats, peq: peq.length, peqT: peqT, merc: merc, mercNormal: mercNormal, diasGasto: Object.keys(dias).length,
     outros: outros, ciclo: cic, noCic: noCic, ideal: ideal, resta: resta, porDia: porDia, acoes: acoes.slice(0, 4) };
 }
 function statusSemana(r) { var ref = r.alvoSem > 0 ? r.alvoSem : r.normalTot; return r.tot > ref * 1.05 ? 'bad' : r.tot < ref * .95 ? 'good' : 'mid'; }
@@ -1510,12 +1515,13 @@ function renderizarSemana() {
     '<div style="font-size:11px;color:#6b7280;margin-top:6px">Orçamento semanal = orçamento do período ÷ dias do período × 7' + (r.parcial ? ', proporcional aos dias já passados' : '') + '</div></div>' : '';
   var thMed = r.parcial ? 'Média até este dia' : 'Média por semana';
   var linhas = r.vaz.length ? r.vaz.map(function (x) {
-    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + ' · costuma: ' + semFreq(x.nb, r.semBase) + (x.nb ? ', ' + m0(x.base / x.nb) + ' cada' : '') + '</span></td><td>' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td>' + m0(x.normal) + '</td><td style="color:#dc2626;font-weight:800">+' + m0(x.exc) + '</td></tr>';
+    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + ' · nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + '</span></td><td>' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td>' + m0(x.normal) + '</td><td style="color:#dc2626;font-weight:800">+' + m0(x.exc) + '</td></tr>';
   }).join('') : '<tr><td colspan="4" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>';
   var vazCard = '<div class="card"><div class="card-titulo">Onde mais vazou</div>' +
     '<div style="font-size:11.5px;color:#6b7280;margin:-4px 0 8px">"Vazou" = gastou mais do que a sua média por semana naquele lugar (' + r.semBase + ' semanas anteriores)</div>' +
+    (r.esporSem.length ? '<div style="font-size:11.5px;color:#374151;margin:0 0 8px">Compras esporádicas na semana (não entram em "vazou"): ' + r.esporSem.map(function (x) { return '<b>' + esc(x.nome) + '</b> ' + m0(x.sem); }).join(' · ') + '</div>' : '') +
     '<div style="overflow-x:auto"><table class="sem-tab"><thead><tr><th>Onde</th><th>Esta semana</th><th>' + thMed + '</th><th>A mais</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
-    '<div style="font-size:11px;color:#6b7280;margin-top:6px">Média por semana = o que você gastou ali nas ' + r.semBase + ' semanas anteriores ÷ ' + r.semBase + '.' + ' Coisas que você compra de vez em quando só aparecem aqui se a compra foi mais cara ou mais frequente que o costume.</div></div>';
+    '<div style="font-size:11px;color:#6b7280;margin-top:6px">Média por semana = o que você gastou ali nas ' + r.semBase + ' semanas anteriores ÷ ' + r.semBase + '.' + ' Roupas, calçados, presentes, eletrônicos e móveis não entram aqui. O que você não compra quase toda semana só aparece se a semana passou do que você costuma gastar numa semana em que compra ali.</div></div>';
   var acoesCard = '<div class="card" style="border-left:5px solid #7c3aed"><div class="card-titulo">✅ O que fazer nesta semana</div><ol class="sem-acoes">' +
     r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
     '<div style="display:flex;gap:8px;margin-top:12px"><button id="sem-pdf" style="flex:1;padding:12px 8px;border:0;border-radius:12px;background:#1d4ed8;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDF</button>' +
@@ -1525,7 +1531,7 @@ function renderizarSemana() {
   $('sem-wa').onclick = function () {
     var txt = function (h) { return h.replace(/<b>|<\/b>/g, '*').replace(/<[^>]+>/g, ''); };
     var msg = '📌 *' + (r.parcial ? 'SEMANA ATUAL (ATÉ ' + semFD(r.ate).toUpperCase() + ') ' : 'SEMANA ') + semFD(r.seg).toUpperCase() + ' – ' + semFD(r.dom).toUpperCase() + '*\n━━━━━━━━━━━━━━━━\n💰 Gasto: *' + m0(r.tot) + '*' + (r.alvoSem > 0 ? ' (alvo ' + m0(r.alvoSem) + ')' : '') + '\n📊 Sua média por semana: ' + m0(r.normalTot) + '\n';
-    if (r.vaz.length) { msg += '\n🔻 *Onde mais vazou*\n'; r.vaz.forEach(function (x) { msg += '• ' + x.nome + ': ' + m0(x.sem) + ' (média por semana ali ' + m0(x.normal) + ', +' + m0(x.exc) + '; costuma: ' + semFreq(x.nb, r.semBase) + ')\n'; }); }
+    if (r.vaz.length) { msg += '\n🔻 *Onde mais vazou*\n'; r.vaz.forEach(function (x) { msg += '• ' + x.nome + ': ' + m0(x.sem) + ' (média por semana ali ' + m0(x.normal) + ', +' + m0(x.exc) + '; nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + ')\n'; }); }
     msg += '\n✅ *O que fazer nesta semana*\n'; r.acoes.forEach(function (a, i) { msg += (i + 1) + '. ' + txt(a) + '\n'; });
     compartilharTexto(msg + '\n_Enviado via MinhaCasa_');
   };
@@ -1536,7 +1542,7 @@ function exportarPDFSemana(r) {
   var st = statusSemana(r), cor = corStatus(st);
   var titulo = (r.parcial ? 'Semana atual (até ' + semFD(r.ate) + ')' : 'Semana') + ' · ' + semFD(r.seg) + ' – ' + semFD(r.dom);
   var vaz = r.vaz.length ? r.vaz.map(function (x) {
-    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + '</span></td><td class="v">' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td style="font-size:12px;color:#374151">' + semFreq(x.nb, r.semBase) + (x.nb ? ', ' + m0(x.base / x.nb) + ' cada' : '') + '</td><td class="v" style="color:#6b7280">' + m0(x.normal) + '</td><td class="v" style="color:#dc2626">+' + m0(x.exc) + '</td></tr>';
+    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + '</span></td><td class="v">' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td style="font-size:12px;color:#374151">' + semHist(x, r.semBase) + '</td><td class="v" style="color:#6b7280">' + m0(x.normal) + '</td><td class="v" style="color:#dc2626">+' + m0(x.exc) + '</td></tr>';
   }).join('') : '<tr><td colspan="5" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>';
   var cats = r.cats.filter(function (c) { return c.orcSem > 0 || c.sem > 0; }).map(function (c) {
     var pct = c.orcSem > 0 ? Math.min(c.sem / c.orcSem * 100, 100) : 0, corB = c.exc > 0 ? '#f44336' : pct >= 80 ? '#ff9800' : c.cor;
@@ -1552,7 +1558,7 @@ function exportarPDFSemana(r) {
       '<div style="font-size:13px;color:#374151;margin-top:4px">' + r.n + ' lançamentos · ' + r.diasGasto + ' de ' + r.diasDec + ' dias com gasto<br>' +
       (r.alvoSem > 0 ? (r.parcial ? 'Alvo até hoje: ' : 'Alvo da semana: ') + '<b>' + m0(r.alvoSem) + '</b> · ' : '') +
       'Sua média por semana: <b>' + m0(r.normalTot) + '</b> <span style="color:#6b7280">(nas ' + r.semBase + ' semana' + (r.semBase > 1 ? 's' : '') + ' anteriores)</span></div></div>' +
-    '<h2>🔻 Onde mais vazou</h2><table><thead><tr>' + th('Onde') + th('Esta semana', 'right') + th('Você costuma comprar') + th(r.parcial ? 'Média até este dia' : 'Média por semana', 'right') + th('A mais', 'right') + '</tr></thead><tbody>' + vaz + '</tbody></table>' +
+    '<h2>🔻 Onde mais vazou</h2><table><thead><tr>' + th('Onde') + th('Esta semana', 'right') + th('Nas ' + r.semBase + ' semanas antes') + th(r.parcial ? 'Média até este dia' : 'Média por semana', 'right') + th('A mais', 'right') + '</tr></thead><tbody>' + vaz + '</tbody></table>' +
     '<h2>✅ O que fazer nesta semana</h2><ol>' + r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
     (cats ? '<h2>📊 Categorias × orçamento semanal</h2><table><thead><tr>' + th('Categoria') + th('Gasto', 'right') + th('Orçamento', 'right') + '</tr></thead><tbody>' + cats + '</tbody></table>' : '') +
     '<div style="margin-top:22px;font-size:11px;color:#6b7280;text-align:center">Gerado em ' + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' · MinhaCasa</div>';
