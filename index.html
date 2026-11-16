@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.22.0">
+<meta name="app-version" content="2.23.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -812,6 +812,21 @@ body {
 .aj-btn.perigo { color:#dc2626; border-color:#fecaca; background:#fef2f2; }
 .aj-btn.pri { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
 .aj-full { width:100%; padding:12px; margin-top:10px; }
+.cf-resumo { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:10px 0; }
+.cf-resumo div { border-radius:10px; padding:8px 4px; text-align:center; font-size:11px; font-weight:700; color:#374151; }
+.cf-resumo b { display:block; font-size:20px; }
+.cf-ok { background:#dcfce7; } .cf-data { background:#dbeafe; } .cf-valor { background:#fef3c7; } .cf-falta { background:#fee2e2; } .cf-soapp { background:#f3e8ff; }
+.cf-grupo { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#6b7280; margin:14px 0 6px; }
+.cf-item { background:#fff; border:1px solid #e5e7eb; border-left:4px solid #e5e7eb; border-radius:10px; padding:9px 10px; margin-bottom:6px; display:flex; gap:8px; align-items:center; }
+.cf-item.cf-falta { border-left-color:#ef4444; background:#fff; } .cf-item.cf-valor { border-left-color:#f59e0b; background:#fff; } .cf-item.cf-data { border-left-color:#3b82f6; background:#fff; } .cf-item.cf-ok { border-left-color:#22c55e; background:#fff; } .cf-item.cf-soapp { border-left-color:#a855f7; background:#fff; }
+.cf-item .cf-tx { flex:1; min-width:0; font-size:13px; line-height:1.35; color:#111827; }
+.cf-item .cf-tx small { display:block; color:#6b7280; font-size:12px; }
+.cf-item .cf-v { font-weight:800; font-size:14px; white-space:nowrap; }
+.cf-item button { flex:none; padding:7px 10px; font-size:12px; margin:0; }
+.cf-passos { margin:8px 0 12px; padding-left:20px; font-size:13px; color:#374151; line-height:1.5; }
+.cf-map { width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; display:block; overflow-x:auto; }
+.cf-map td, .cf-map th { border:1px solid #e5e7eb; padding:4px 6px; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+.cf-map th { background:#f3f4f6; }
 .aj-input { width:100%; padding:11px 12px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:16px; font-family:inherit; background:#fff; }
 .aj-label { display:block; font-size:12px; font-weight:700; color:#6b7280; margin:10px 0 5px; }
 .codigo { font-family: ui-monospace, Menlo, monospace; font-size:13.5px; word-break:break-all; background:#f3f4f6; padding:12px; border-radius:10px; user-select:all; -webkit-user-select:all; color:#111827; }
@@ -1304,6 +1319,12 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     <div class="aj-sec">Membros</div>
     <div class="card" id="aj-membros"></div>
 
+    <div class="aj-sec">🏦 Conferir com o banco</div>
+    <div class="card">
+      <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Baixe o extrato do seu banco (OFX ou CSV) e o app mostra o que está no banco e falta aqui, o que tem valor ou data diferente e o que bate. O arquivo é lido <b>só neste aparelho</b>, não vai para a internet.</div>
+      <button class="aj-btn pri aj-full" id="aj-conferir">Conferir com o extrato do banco</button>
+    </div>
+
     <div id="aj-limpar-teste" style="display:none">
       <div class="aj-sec">🧪 Ambiente de teste</div>
       <div class="card">
@@ -1345,6 +1366,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="banco.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

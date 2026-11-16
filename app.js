@@ -769,9 +769,11 @@ function salvarLancamento() {
     mostrarToast('✅', 'Salvo: ' + formatar(valor) + ' em ' + cat.nome);
   }
   Promise.all(ps).catch(function () { mostrarToast('⚠️', 'Erro ao salvar. Verifique a conexão.'); });
-  var voltar = a.editId ? (S.voltarPara || 'inicio') : 'inicio';
-  S.add.editId = null;
+  var voltar = a.editId ? (S.voltarPara || 'inicio') : (a.voltarConf ? 'ajustes' : 'inicio');
+  var reabrirConf = !!a.voltarConf;
+  S.add.editId = null; S.add.voltarConf = false;
   irPara(voltar);
+  if (reabrirConf) setTimeout(recalcularConferencia, 250);
 }
 
 // Exclusão (com opção de apagar o plano inteiro de parcelas)
@@ -2041,6 +2043,7 @@ function renderAjustes() {
   }).join('');
   renderAdmin();
   renderLimparTeste();
+  $('aj-conferir').onclick = abrirConferencia;
   $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
 }
@@ -2307,6 +2310,151 @@ function mostrarAdmin() {
     return db.ref('admin/codigoAcesso').remove().then(function () { _adm.codigo = ''; mostrarToast('⛔', 'Código geral desativado. Só os convites com nome funcionam.', 5000); });
   }); };
 }
+
+// ═════════════════════════ CONFERIR COM O BANCO (16/11/2026) ═════════════════════════
+// O arquivo do banco (OFX/CSV) é lido neste aparelho, com banco.js (window.MCBanco). Só os DÉBITOS entram.
+// Estado em memória (_conf): banco escolhido, texto do arquivo e o resultado. Mapa de colunas de CSV fica
+// guardado neste aparelho, por banco, para a próxima vez ser automático.
+var _conf = { banco: null, texto: '', nomeArq: '', res: null, ajustando: false, verOk: false };
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function bancoPorId(id) { return MCBanco.BANCOS.filter(function (b) { return b.id === id; })[0] || MCBanco.BANCOS[MCBanco.BANCOS.length - 1]; }
+function abrirConferencia() {
+  if (!window.MCBanco) { mostrarToast('⚠️', 'Atualize o app para usar a conferência'); return; }
+  if (!_conf.banco) _conf.banco = lsGet('mc_banco') || (moeda() === 'BRL' ? 'nubank' : 'cibc');
+  var b = bancoPorId(_conf.banco);
+  var grupo = function (pais, rot) {
+    return '<optgroup label="' + rot + '">' + MCBanco.BANCOS.filter(function (x) { return x.pais === pais; }).map(function (x) {
+      return '<option value="' + x.id + '"' + (x.id === b.id ? ' selected' : '') + '>' + esc(x.nome) + '</option>'; }).join('') + '</optgroup>';
+  };
+  abrirSheet('<h3>🏦 Conferir com o banco</h3>' +
+    '<label class="aj-label" for="cf-banco" style="margin-top:4px">Seu banco</label>' +
+    '<select class="aj-input" id="cf-banco">' + grupo('BR', 'Brasil') + grupo('CA', 'Canadá') + grupo('', 'Outro') + '</select>' +
+    '<div style="font-size:13px;font-weight:700;color:#111827;margin-top:12px">Como baixar o extrato no ' + esc(b.nome) + ' (' + esc(b.formato) + '):</div>' +
+    '<ol class="cf-passos">' + b.como.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' +
+    '<div style="font-size:12px;color:#6b7280;margin:-4px 0 10px">Os nomes dos menus podem mudar no site ou app do banco.</div>' +
+    '<label class="aj-btn pri aj-full" for="cf-arq" style="display:block;text-align:center;cursor:pointer">Escolher o arquivo do extrato</label>' +
+    '<input type="file" id="cf-arq" accept=".ofx,.qfx,.csv,.txt,text/csv,application/x-ofx" style="display:none">' +
+    (_conf.res ? '<button class="aj-btn aj-full" id="cf-ver">Ver a última conferência (' + esc(_conf.nomeArq) + ')</button>' : '') +
+    '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
+  $('cf-banco').onchange = function () { _conf.banco = this.value; lsSet('mc_banco', this.value); abrirConferencia(); };
+  if ($('cf-ver')) $('cf-ver').onclick = recalcularConferencia;
+  $('cf-arq').onchange = function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    lerArquivoTexto(f).then(function (t) { _conf.texto = t; _conf.nomeArq = f.name; _conf.ajustando = false; _conf.verOk = false; processarConferencia(); },
+      function () { mostrarToast('⚠️', 'Não consegui ler o arquivo'); });
+  };
+}
+// Lê como UTF-8; se aparecer caractere quebrado (arquivo em Latin-1, comum em bancos brasileiros), relê.
+function lerArquivoTexto(f) {
+  function ler(enc) { return new Promise(function (ok, erro) { var r = new FileReader(); r.onload = function () { ok(r.result); }; r.onerror = erro; r.readAsText(f, enc); }); }
+  return ler('UTF-8').then(function (t) { return t.indexOf('�') >= 0 ? ler('ISO-8859-1') : t; });
+}
+function processarConferencia(mapaManual) {
+  var b = bancoPorId(_conf.banco), salvo = null;
+  try { salvo = JSON.parse(lsGet('mc_mapa_' + b.id) || 'null'); } catch (e) {}
+  var r = MCBanco.ler(_conf.texto, { banco: b, mapa: mapaManual || salvo || null });
+  // mapa salvo que não serve mais para este arquivo → tenta descobrir de novo
+  if (!mapaManual && salvo && r.formato === 'CSV' && !r.transacoes.length) r = MCBanco.ler(_conf.texto, { banco: b });
+  if (mapaManual) lsSet('mc_mapa_' + b.id, JSON.stringify(mapaManual));
+  _conf.leitura = r;
+  if (r.formato === 'CSV' && (r.aviso || _conf.ajustando)) { mostrarMapa(); return; }
+  if (!r.transacoes.length) { mostrarToast('⚠️', r.aviso || 'Nenhum lançamento no arquivo'); return; }
+  var deb = r.transacoes.filter(function (x) { return x.tipo === 'debito'; });
+  _conf.creditos = r.transacoes.length - deb.length;
+  _conf.debitos = deb;
+  recalcularConferencia();
+}
+// refaz o cruzamento com os lançamentos de agora (depois de lançar ou corrigir algo)
+function recalcularConferencia() {
+  if (_conf.debitos) _conf.res = MCBanco.conferir(_conf.debitos, lancamentos());
+  mostrarConferencia();
+}
+function mostrarMapa() {
+  var r = _conf.leitura, m = r.mapa || {}, rows = r.linhas || [], ini = m.inicio || 0;
+  var nCol = Math.max.apply(null, rows.slice(0, 20).map(function (x) { return x.length; }));
+  var amostra = rows.slice(Math.max(0, ini - 1), ini + 5);
+  var opc = function (sel, comNenhum) {
+    var h = comNenhum ? '<option value="-1">—</option>' : '';
+    for (var c = 0; c < nCol; c++) h += '<option value="' + c + '"' + (sel === c ? ' selected' : '') + '>Coluna ' + (c + 1) + '</option>';
+    return h;
+  };
+  var duas = m.debito != null && m.debito >= 0;
+  abrirSheet('<h3>Quais colunas são quais?</h3>' +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45">' + (r.aviso ? esc(r.aviso) + ' ' : '') + 'Confira as primeiras linhas do arquivo e diga onde está cada informação. O app guarda isso para o ' + esc(bancoPorId(_conf.banco).nome) + '.</div>' +
+    '<table class="cf-map"><tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<th>Coluna ' + (c + 1) + '</th>'; }).join('') + '</tr>' +
+    amostra.map(function (row) { return '<tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<td>' + esc(row[c] || '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>' +
+    '<label class="aj-label">Data</label><select class="aj-input" id="mp-data">' + opc(m.data) + '</select>' +
+    '<label class="aj-label">Formato da data</label><select class="aj-input" id="mp-ordem"><option value="dmy"' + (m.ordem !== 'mdy' ? ' selected' : '') + '>dia/mês/ano (Brasil)</option><option value="mdy"' + (m.ordem === 'mdy' ? ' selected' : '') + '>mês/dia/ano (EUA)</option></select>' +
+    '<label class="aj-label">Descrição</label><select class="aj-input" id="mp-desc">' + opc(m.desc, true) + '</select>' +
+    '<label class="aj-label">Os valores vêm em</label><select class="aj-input" id="mp-modo"><option value="1"' + (!duas ? ' selected' : '') + '>Uma coluna (com sinal)</option><option value="2"' + (duas ? ' selected' : '') + '>Duas colunas: débito e crédito</option></select>' +
+    '<div id="mp-um"' + (duas ? ' style="display:none"' : '') + '><label class="aj-label">Valor</label><select class="aj-input" id="mp-valor">' + opc(m.valor) + '</select>' +
+    '<label class="aj-label">Os gastos aparecem como</label><select class="aj-input" id="mp-sinal"><option value="negativo"' + (m.sinal !== 'positivo' ? ' selected' : '') + '>Negativos (ex.: -45,90)</option><option value="positivo"' + (m.sinal === 'positivo' ? ' selected' : '') + '>Positivos (ex.: fatura de cartão)</option></select></div>' +
+    '<div id="mp-dois"' + (duas ? '' : ' style="display:none"') + '><label class="aj-label">Débito (gastos)</label><select class="aj-input" id="mp-deb">' + opc(m.debito) + '</select>' +
+    '<label class="aj-label">Crédito (entradas)</label><select class="aj-input" id="mp-cred">' + opc(m.credito) + '</select></div>' +
+    '<label class="aj-label">Primeira linha com lançamento</label><input class="aj-input" id="mp-ini" type="number" min="1" value="' + (ini + 1) + '">' +
+    '<button class="aj-btn pri aj-full" id="mp-ok" style="margin-top:12px">Usar estas colunas</button><button class="aj-btn aj-full" id="mp-voltar">Voltar</button>');
+  $('mp-modo').onchange = function () { $('mp-um').style.display = this.value === '1' ? '' : 'none'; $('mp-dois').style.display = this.value === '2' ? '' : 'none'; };
+  $('mp-voltar').onclick = abrirConferencia;
+  $('mp-ok').onclick = function () {
+    var dois = $('mp-modo').value === '2';
+    var novo = { inicio: Math.max(0, (+$('mp-ini').value || 1) - 1), data: +$('mp-data').value, desc: +$('mp-desc').value, ordem: $('mp-ordem').value };
+    if (dois) { novo.debito = +$('mp-deb').value; novo.credito = +$('mp-cred').value; } else { novo.valor = +$('mp-valor').value; novo.sinal = $('mp-sinal').value; }
+    _conf.ajustando = false;
+    var teste = MCBanco.ler(_conf.texto, { mapa: novo });
+    if (!teste.transacoes.length) { mostrarToast('⚠️', 'Com essas colunas não encontrei nenhum lançamento. Confira a data e o valor.', 4500); return; }
+    processarConferencia(novo);
+  };
+}
+function mostrarConferencia() {
+  var c = _conf.res; if (!c) { abrirConferencia(); return; }
+  var por = { ok: [], data: [], valor: [], falta: [] };
+  c.linhas.forEach(function (l) { por[l.status].push(l); });
+  var nomeApp = function (a) { return a ? esc(descLanc(a)) : ''; };
+  var item = function (cls, txt, sub, valor, botao) {
+    return '<div class="cf-item ' + cls + '"><div class="cf-tx">' + txt + (sub ? '<small>' + sub + '</small>' : '') + '</div><div class="cf-v">' + valor + '</div>' + (botao || '') + '</div>';
+  };
+  var html = '<h3>🏦 Banco × app</h3><div style="font-size:12px;color:#6b7280">' + esc(_conf.nomeArq) + ' · ' + formatarData(c.inicio) + ' a ' + formatarData(c.fim) + ' · só débitos' + (_conf.creditos ? ' (' + _conf.creditos + ' crédito' + (_conf.creditos > 1 ? 's' : '') + ' ignorado' + (_conf.creditos > 1 ? 's' : '') + ')' : '') + '</div>' +
+    '<div class="cf-resumo"><div class="cf-ok"><b>' + por.ok.length + '</b>batem</div><div class="cf-data"><b>' + por.data.length + '</b>data dif.</div><div class="cf-valor"><b>' + por.valor.length + '</b>valor dif.</div><div class="cf-falta"><b>' + por.falta.length + '</b>faltam</div></div>';
+  if (por.falta.length) html += '<div class="cf-grupo">No banco e não no app</div>' + por.falta.map(function (l) {
+    var i = c.linhas.indexOf(l);
+    return item('cf-falta', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data), formatar(l.banco.valor), '<button class="aj-btn pri" data-cflancar="' + i + '">Lançar</button>');
+  }).join('');
+  if (por.valor.length) html += '<div class="cf-grupo">Valor diferente</div>' + por.valor.map(function (l) {
+    var i = c.linhas.indexOf(l);
+    return item('cf-valor', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · no app: ' + nomeApp(l.app) + ' ' + formatar(l.app.valor), formatar(l.banco.valor), '<button class="aj-btn" data-cfcorrigir="' + i + '">Corrigir</button>');
+  }).join('');
+  if (c.soApp.length) html += '<div class="cf-grupo">No app e não no banco</div>' + c.soApp.map(function (a) {
+    return item('cf-soapp', nomeApp(a), formatarData(a.data) + ' · pode ter sido pago com outro cartão ou conta', formatar(a.valor));
+  }).join('');
+  if (por.data.length) html += '<div class="cf-grupo">Mesmo valor, data diferente</div>' + por.data.map(function (l) {
+    return item('cf-data', esc(l.banco.desc || '(sem descrição)'), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')', formatar(l.banco.valor));
+  }).join('');
+  if (por.ok.length) html += '<div class="cf-grupo">Batem (' + por.ok.length + ')</div>' + (_conf.verOk ? por.ok.map(function (l) {
+    return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app), formatar(l.banco.valor));
+  }).join('') : '<button class="aj-btn aj-full" id="cf-verok">Mostrar os ' + por.ok.length + ' que batem</button>');
+  html += '<div style="height:8px"></div>' + (_conf.leitura && _conf.leitura.formato === 'CSV' ? '<button class="aj-btn aj-full" id="cf-ajustar">Ajustar colunas do arquivo</button>' : '') +
+    '<button class="aj-btn aj-full" id="cf-outro">Escolher outro arquivo</button><button class="aj-btn aj-full" data-fechar>Fechar</button>';
+  abrirSheet(html);
+  if ($('cf-verok')) $('cf-verok').onclick = function () { _conf.verOk = true; mostrarConferencia(); };
+  if ($('cf-ajustar')) $('cf-ajustar').onclick = function () { _conf.ajustando = true; mostrarMapa(); };
+  $('cf-outro').onclick = abrirConferencia;
+  qsa('#sheet-box [data-cflancar]').forEach(function (bt) { bt.onclick = function () {
+    var l = c.linhas[+bt.dataset.cflancar];
+    fecharSheet(); irPara('add');
+    S.add.voltarConf = true;
+    $('inp-valor').value = numTxt(l.banco.valor.toFixed(2)); $('inp-data').value = l.banco.data; $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
+    mostrarToast('🏦', 'Escolha a categoria e salve. Depois o app volta para a conferência.', 4000);
+  }; });
+  qsa('#sheet-box [data-cfcorrigir]').forEach(function (bt) { bt.onclick = function () {
+    var l = c.linhas[+bt.dataset.cfcorrigir], reg = S.raw[l.app.id];
+    if (!reg) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
+    var novo = Object.assign({}, reg); novo.v = Math.round(l.banco.valor * 100);
+    gravarLanc(l.app.id, novo).then(function () { mostrarToast('✅', 'Corrigido para ' + formatar(l.banco.valor)); }, function () { mostrarToast('⚠️', 'Erro ao salvar'); });
+    recalcularConferencia();
+  }; });
+}
+
 // ── Só no ambiente de teste (14/11/2026): apagar todos os lançamentos da casa ──
 // Escondido em produção pelo config.js (MINHACASA_AMBIENTE). Pede dois toques.
 var _limparConf = false;
