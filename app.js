@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.25.2';
+var VERSAO = '2.25.3';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -730,6 +730,7 @@ function pintarTipoAdd() {
   $('btn-salvar-pro').innerHTML = ICO('check') + (ed ? 'Salvar alterações' : dev ? 'Salvar devolução' : 'Salvar lançamento');
   $('lbl-valor').textContent = dev ? 'Valor devolvido' : 'Valor Gasto';
   $('lbl-data').textContent = dev ? 'Data da devolução' : 'Data do Gasto';
+  $('inp-valor').placeholder = numTxt('0.00');
   $('inp-desc').placeholder = dev ? 'Ex: Devolvi a calça, troca do presente…' : 'Ex: Gasolina no posto, compras da semana…';
   $('card-orig').style.display = dev ? '' : 'none';
   $('card-forma').style.display = dev ? '' : 'none';
@@ -774,11 +775,21 @@ function renderOrig() {
   $('orig-lista').innerHTML = lista.length ? lista.map(function (l) { return item(l, false); }).join('')
     : '<div class="add-dica">Nenhuma compra encontrada com "' + esc(bruto) + '". Tente outro nome, valor ou dia, ou registre sem compra escolhendo a categoria abaixo.</div>';
 }
-function escolherOrig(id) {
+// Subcategoria da compra; se a compra não tinha, procura a que tem o mesmo nome da descrição (ex.: "Costco")
+function subDaCompra(o) {
+  var c = catPorId(o.cat); if (!c || !c.subs.length) return null;
+  if (o.sub && c.subs.some(function (s) { return s.id === o.sub; })) return o.sub;
+  var d = normNome(o.desc); if (!d) return null;
+  var s = c.subs.filter(function (x) { var n = normNome(x.nome); return n && (n === d || d.indexOf(n) === 0 || n.indexOf(d) === 0); })[0];
+  return s ? s.id : null;
+}
+// Ao escolher ou trocar a compra: categoria e subcategoria vêm dela; valor devolvido e descrição ficam em branco
+// para preencher (16/11/2026). manter = vindo da conferência, que já traz valor e descrição do extrato.
+function escolherOrig(id, manter) {
   var a = S.add, o = compraPorId(id); if (!o) return;
-  a.orig = id; a.cat = o.cat; a.sub = o.sub;
-  if (!$('inp-desc').value.trim()) $('inp-desc').value = descLanc(o).slice(0, 140);
-  if (!$('inp-valor').value.trim()) $('inp-valor').value = numTxt(restaDevolver(o).toFixed(2));
+  a.orig = id; a.cat = o.cat; a.sub = subDaCompra(o);
+  if (manter) { if (!$('inp-desc').value.trim()) $('inp-desc').value = descLanc(o).slice(0, 140); }
+  else { $('inp-valor').value = ''; $('inp-desc').value = ''; }
   renderAdd(); renderOrig(); atualizarAvisoValor();
 }
 function renderCreditoAdd() {
@@ -2626,7 +2637,7 @@ function mostrarConferencia() {
     S.add.voltarConf = true; S.add.tipo = 'dev'; S.add.lj = false; S.add.cl = null;
     $('inp-valor').value = numTxt(l.banco.valor.toFixed(2)); $('inp-data').value = l.banco.data; $('inp-desc').value = '';
     pintarTipoAdd();
-    if (o) escolherOrig(o.id);
+    if (o) escolherOrig(o.id, true);
     if (!$('inp-desc').value.trim()) $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
     mostrarToast('↩️', o ? 'Confira a compra e salve. Depois o app volta para a conferência.' : 'Escolha a compra ou a categoria e salve.', 4000);
   }; });
@@ -2995,7 +3006,7 @@ function ligarEventos() {
     if ((b = t.closest('.card-cat[data-cat]'))) { irParaCategoria(b.dataset.cat); return; }
     if ((b = t.closest('[data-addtipo]'))) { if (S.add.tipo !== b.dataset.addtipo) { S.add.tipo = b.dataset.addtipo; if (S.add.tipo === 'compra') { S.add.orig = null; S.add.lj = false; } else S.add.cl = null; pintarTipoAdd(); } return; }
     if ((b = t.closest('[data-addlj]'))) { S.add.lj = b.dataset.addlj === '1'; pintarTipoAdd(); return; }
-    if (t.closest('[data-origtrocar]')) { S.add.orig = null; renderOrig(); atualizarAvisoValor(); return; }
+    if (t.closest('[data-origtrocar]')) { S.add.orig = null; $('inp-valor').value = ''; $('inp-desc').value = ''; renderOrig(); atualizarAvisoValor(); return; }
     if ((b = t.closest('[data-origem]'))) { if (S.add.orig !== b.dataset.origem) escolherOrig(b.dataset.origem); return; }
     if ((b = t.closest('[data-addcat]'))) { if (S.add.cat !== b.dataset.addcat) S.add.sub = null; S.add.cat = b.dataset.addcat; renderAdd(); return; }
     if ((b = t.closest('[data-per] .rel-per-btn'))) { setPer(b.parentNode.dataset.per, b.dataset.tipo); return; }
