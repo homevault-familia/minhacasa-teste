@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.28.1';
+var VERSAO = '2.28.2';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -547,7 +547,7 @@ function linhaLanc(l, pagasMap, comData, classe, devMap) {
     '<div class="lanc-ponto" style="background:' + COR(l.cat) + ';flex-shrink:0"></div>' +
     '<div class="lanc-info"><div class="lanc-desc">' + esc(descLanc(l)) + parcelaBadgeHtml(l, pagasMap) + seloDev(l, devMap) + '</div>' +
     '<div class="lanc-meta">' + metaLanc(l, comData) + '</div></div>' +
-    '<div class="lanc-valor" style="color:' + (l.dev ? '#16a34a' : COR(l.cat)) + '">' + formatar(l.valor) + '</div>' +
+    (l.dev ? '<div class="lanc-valor lanc-valor-dev">' : '<div class="lanc-valor" style="color:' + COR(l.cat) + '">') + formatar(l.valor) + '</div>' +
     '<button class="lanc-edit" data-editar="' + l.id + '" aria-label="Editar lançamento">' + ICO('edit') + '</button>' +
     '<button class="lanc-del" data-excluir="' + l.id + '" aria-label="Excluir lançamento">' + ICO('trash') + '</button></div>';
 }
@@ -1028,7 +1028,7 @@ function exportarPDFHistorico() {
   var pills = Object.keys(totCat).map(function (c) { return '<span class="pill" style="color:' + COR(c) + ';border-color:' + COR(c) + ';background:' + alfa(COR(c), '12') + '">' + esc(EMO(c) + ' ' + NOME(c)) + ': ' + formatar(totCat[c]) + '</span>'; }).join('');
   var linhas = Object.keys(porDia).sort(function (a, b) { return b.localeCompare(a); }).map(function (d) {
     return '<tr class="dia"><td colspan="2">' + formatarData(d) + '</td><td class="v">' + formatar(porDia[d].reduce(function (s, l) { return s + l.valor; }, 0)) + '</td></tr>' +
-      porDia[d].map(function (l) { return '<tr><td>' + (l.dev ? '↩ ' : '') + esc(descLanc(l)) + (l.dev ? ' <small style="color:#16a34a">(devolução' + (l.lj ? ', crédito na loja' : '') + ')</small>' : '') + '</td><td style="color:#6b7280">' + esc(NOME(l.cat) + (nomeSub(l.cat, l.sub) ? ' · ' + nomeSub(l.cat, l.sub) : '')) + '</td><td class="v" style="color:' + COR(l.cat) + '">' + formatar(l.valor) + '</td></tr>'; }).join('');
+      porDia[d].map(function (l) { return '<tr><td>' + (l.dev ? '↩ ' : '') + esc(descLanc(l)) + (l.dev ? ' <small style="color:#16a34a">(devolução' + (l.lj ? ', crédito na loja' : '') + ')</small>' : '') + '</td><td style="color:#6b7280">' + esc(NOME(l.cat) + (nomeSub(l.cat, l.sub) ? ' · ' + nomeSub(l.cat, l.sub) : '')) + '</td><td class="v" style="' + (l.dev ? 'color:#15803d;background:#dcfce7' : 'color:' + COR(l.cat)) + '">' + formatar(l.valor) + '</td></tr>'; }).join('');
   }).join('');
   abrirImpressao('MinhaCasa — Histórico', '<h1>📋 ' + esc(S.cfg.nome || 'MinhaCasa') + ' — Histórico</h1><div class="sub">' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + ' · ' + lista.length + ' lançamentos</div>' +
     pills + '<table>' + linhas + '</table><div class="tot">Total: ' + formatar(total) + '</div>');
