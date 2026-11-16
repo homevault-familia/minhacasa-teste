@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.25.0';
+var VERSAO = '2.25.1';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -437,22 +437,24 @@ function renderizar() {
   else { al.className = 'alerta'; al.textContent = ''; }
 
   // Cards de categoria
+  var nDev = {}; T.lista.forEach(function (l) { if (l.valor < 0) nDev[l.cat] = (nDev[l.cat] || 0) + 1; });
   $('grid-cat').innerHTML = todasCats().map(function (cat) {
     var gasto = T.tots[cat.id] || 0, orc = +cat.orc || 0, qtd = T.qtds[cat.id] || 0;
+    var qtdTxt = qtd + ' lanç.' + (nDev[cat.id] ? ' · ' + nDev[cat.id] + ' devol.' : ''), rotG = gasto < 0 ? 'Devolvido' : 'Gasto';
     var corpo;
     if (orc > 0) {
-      var pC = Math.min(gasto / orc * 100, 100), restC = orc - gasto;
+      var pC = Math.max(0, Math.min(gasto / orc * 100, 100)), restC = orc - gasto;
       var corB = gasto > orc ? '#f44336' : pC >= 80 ? '#ff9800' : cat.cor;
-      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">Gasto</div><div class="cat-valor" style="color:' + cat.cor + '">' + formatar(gasto) + '</div>' +
+      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + '</div>' +
         '<div class="cat-sub-orc">Orç: ' + formatar(orc) + '</div></div>' +
         '<div style="text-align:right"><div class="cat-rotulo">Disponível</div><div class="cat-valor" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(restC) + '</div></div></div>' +
         '<div class="cat-barra-fundo" style="display:block"><div class="cat-barra-fill" style="width:' + pC + '%;background:' + corB + '"></div></div>' +
         '<div class="cat-orc" style="color:' + (restC < 0 ? '#f44336' : '#bbb') + '">' + pC.toFixed(0) + '% utilizado</div>';
     } else {
-      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">Gasto</div><div class="cat-valor" style="color:' + cat.cor + '">' + formatar(gasto) + '</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>';
+      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + '</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>';
     }
     return '<div class="card-cat" data-cat="' + cat.id + '">' +
-      '<div class="cat-header"><span class="cat-icon" style="background:' + alfa(cat.cor, '22') + '">' + esc(cat.emoji) + '</span><span class="cat-nome">' + esc(cat.nome) + '</span><span class="cat-qtd">' + qtd + ' lanç.</span></div>' +
+      '<div class="cat-header"><span class="cat-icon" style="background:' + alfa(cat.cor, '22') + '">' + esc(cat.emoji) + '</span><span class="cat-nome">' + esc(cat.nome) + '</span><span class="cat-qtd">' + qtdTxt + '</span></div>' +
       corpo + '</div>';
   }).join('');
 
@@ -467,9 +469,9 @@ function renderizarPizza(tots, total) {
   $('pizza-wrap').innerHTML = '<div class="pizza-legenda">' + todasCats().map(function (c) {
     var v = tots[c.id] || 0, orc = +c.orc || 0;
     var pct = orc > 0 ? (v / orc * 100).toFixed(0) : (total > 0 ? (v / total * 100).toFixed(0) : 0);
-    var cor = v > orc && orc > 0 ? '#f44336' : c.cor;
+    var cor = v > orc && orc > 0 ? '#f44336' : v < 0 ? '#16a34a' : c.cor;
     return '<div class="pizza-item"><div class="pizza-cor" style="background:' + cor + '"></div>' +
-      '<div class="pizza-txt">' + esc(c.nome) + ' <span style="color:#6b7280;font-size:11px">(' + pct + '% ' + (orc > 0 ? 'do orç.' : 'do total') + ')</span></div>' +
+      '<div class="pizza-txt">' + esc(c.nome) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? 'devolução' : pct + '% ' + (orc > 0 ? 'do orç.' : 'do total')) + ')</span></div>' +
       '<div class="pizza-val" style="color:' + cor + '">' + formatar(v) + '</div></div>';
   }).join('') + '</div>';
 }
@@ -1037,8 +1039,8 @@ function renderizarRelatorio() {
   var subTot = {};
   T.lista.forEach(function (l) { if (l.cat === PARC || !l.sub) return; var k = l.cat + '|' + l.sub; subTot[k] = (subTot[k] || 0) + l.valor; });
   var cats = '<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>' +
-    todasCats().filter(function (c) { return (T.tots[c.id] || 0) > 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
-      var g = T.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.min(g / o * 100, 100) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
+    todasCats().filter(function (c) { return (T.tots[c.id] || 0) !== 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
+      var g = T.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.max(0, Math.min(g / o * 100, 100)) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
       var corB = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : c.cor, restC = o - g;
       var barra = o > 0 ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:' + pC.toFixed(1) + '%;background:' + corB + '"></div></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px"><span style="color:#6b7280">' + pC.toFixed(0) + '% do orçado ' + formatar(o) + '</span>' +
@@ -1047,8 +1049,8 @@ function renderizarRelatorio() {
         var v = subTot[c.id + '|' + s.id]; if (!v) return '';
         return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">' + esc(s.nome) + '</span><span style="font-weight:700;color:' + c.cor + '">' + formatar(v) + '</span></div>';
       }).join('');
-      return '<div class="rel-cat-bloco" style="border-color:' + c.cor + '"><div class="rel-cat-header"><span class="rel-cat-nome">' + esc(c.emoji + ' ' + c.nome) + '</span><span class="rel-cat-pct-total">' + (c.id === PARC ? 'compromisso mensal' : pTot.toFixed(1) + '% do total') + '</span></div>' +
-        '<div class="rel-cat-nums"><div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + c.cor + '">' + formatar(g) + '</div><div class="rel-cat-num-lbl">Gasto</div></div>' +
+      return '<div class="rel-cat-bloco" style="border-color:' + c.cor + '"><div class="rel-cat-header"><span class="rel-cat-nome">' + esc(c.emoji + ' ' + c.nome) + '</span><span class="rel-cat-pct-total">' + (c.id === PARC ? 'compromisso mensal' : g < 0 ? 'só devolução' : pTot.toFixed(1) + '% do total') + '</span></div>' +
+        '<div class="rel-cat-nums"><div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + c.cor + '">' + formatar(g) + '</div><div class="rel-cat-num-lbl">' + (g < 0 ? 'Devolvido' : 'Gasto') + '</div></div>' +
         (o > 0 ? '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:#555">' + formatar(o) + '</div><div class="rel-cat-num-lbl">Orçado</div></div>' +
           '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(Math.abs(restC)) + '</div><div class="rel-cat-num-lbl">' + (restC < 0 ? 'Excedeu' : 'Disponível') + '</div></div>' : '') +
         '</div>' + barra + subs + '</div>';
@@ -1144,9 +1146,9 @@ function renderizarRelcat() {
   var porDia = {};
   lista.forEach(function (l) { porDia[l.data] = (porDia[l.data] || 0) + l.valor; });
   var diasCom = Object.keys(porDia).filter(function (d) { return porDia[d] > 0; }).length, mediaDia = diasCom ? total / diasCom : 0;
-  var nCompras = lista.filter(function (l) { return l.valor > 0; }).length || 1;
+  var nCompras = lista.filter(function (l) { return l.valor > 0; }).length;
   var maior = lista.reduce(function (m, l) { return l.valor > (m.valor || 0) ? l : m; }, {});
-  var pctOrc = orc > 0 ? Math.min(total / orc * 100, 100) : 0, corB = total > orc && orc > 0 ? '#f44336' : pctOrc >= 80 ? '#ff9800' : cor;
+  var pctOrc = orc > 0 ? Math.max(0, Math.min(total / orc * 100, 100)) : 0, corB = total > orc && orc > 0 ? '#f44336' : pctOrc >= 80 ? '#ff9800' : cor;
   var hero = '<div class="card" style="margin-bottom:10px"><div class="relcat-hero"><div class="relcat-hero-val" style="color:' + cor + '">' + formatar(total) + '</div>' +
     '<div class="relcat-hero-sub">' + (c.id === PARC ? lista.length + ' planos · compromisso mensal' : lista.length + ' lançamentos · ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim)) + '</div></div>' +
     (orc > 0 ? '<div class="orc-barra-fundo" style="height:10px;margin-top:8px"><div class="orc-barra-fill" style="width:' + pctOrc.toFixed(1) + '%;background:' + corB + '"></div></div>' +
@@ -1156,7 +1158,7 @@ function renderizarRelcat() {
     '<div class="relcat-stat"><div class="relcat-stat-val" style="color:' + cor + '">' + formatar(mediaDia) + '</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>' +
     '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + diasCom + '</div><div class="relcat-stat-lbl">Dias com gasto</div></div>' +
     (maior.valor ? '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#e53935">' + formatar(maior.valor) + '</div><div class="relcat-stat-lbl">Maior gasto · ' + formatarData(maior.data) + '</div></div>' : '') +
-    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + formatar(total / nCompras) + '</div><div class="relcat-stat-lbl">Média por compra</div></div></div>';
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + (nCompras ? formatar(total / nCompras) : '—') + '</div><div class="relcat-stat-lbl">Média por compra</div></div></div>';
   var subs = '<div class="card" style="margin-bottom:10px"><div class="card-titulo">' + (c.id === PARC ? 'Por Plano' : 'Por Subcategoria') + '</div>' + subKeys.map(function (k) {
     var v = subTots[k];
     return '<div class="relcat-sub-row"><div class="relcat-sub-nome">' + esc(k) + '</div><div class="relcat-sub-bar-wrap"><div class="relcat-sub-bar-fill" style="width:' + (v / maxSub * 100).toFixed(1) + '%;background:' + cor + '"></div></div>' +
