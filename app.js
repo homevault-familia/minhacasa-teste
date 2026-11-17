@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.28.3';
+var VERSAO = '2.29.0';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2735,8 +2735,10 @@ function aplicarPagamento() {
 }
 function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
 // Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
-var ATALHO_ICLOUD = { teste: '', producao: 'https://www.icloud.com/shortcuts/86d83d8583ee4be29e97973ceb3ca3a3' }; // teste: sem link próprio por enquanto (o atalho oficial abre o app oficial)
-function linkAtalho() { return ATALHO_ICLOUD[window.MINHACASA_AMBIENTE === 'teste' ? 'teste' : 'producao'] || ''; }
+// Os dois links abrem o app oficial (minhacasaapp.com); no ambiente de teste também aparecem, com um aviso.
+var ATALHO_ICLOUD = 'https://www.icloud.com/shortcuts/86d83d8583ee4be29e97973ceb3ca3a3';   // atalho "MinhaCasa" (as ações)
+var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/e425556e58454a9ea22448456acf4a20'; // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
+function linkAtalho() { return ATALHO_ICLOUD; }
 var FRASE_IA = {
   pt: 'Quando eu pagar com qualquer cartão da Carteira, execute o atalho "MinhaCasa" imediatamente, sem perguntar.',
   en: 'When I pay with any card in Wallet, run the shortcut "MinhaCasa" immediately, without asking.'
@@ -2763,10 +2765,11 @@ function abrirApplePay() {
   abrirSheet('<h3>📲 Lançar ao pagar com Apple Pay</h3>' +
     '<div class="ap-st ' + (st.ok ? 'ok' : 'nao') + '">' + (st.ok ? '✅ ' : '⏳ ') + esc(st.txt) + '</div>' +
     (ios ? '' : '<div class="ap-aviso">Este recurso é do <b>iPhone</b> (Apple Pay). No Android não existe um jeito de o celular avisar o app na hora do pagamento; use a <b>Conferência com o banco</b> para achar o que faltou lançar. Se você tem iPhone, abra o MinhaCasa nele para configurar.</div>') +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 2 partes, uns 3 minutos, no app <b>Atalhos</b> (Shortcuts), que já vem no iPhone. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 3 passos, uns 2 minutos, com o app <b>Atalhos</b> (Shortcuts) da Apple. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
+    (window.MINHACASA_AMBIENTE === 'teste' ? '<div class="ap-aviso">Ambiente de teste: estes links instalam a versão que abre o <b>app oficial</b> (minhacasaapp.com).</div>' : '') +
 
     '<div class="ap-parte">1 · Instalar o atalho MinhaCasa</div>' +
-    (lk ? '<div class="ap-txt">Toque no botão. Na página que abrir, toque em <b>Obter Atalho</b> (Get Shortcut) e, no app Atalhos, em <b>Adicionar Atalho</b> (Add Shortcut).</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
+    (lk ? '<div class="ap-txt">Toque no botão. Na página que abrir, toque em <b>Obter Atalho</b> (Get Shortcut) e, no app Atalhos, em <b>Adicionar Atalho</b> (Add Shortcut). Se o iPhone pedir para baixar o app <b>Atalhos</b>, toque em <b>Mostrar na App Store</b> e baixe (é gratuito, da Apple); depois toque de novo no botão.</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
         : '<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>') +
     '<details class="ap-det"' + (lk ? '' : ' open') + '><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">' +
     '<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>' +
@@ -2776,7 +2779,16 @@ function abrirApplePay() {
     '<li>Adicione <b>Abrir URLs</b> (Open URLs).</li>' +
     '<li>Dê o nome <b>MinhaCasa</b> ao atalho (tocando no nome, em cima) e saia.</li></ol></details>' +
 
-    '<div class="ap-parte">2 · Ligar ao seu cartão</div>' +
+    '<div class="ap-parte">2 · Instalar a ligação com o cartão</div>' +
+    '<div class="ap-txt">Toque no botão e, do mesmo jeito, em <b>Obter Atalho</b> e <b>Adicionar Atalho</b>. Ele se chama <b>Cartão MinhaCasa</b>.</div>' +
+    '<a class="aj-btn pri aj-full ap-link" href="' + esc(AUTOMACAO_ICLOUD) + '" target="_blank" rel="noopener">Instalar o Cartão MinhaCasa</a>' +
+    '<div class="ap-parte">3 · Escolher o seu cartão e ligar</div>' +
+    '<ol class="cf-passos ap-passos">' +
+    '<li>No app <b>Atalhos</b>, abra <b>Automação</b> (Automation) e toque em <b>Quando eu tocar num passe ou cartão da Carteira</b> (When I tap a Wallet pass or payment card).</li>' +
+    '<li>Toque em <b>Editar</b> (Edit). No bloco <b>Quando… for tocado</b> (When… is tapped), toque no nome do cartão e marque <b>o seu cartão</b>, o que você controla no MinhaCasa. O nome tem que ficar <b>azul</b>.</li>' +
+    '<li>Confira se o bloco <b>Executar</b> (Run) mostra <b>MinhaCasa</b>. Se mostrar outro nome ou um aviso vermelho, toque nele e escolha <b>MinhaCasa</b>.</li>' +
+    '<li>Toque na setinha <b>›</b> ao lado de "for tocado" (is tapped) e ligue <b>Automação</b> (Automation): fica verde e some o aviso "Automação desligada" (Automation is turned off). Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li></ol>' +
+    '<details class="ap-det"><summary>Não deu certo? Criar a ligação de outro jeito</summary>' +
     '<div class="ap-txt">No app Atalhos, abra <b>Automação</b> (Automation) e toque no <b>+</b>. O que aparece?</div>' +
     '<div class="ap-esc"><button type="button" class="aj-btn" data-apcam="a"><span>Uma caixa</span><b>"Descreva um atalho"</b></button><button type="button" class="aj-btn" data-apcam="b"><span>Uma lista</span><b>Hora, Chegar, Carteira…</b></button></div>' +
     '<div id="ap-cam-a" class="ap-cam" style="display:none"><div class="ap-cam-t">Com a IA do iPhone</div><ol class="cf-passos ap-passos">' +
@@ -2789,7 +2801,9 @@ function abrirApplePay() {
     '<li>Marque <b>só o cartão</b> que você controla no MinhaCasa e escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
     '<li>Na lista de atalhos, escolha <b>MinhaCasa</b>. Toque em <b>OK</b> (Done).</li></ol></div>' +
 
-    '<div class="ap-parte">3 · Testar</div>' +
+    '</details>' +
+
+    '<div class="ap-parte">4 · Testar</div>' +
     '<div class="ap-txt">Pague algo pequeno por aproximação com esse cartão. O MinhaCasa deve abrir com o valor e a loja; confira a categoria e salve. Esta tela passa a mostrar <b>✅ Funcionando</b>.</div>' +
     '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin:8px 0 10px"><b>Na primeira vez</b>, o link abre no Safari: se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua ligada.</div>' +
     '<button class="aj-btn aj-full" id="ap-testar">Ver como fica (simula um pagamento)</button>' +
