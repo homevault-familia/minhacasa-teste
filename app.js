@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.3';
+var VERSAO = '2.29.4';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2750,12 +2750,12 @@ function aplicarPagamento() {
 function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
 // Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
 // Os dois links abrem o app oficial (minhacasaapp.com); no ambiente de teste também aparecem, com um aviso.
-var ATALHO_ICLOUD = 'https://www.icloud.com/shortcuts/86d83d8583ee4be29e97973ceb3ca3a3';   // atalho "MinhaCasa" (as ações)
-var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/e425556e58454a9ea22448456acf4a20'; // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
+var ATALHO_ICLOUD = 'https://www.icloud.com/shortcuts/5e8401a26f594d0d929cf04e8255c506';   // atalho "MinhaCasa" (as ações)
+var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/bb97f33836204b17b05fd01ae04027b3'; // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
 function linkAtalho() { return ATALHO_ICLOUD; }
 var FRASE_IA = {
-  pt: 'Quando eu pagar com qualquer cartão da Carteira, execute o atalho "MinhaCasa" imediatamente, sem perguntar.',
-  en: 'When I pay with any card in Wallet, run the shortcut "MinhaCasa" immediately, without asking.'
+  pt: 'Quando eu pagar com qualquer cartão da Carteira, sem perguntar: crie um Texto com o Comerciante e o Valor da transação, e execute o atalho "MinhaCasa" com esse Texto como entrada.',
+  en: 'When I pay with any card in Wallet, without asking: make a Text with the transaction\'s Merchant and Amount, then run the shortcut "MinhaCasa" with that Text as input.'
 };
 function eIPhone() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 // Funciona? 1) algum lançamento salvo a partir do Apple Pay (vale para a casa toda, em qualquer aparelho);
@@ -2787,8 +2787,7 @@ function abrirApplePay() {
         : '<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>') +
     '<details class="ap-det"' + (lk ? '' : ' open') + '><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">' +
     '<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>' +
-    '<li>Adicione a ação <b>Texto</b> (Text). Dentro dela, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado; toque na bolinha azul e escolha <b>Valor</b> (Amount). Digite <code>|</code>, insira de novo e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code>, insira de novo e escolha <b>Cartão ou Passe</b> (Card or Pass).</li>' +
-    '<li>Adicione <b>Codificar URL</b> (URL Encode).</li>' +
+    '<li>Adicione <b>Codificar URL</b> (URL Encode) e, dentro dela, a variável <b>Entrada do Atalho</b> (Shortcut Input).</li>' +
     '<li>Adicione outro <b>Texto</b> (Text) com o endereço abaixo e, colado nele, a variável <b>URL Codificado</b> (URL Encoded Text):<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
     '<li>Adicione <b>Abrir URLs</b> (Open URLs).</li>' +
     '<li>Dê o nome <b>MinhaCasa</b> ao atalho (tocando no nome, em cima) e saia.</li></ol></details>' +
@@ -2809,11 +2808,13 @@ function abrirApplePay() {
     '<li>Copie uma das frases abaixo (a do idioma do seu iPhone), cole na caixa e envie.' + fraseBtns + '</li>' +
     '<li>Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li>' +
     '<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>' +
-    '<li>Toque na setinha desse bloco e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>' +
+    '<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant) e <b>Valor</b> (Amount), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>' +
+    '<li>Toque na setinha do bloco do cartão e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>' +
     '<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA</div><ol class="cf-passos ap-passos">' +
     '<li>Na lista, escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>' +
     '<li>Marque <b>só o cartão</b> que você controla no MinhaCasa e escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
-    '<li>Na lista de atalhos, escolha <b>MinhaCasa</b>. Toque em <b>OK</b> (Done).</li></ol></div>' +
+    '<li>Toque em <b>Nova Automação em Branco</b> (New Blank Automation). Adicione <b>Texto</b> (Text) e, dentro dele, insira a variável do pagamento duas vezes: uma como <b>Comerciante</b> (Merchant) e outra como <b>Valor</b> (Amount) (toque na bolinha para escolher).</li>' +
+    '<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha, ponha a entrada (Input) como <b>Texto</b>. Toque em <b>OK</b> (Done).</li></ol></div>' +
 
     '</details>' +
 
