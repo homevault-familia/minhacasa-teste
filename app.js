@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.1';
+var VERSAO = '2.29.2';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2680,7 +2680,14 @@ function capturarPagamentoDoLink() {
   var t = m[1];
   try { t = decodeURIComponent(t); } catch (e) {}
   try { t = decodeURIComponent(t); } catch (e) {} // se o atalho codificou duas vezes
-  var partes = t.split('|').map(function (x) { return x.trim(); });
+  // separador: "|" ou quebra de linha; sem separador, o valor é o trecho com cara de dinheiro no fim ou no começo
+  // ("CIRCLE K 2742 CA$45.20", "$12.50 Tim Hortons") (16/11/2026)
+  if (!/[|\n]/.test(t)) {
+    var mFim = /^(.*?)\s*((?:[A-Z]{1,3})?[$€£]\s?-?\d[\d.,]*|-?\d[\d.,]*[.,]\d{2}(?:\s?(?:[$€£]|CAD|BRL|USD|EUR))?)\s*$/i.exec(t.trim());
+    var mIni = /^\s*((?:[A-Z]{1,3})?[$€£]\s?-?\d[\d.,]*|-?\d[\d.,]*[.,]\d{2}(?:\s?(?:[$€£]|CAD|BRL|USD|EUR))?)\s*(.*)$/i.exec(t.trim());
+    if (mFim && mFim[1]) t = mFim[1] + '|' + mFim[2]; else if (mIni) t = mIni[1] + '|' + mIni[2];
+  }
+  var partes = t.split(/[|\n]/).map(function (x) { return x.trim(); });
   // aceita "valor|loja" e "loja|valor": o valor é a parte que só tem número e moeda (16/11/2026)
   var ehValor = function (x) { var y = String(x || '').replace(/(CA|US|R|A|NZ|C)?\$|CAD|BRL|USD|EUR|€|£|\s/gi, ''); return /^-?\d[\d.,]*$/.test(y); };
   var iv = partes.findIndex(ehValor);
