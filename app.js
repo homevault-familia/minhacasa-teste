@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.0';
+var VERSAO = '2.29.1';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2680,7 +2680,14 @@ function capturarPagamentoDoLink() {
   var t = m[1];
   try { t = decodeURIComponent(t); } catch (e) {}
   try { t = decodeURIComponent(t); } catch (e) {} // se o atalho codificou duas vezes
-  var partes = t.split('|'), v = MCBanco.numero(partes[0]);
+  var partes = t.split('|').map(function (x) { return x.trim(); });
+  // aceita "valor|loja" e "loja|valor": o valor é a parte que só tem número e moeda (16/11/2026)
+  var ehValor = function (x) { var y = String(x || '').replace(/(CA|US|R|A|NZ|C)?\$|CAD|BRL|USD|EUR|€|£|\s/gi, ''); return /^-?\d[\d.,]*$/.test(y); };
+  var iv = partes.findIndex(ehValor);
+  var valorTxt = iv >= 0 ? partes[iv] : '';
+  var resto = partes.filter(function (x, k) { return k !== iv && x; });
+  partes = [valorTxt, resto[0] || '', resto[1] || ''];
+  var v = MCBanco.numero(partes[0]);
   var pag = { valor: isFinite(v) ? Math.abs(v) : 0, loja: txtCurto((partes[1] || '').replace(/\s+/g, ' ').trim(), 140), cartao: txtCurto((partes[2] || '').trim(), 60), em: Date.now() };
   S.pagPend = pag;
   try { sessionStorage.setItem(CHAVE_PAG, JSON.stringify(pag)); } catch (e) {} // sobrevive ao login
