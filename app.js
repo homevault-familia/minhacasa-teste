@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.4';
+var VERSAO = '2.29.5';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2751,7 +2751,7 @@ function linkPagamento() { return location.origin + location.pathname.replace(/i
 // Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
 // Os dois links abrem o app oficial (minhacasaapp.com); no ambiente de teste também aparecem, com um aviso.
 var ATALHO_ICLOUD = 'https://www.icloud.com/shortcuts/5e8401a26f594d0d929cf04e8255c506';   // atalho "MinhaCasa" (as ações)
-var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/bb97f33836204b17b05fd01ae04027b3'; // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
+var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/8d5e3595437b441fa14025435e1415c9'; // com Any Card // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
 function linkAtalho() { return ATALHO_ICLOUD; }
 var FRASE_IA = {
   pt: 'Quando eu pagar com qualquer cartão da Carteira, sem perguntar: crie um Texto com o Comerciante e o Valor da transação, e execute o atalho "MinhaCasa" com esse Texto como entrada.',
