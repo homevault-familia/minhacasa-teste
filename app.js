@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.2';
+var VERSAO = '2.29.3';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2683,7 +2683,7 @@ function capturarPagamentoDoLink() {
   // separador: "|" ou quebra de linha; sem separador, o valor é o trecho com cara de dinheiro no fim ou no começo
   // ("CIRCLE K 2742 CA$45.20", "$12.50 Tim Hortons") (16/11/2026)
   if (!/[|\n]/.test(t)) {
-    var mFim = /^(.*?)\s*((?:[A-Z]{1,3})?[$€£]\s?-?\d[\d.,]*|-?\d[\d.,]*[.,]\d{2}(?:\s?(?:[$€£]|CAD|BRL|USD|EUR))?)\s*$/i.exec(t.trim());
+    var mFim = /^(.*?)\s*((?:(?<=\s|^)[A-Z]{1,3})?[$€£]\s?-?\d[\d.,]*|-?\d[\d.,]*[.,]\d{2}(?:\s?(?:[$€£]|CAD|BRL|USD|EUR))?)\s*$/i.exec(t.trim());
     var mIni = /^\s*((?:[A-Z]{1,3})?[$€£]\s?-?\d[\d.,]*|-?\d[\d.,]*[.,]\d{2}(?:\s?(?:[$€£]|CAD|BRL|USD|EUR))?)\s*(.*)$/i.exec(t.trim());
     if (mFim && mFim[1]) t = mFim[1] + '|' + mFim[2]; else if (mIni) t = mIni[1] + '|' + mIni[2];
   }
