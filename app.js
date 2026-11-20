@@ -6,10 +6,11 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.31.5';
+var VERSAO = '2.31.6';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
-  { v: '2.31.5', d: '20/11/2026', itens: [
+  { v: '2.31.6', d: '20/11/2026', itens: [
+    'O nome MinhaCasa™ agora aparece com o símbolo de marca (™).',
     'Logo novo: uma casa com barras que sobem, mostrando o orçamento da família sob controle. Para ver o ícone novo na tela do iPhone, apague o atalho antigo e adicione o app de novo à Tela de Início.'
   ] },
   { v: '2.31.3', d: '20/11/2026', itens: [
@@ -433,7 +434,7 @@ function renderizar() {
   renderAvisoPeriodo();
   var hj = hoje();
   var totalHoje = T.todos.filter(function (l) { return l.data === hj; }).reduce(function (s, l) { return s + l.valor; }, 0);
-  $('txt-casa').textContent = c.nome || 'MinhaCasa';
+  $('txt-casa').textContent = c.nome || 'MinhaCasa™';
   $('txt-total').textContent = formatar(T.comum);
   var parc = T.tots[PARC] || 0;
   $('hero-parc-wrap').style.display = parc > 0 ? '' : 'none';
@@ -1036,7 +1037,7 @@ function compartilharHistorico() {
     msg += '\n📅 *' + formatarData(d) + '* — ' + formatar(porDia[d].reduce(function (s, l) { return s + l.valor; }, 0)) + '\n';
     porDia[d].forEach(function (l) { var sb = nomeSub(l.cat, l.sub); msg += '  • ' + (l.dev ? '↩ Devolução · ' : '') + NOME(l.cat) + (sb ? ' (' + sb + ')' : '') + ': ' + formatar(l.valor) + (l.desc ? ' — ' + l.desc : '') + '\n'; });
   });
-  msg += '\n━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*\n\n_Enviado via MinhaCasa_';
+  msg += '\n━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*\n\n_Enviado via MinhaCasa™_';
   compartilharTexto(msg);
 }
 function abrirImpressao(titulo, corpo) {
@@ -1155,7 +1156,7 @@ function renderizarRelatorio() {
   $('rel-wa').onclick = function () {
     var msg = '📊 *RELATÓRIO — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
     todasCats().forEach(function (c) { var g = T.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + c.nome + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
-    msg += '━━━━━━━━━━━━━━━━\n💰 *Total gasto: ' + formatar(grand) + '*\n✅ Disponível: ' + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + '\n\n_Enviado via MinhaCasa_';
+    msg += '━━━━━━━━━━━━━━━━\n💰 *Total gasto: ' + formatar(grand) + '*\n✅ Disponível: ' + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + '\n\n_Enviado via MinhaCasa™_';
     compartilharTexto(msg);
   };
 }
@@ -1232,7 +1233,7 @@ function renderizarRelcat() {
   $('rc-wa').onclick = function () {
     var msg = c.emoji + ' *' + c.nome.toUpperCase() + '* — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '\n━━━━━━━━━━━━━━━━\n';
     subKeys.forEach(function (k) { msg += '• ' + k + ': ' + formatar(subTots[k]) + '\n'; });
-    msg += '━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*' + (orc ? ' / orçado ' + formatar(orc) : '') + '\n\n_Enviado via MinhaCasa_';
+    msg += '━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*' + (orc ? ' / orçado ' + formatar(orc) : '') + '\n\n_Enviado via MinhaCasa™_';
     compartilharTexto(msg);
   };
   $('rc-pdf').onclick = function () {
@@ -1717,7 +1718,7 @@ function renderizarSemana() {
     var msg = '📌 *' + (r.parcial ? 'SEMANA ATUAL (ATÉ ' + semFD(r.ate).toUpperCase() + ') ' : 'SEMANA ') + semFD(r.seg).toUpperCase() + ' – ' + semFD(r.dom).toUpperCase() + '*\n━━━━━━━━━━━━━━━━\n💰 Gasto: *' + m0(r.tot) + '*' + (r.alvoSem > 0 ? ' (alvo ' + m0(r.alvoSem) + ')' : '') + '\n📊 Sua média por semana: ' + m0(r.normalTot) + '\n';
     if (r.vaz.length) { msg += '\n🔻 *Onde mais vazou*\n'; r.vaz.forEach(function (x) { msg += '• ' + x.nome + ': ' + m0(x.sem) + ' (média por semana ali ' + m0(x.normal) + ', +' + m0(x.exc) + '; nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + ')\n'; }); }
     msg += '\n✅ *O que fazer nesta semana*\n'; r.acoes.forEach(function (a, i) { msg += (i + 1) + '. ' + txt(a) + '\n'; });
-    compartilharTexto(msg + '\n_Enviado via MinhaCasa_');
+    compartilharTexto(msg + '\n_Enviado via MinhaCasa™_');
   };
 }
 
@@ -1745,7 +1746,7 @@ function exportarPDFSemana(r) {
     '<h2>🔻 Onde mais vazou</h2><table><thead><tr>' + th('Onde') + th('Esta semana', 'right') + th('Nas ' + r.semBase + ' semanas antes') + th(r.parcial ? 'Média até este dia' : 'Média por semana', 'right') + th('A mais', 'right') + '</tr></thead><tbody>' + vaz + '</tbody></table>' +
     '<h2>✅ O que fazer nesta semana</h2><ol>' + r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
     (cats ? '<h2>📊 Categorias × orçamento semanal</h2><table><thead><tr>' + th('Categoria') + th('Gasto', 'right') + th('Orçamento', 'right') + '</tr></thead><tbody>' + cats + '</tbody></table>' : '') +
-    '<div style="margin-top:22px;font-size:11px;color:#6b7280;text-align:center">Gerado em ' + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' · MinhaCasa</div>';
+    '<div style="margin-top:22px;font-size:11px;color:#6b7280;text-align:center">Gerado em ' + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' · MinhaCasa™</div>';
   abrirImpressao('MinhaCasa — ' + titulo, corpo);
 }
 
