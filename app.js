@@ -6,7 +6,7 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.5';
+var VERSAO = '2.29.6';
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -2810,12 +2810,14 @@ function abrirApplePay() {
     '<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>' +
     '<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant) e <b>Valor</b> (Amount), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>' +
     '<li>Toque na setinha do bloco do cartão e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>' +
-    '<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA</div><ol class="cf-passos ap-passos">' +
-    '<li>Na lista, escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>' +
-    '<li>Marque <b>só o cartão</b> que você controla no MinhaCasa e escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
-    '<li>Toque em <b>Nova Automação em Branco</b> (New Blank Automation). Adicione <b>Texto</b> (Text) e, dentro dele, insira a variável do pagamento duas vezes: uma como <b>Comerciante</b> (Merchant) e outra como <b>Valor</b> (Amount) (toque na bolinha para escolher).</li>' +
-    '<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha, ponha a entrada (Input) como <b>Texto</b>. Toque em <b>OK</b> (Done).</li></ol></div>' +
-
+    '<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA (iPhones com iOS mais antigo)</div><ol class="cf-passos ap-passos">' +
+    '<li>Se você instalou o <b>Cartão MinhaCasa</b> e ele aparece com <b>Variável Desconhecida</b> (Unknown Variable) em vermelho, apague-o (segure em cima → Apagar). Mantenha só o atalho <b>MinhaCasa</b>.</li>' +
+    '<li>Em <b>Automação</b> (Automation), toque no <b>+</b> e escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>' +
+    '<li>Marque <b>só o seu cartão</b>. Se aparecer, escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
+    '<li>Toque em <b>Criar Novo Atalho</b> (Create New Shortcut) ou <b>Nova Automação em Branco</b> (New Blank Automation). Não escolha o MinhaCasa direto da lista.</li>' +
+    '<li>Adicione <b>Texto</b> (Text). Dentro dele, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado, toque na bolinha e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code> (teclas 123 → #+=). Insira de novo a Entrada do Atalho e escolha <b>Valor</b> (Amount).</li>' +
+    '<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha <b>›</b>, ponha a entrada (Input) como <b>Texto</b> (Text). Toque em <b>OK</b> (Done).</li>' +
+    '<li>Volte em <b>Automação</b>, toque na automação nova e confira se está em <b>Executar Imediatamente</b> (Run Immediately).</li></ol></div>' +
     '</details>' +
 
     '<div class="ap-parte">4 · Testar</div>' +
