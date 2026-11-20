@@ -2520,6 +2520,8 @@ var _conf = { banco: null, texto: '', nomeArq: '', res: null, ajustando: false, 
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function bancoPorId(id) { return MCBanco.BANCOS.filter(function (b) { return b.id === id; })[0] || MCBanco.BANCOS[MCBanco.BANCOS.length - 1]; }
+// bancos sem leitura própria: o app usa o leitor automático e, se precisar, pergunta as colunas uma vez (20/11/2026)
+var SEM_LEITOR = ['desjardins', 'outro'];
 function abrirConferencia() {
   if (!window.MCBanco) { mostrarToast('⚠️', 'Atualize o app para usar a conferência'); return; }
   if (!_conf.banco) _conf.banco = lsGet('mc_banco') || (moeda() === 'BRL' ? 'nubank' : 'cibc');
@@ -2528,7 +2530,7 @@ function abrirConferencia() {
     return '<optgroup label="' + rot + '">' + MCBanco.BANCOS.filter(function (x) { return x.pais === pais; }).map(function (x) {
       return '<option value="' + x.id + '"' + (x.id === b.id ? ' selected' : '') + '>' + esc(x.nome) + '</option>'; }).join('') + '</optgroup>';
   };
-  // Tela em 3 passos, para quem nunca usou (20/11/2026)
+  // Tela em passos, para quem nunca usou (20/11/2026)
   abrirSheet('<h3>🏦 Conferir com o banco</h3>' +
     '<div class="cf-intro">Compare os gastos do seu cartão com o que está no app e descubra <b>o que faltou lançar</b>. O arquivo é lido só neste aparelho.</div>' +
     '<div class="cf-passo"><span class="cf-n">1</span><div><b>Escolha o banco</b>' +
@@ -2536,6 +2538,11 @@ function abrirConferencia() {
     '<div class="cf-passo"><span class="cf-n">2</span><div><b>Baixe o extrato no site do ' + esc(b.nome) + '</b> <span class="cf-fmt">' + esc(b.formato) + '</span>' +
       '<details class="cf-det"><summary>Ver como baixar</summary><ol class="cf-passos">' + b.como.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' +
       '<div style="font-size:12px;color:#6b7280;margin:-4px 0 6px">Os nomes dos menus podem mudar no site do banco.</div></details>' +
+      (SEM_LEITOR.indexOf(b.id) >= 0 ? '<div class="cf-aviso-banco"><b>' + (b.id === 'outro' ? 'Banco que o app ainda não conhece' : 'O app ainda não tem leitura própria do ' + esc(b.nome)) + '.</b> Funciona assim mesmo:' +
+        '<ol><li>Baixe o extrato em <b>CSV</b> (ou <b>OFX</b>, se o banco oferecer: é lido sem perguntas).</li>' +
+        '<li>Escolha o arquivo normalmente. O app tenta entender sozinho.</li>' +
+        '<li>Se ele não conseguir, mostra as primeiras linhas do arquivo e pergunta <b>qual coluna é a data, o valor e a descrição</b>. É só olhar a tabela e escolher.</li>' +
+        '<li>Você responde <b>uma vez só</b>: o app guarda para as próximas conferências desse banco.</li></ol></div>' : '') +
       '<div class="cf-dica">💳 Tem <b>mais de um cartão</b>, até de bancos diferentes? Baixe <b>um arquivo de cada</b>. No próximo passo você escolhe todos juntos.</div></div></div>' +
     '<div class="cf-passo"><span class="cf-n">3</span><div><b>Escolha os arquivos</b>' +
       '<div class="cf-dica" style="margin-top:6px">📱 No iPhone, na janela de arquivos: abra a pasta <b>Downloads</b> (ou onde salvou), toque em <b>Selecionar</b> em cima, marque os arquivos e toque em <b>Abrir</b>.</div>' +
@@ -2667,8 +2674,10 @@ function mostrarMapa() {
     return h;
   };
   var duas = m.debito != null && m.debito >= 0;
+  var bm = bancoPorId(_conf.bancoMapa || _conf.banco);
   abrirSheet('<h3>Quais colunas são quais?</h3>' +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45">' + (r.aviso ? esc(r.aviso) + ' ' : '') + 'Confira as primeiras linhas do arquivo e diga onde está cada informação. O app guarda isso para o ' + esc(bancoPorId(_conf.bancoMapa || _conf.banco).nome) + '.</div>' +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45">' + (r.aviso ? 'O app não conseguiu entender este arquivo sozinho. ' : '') + 'A tabela abaixo mostra as primeiras linhas do arquivo, com as colunas numeradas. ' +
+      'Olhe onde estão a <b>data</b>, o <b>valor</b> e a <b>descrição</b> (o nome da loja) e escolha nas listas embaixo. Você só faz isso <b>uma vez</b>: o app guarda para o ' + esc(bm.nome) + '.</div>' +
     (_conf.rotMapa ? '<div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-top:6px">📄 ' + esc(_conf.rotMapa) + '</div>' : '') +
     '<table class="cf-map"><tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<th>Coluna ' + (c + 1) + '</th>'; }).join('') + '</tr>' +
     amostra.map(function (row) { return '<tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<td>' + esc(row[c] || '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>' +
@@ -2807,6 +2816,7 @@ var AJUDA = {
   'sem-media': ['Sua média', 'Quanto você costuma gastar numa semana, pela <b>média das semanas anteriores</b>.<br><br>Com a semana em andamento, a média é só até o mesmo dia da semana, para comparar igual com igual.'],
   'sem-vazou': ['Onde mais vazou', 'Lugares onde você gastou <b>mais do que a sua média por semana</b> ali.<br><br><b>Esta semana</b>: quanto gastou ali nesta semana.<br><b>Média</b>: quanto costuma gastar ali por semana (soma das semanas anteriores ÷ número de semanas).<br><b>A mais</b>: a diferença.<br><br>Compras de vez em quando (roupas, presentes, eletrônicos, móveis) não entram. Um lugar onde você não costuma comprar pode aparecer com tudo "a mais"; nesse caso veja se não foi só troca de loja (ex.: mercado diferente).'],
   'sem-cats': ['Categorias × orçamento semanal', 'O orçamento de cada categoria convertido para <b>uma semana</b>: orçamento do período ÷ dias do período × 7.<br><br>A barra mostra quanto da semana você já usou em cada categoria.'],
+  'cf-sem-leitor': ['Banco sem leitura própria', 'O app usa um leitor automático. Se não entender o arquivo, pergunta uma vez qual coluna é a data, o valor e a descrição, e guarda a resposta.'],
   'cf-falta': ['No banco e não no app', 'Gastos que aparecem no extrato do banco, mas <b>não foram lançados</b> no app.<br><br>Toque em <b>Lançar</b>: o app abre o registro já com o valor, a data e a loja. É só escolher a categoria e salvar.'],
   'cf-dev': ['Devolução no banco e não no app', 'Dinheiro que <b>voltou</b> para o cartão (uma devolução ou estorno) e ainda não foi registrado no app.<br><br>Toque em <b>Lançar</b>: o app sugere a compra de onde veio a devolução.'],
   'cf-valor': ['Valor diferente', 'O app achou o gasto, mas o <b>valor não é igual</b> ao do banco (ex.: gorjeta, troca de moeda ou erro de digitação).<br><br>Toque em <b>Corrigir</b> para usar o valor do banco.'],
