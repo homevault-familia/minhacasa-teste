@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.31.4">
+<meta name="app-version" content="2.31.5">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="MinhaCasa">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png?v=2">
 <title>MinhaCasa</title>
 <style>
 /* ── LOADING SCREEN ── */
@@ -989,20 +989,20 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 </head>
 <body>
 
-<div id="app-loading"><div class="ld-icon"><img src="icon.svg" alt="" class="brand-logo"></div><div class="ld-txt" id="ld-txt">Carregando…</div></div>
+<div id="app-loading"><div class="ld-icon"><img src="icon.svg?v=2" alt="" class="brand-logo"></div><div class="ld-txt" id="ld-txt">Carregando…</div></div>
 
 <!-- ════════ ENTRADA: login, casa, desbloqueio ════════ -->
 <div id="tela-login">
   <!-- Configuração pendente -->
   <div class="login-card" id="card-semconfig" style="display:none">
-    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-logo"><img src="icon.svg?v=2" alt="MinhaCasa" class="brand-logo"></div>
     <div class="login-title">MinhaCasa</div>
     <div class="login-sub">Configuração pendente: preencha o arquivo config.js com os dados do Firebase (veja o README).</div>
   </div>
 
   <!-- Login / cadastro -->
   <div class="login-card" id="card-auth" style="display:none">
-    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-logo"><img src="icon.svg?v=2" alt="MinhaCasa" class="brand-logo"></div>
     <div class="login-title">MinhaCasa</div>
     <div class="login-sub">Finanças da casa, privadas e criptografadas</div>
     <div class="hv-tabs"><button id="tab-entrar" class="on">Entrar</button><button id="tab-criar">Criar conta</button></div>
@@ -1025,7 +1025,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 
   <!-- Criar casa / convite -->
   <div class="login-card" id="card-casa" style="display:none">
-    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-logo"><img src="icon.svg?v=2" alt="MinhaCasa" class="brand-logo"></div>
     <div class="login-title">Sua casa</div>
     <div class="login-sub">A "casa" guarda os lançamentos. Quem mora junto usa a mesma casa e a mesma senha da casa.</div>
     <div class="hv-tabs"><button id="tab-nova" class="on">Criar casa</button><button id="tab-convite">Tenho convite</button></div>
@@ -1054,7 +1054,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 
   <!-- Desbloquear -->
   <div class="login-card" id="card-unlock" style="display:none">
-    <div class="login-logo"><img src="icon.svg" alt="MinhaCasa" class="brand-logo"></div>
+    <div class="login-logo"><img src="icon.svg?v=2" alt="MinhaCasa" class="brand-logo"></div>
     <div class="login-title">Desbloquear</div>
     <div class="login-sub">Digite a senha da casa para abrir os dados neste aparelho.</div>
     <div class="login-campo"><label for="ul-senha">Senha da casa</label><input id="ul-senha" type="password" autocomplete="off"></div>
@@ -1072,7 +1072,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 <div class="tela" id="tela-inicio">
   <div class="topo">
     <div class="topo-bar">
-      <div class="topo-title"><img src="icon.svg" alt="" class="topo-logo"><span id="txt-casa">MinhaCasa</span></div>
+      <div class="topo-title"><img src="icon.svg?v=2" alt="" class="topo-logo"><span id="txt-casa">MinhaCasa</span></div>
       <div class="topo-bar-right">
         <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:4px">
           <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#aaa;display:inline-block"></span>

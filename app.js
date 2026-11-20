@@ -6,10 +6,10 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.31.4';
+var VERSAO = '2.31.5';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
-  { v: '2.31.4', d: '20/11/2026', itens: [
+  { v: '2.31.5', d: '20/11/2026', itens: [
     'Logo novo: uma casa com barras que sobem, mostrando o orçamento da família sob controle. Para ver o ícone novo na tela do iPhone, apague o atalho antigo e adicione o app de novo à Tela de Início.'
   ] },
   { v: '2.31.3', d: '20/11/2026', itens: [
