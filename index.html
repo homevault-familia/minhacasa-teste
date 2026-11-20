@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.32.1">
+<meta name="app-version" content="2.33.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -36,6 +36,15 @@
 .idioma-sel button[aria-pressed="true"] { background: #fff; color: #1e3a8a; }
 .idioma-sel .ic-glb { display: inline-flex; align-items: center; padding: 0 6px 0 8px; color: rgba(255,255,255,.85); }
 .idioma-sel .ic-glb svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.ed-tr { margin-top: 14px; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; background: #f9fafb; }
+.ed-tr summary { cursor: pointer; font-size: 14px; font-weight: 700; color: #1f2937; min-height: 32px; display: flex; align-items: center; gap: 6px; list-style: none; }
+.ed-tr summary::-webkit-details-marker { display: none; }
+.ed-tr summary::after { content: '▾'; margin-left: auto; color: #6b7280; }
+.ed-tr[open] summary::after { content: '▴'; }
+.ed-tr-dica { font-size: 12.5px; color: #6b7280; line-height: 1.4; margin: 4px 0 6px; }
+.ed-tr-linha { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr); gap: 8px; align-items: center; margin-top: 8px; }
+.ed-tr-orig { font-size: 13px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-tr-linha .aj-input { margin: 0; }
 .aj-idiomas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .aj-idiomas button { font: inherit; font-size: 14px; font-weight: 700; padding: 12px 6px; min-height: 46px; border-radius: 12px; border: 1.5px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
 .aj-idiomas button[aria-pressed="true"] { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }

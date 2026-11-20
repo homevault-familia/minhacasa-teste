@@ -105,6 +105,12 @@
     fr: ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc']
   };
 
+  var DIAS_C = {
+    pt: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    fr: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  };
+
   document.documentElement.lang = LOCALE[lang];
 
   raiz.MCI18N = {
@@ -119,6 +125,8 @@
     escolhido: function () { return IDIOMAS.indexOf(ler()) >= 0; },
     meses: MESES[lang],
     mesesCurtos: MESES_C[lang],
+    diasCurtos: DIAS_C[lang],
+    dicionario: function () { return lang === 'pt' ? null : D[lang]; },
     faltam: function () { return Object.keys(faltam); },
     blocosSemTraducao: function () { return Object.keys(blocos); }
   };

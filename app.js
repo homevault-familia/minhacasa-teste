@@ -26,9 +26,13 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.32.1';
+var VERSAO = '2.33.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.33.0', d: '20/11/2026', itens: [
+    '<b>🌐 Idiomas, etapa 2</b>: relatórios (semanal, por categoria e completo), projeção, gráficos, ajudas do ?, conferir com o banco, Apple Pay e novidades agora aparecem no idioma escolhido.',
+    '<b>🏷️ Categorias no seu idioma</b>: as categorias padrão do app (Carro, Supermercado…) aparecem traduzidas sozinhas. Para as suas, edite a categoria em Ajustes e preencha <b>Nomes em outros idiomas</b>: cada pessoa da casa vê no idioma dela.'
+  ] },
   { v: '2.32.0', d: '20/11/2026', itens: [
     '<b>🌐 Idiomas</b>: o app agora fala português, inglês e francês. Escolha na tela de entrada (PT · EN · FR) ou em Ajustes → Idioma. Cada pessoa da casa escolhe o seu. (Primeira etapa: telas principais. As demais telas chegam nas próximas versões.)'
   ] },
@@ -70,6 +74,7 @@ var ICO_P = {"edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 
 function ICO(n) { return '<svg class="ic" aria-hidden="true" viewBox="0 0 24 24">' + ICO_P[n] + '</svg>'; }
 var EMOJIS = ['🚗', '⛽', '🛒', '🛍️', '🏠', '💡', '✈️', '🍽️', '☕', '🩺', '💊', '🐾', '👕', '📚', '🎓', '🎉', '🎮', '💳', '🏦', '📱', '🔧', '👶', '🏋️', '💇', '🎁', '🍺', '🧾', '📦', '⚽', '🏖️'];
 var MESES = I18N.meses || ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+var DIAS_C = I18N.diasCurtos || ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 var MESES_C = I18N.mesesCurtos || ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 // ═════════════════════════ utilitários ═════════════════════════
@@ -217,14 +222,53 @@ var db, auth;
 
 // ═════════════════════════ categorias ═════════════════════════
 function catsPadrao() {
-  function c(emoji, nome, cor, subs) { return { id: rid(8), emoji: emoji, nome: nome, cor: cor, orc: 0, subs: subs.map(function (n) { return { id: rid(8), nome: n }; }) }; }
+  // nomes no idioma de quem cria a casa; os outros veem no idioma deles (nomeVis)
+  function c(emoji, nome, cor, subs) { return { id: rid(8), emoji: emoji, nome: padT(nome), cor: cor, orc: 0, subs: subs.map(function (n) { return { id: rid(8), nome: padT(n) }; }) }; }
   return [
-    c('🚗', T('Carro'), '#e53935', [T('Combustível'), T('Manutenção'), T('Seguro'), T('Estacionamento'), T('Outros')]),
-    c('🛒', T('Supermercado'), '#43a047', [T('Supermercado'), T('Feira'), T('Padaria'), T('Farmácia')]),
-    c('🛍️', T('Diversos'), '#fb8c00', [T('Roupas'), T('Restaurantes'), T('Lazer'), T('Assinaturas'), T('Saúde'), T('Pets'), T('Outros')]),
-    c('🏠', T('Casa'), '#00897b', [T('Aluguel / Financiamento'), T('Luz'), T('Água'), T('Internet / Telefone'), T('Manutenção')]),
-    c('✈️', T('Viagens'), '#0284c7', [T('Hospedagem'), T('Alimentação'), T('Transporte'), T('Passeios')])
+    c('🚗', 'Carro', '#e53935', ['Combustível', 'Manutenção', 'Seguro', 'Estacionamento', 'Outros']),
+    c('🛒', 'Supermercado', '#43a047', ['Supermercado', 'Feira', 'Padaria', 'Farmácia']),
+    c('🛍️', 'Diversos', '#fb8c00', ['Roupas', 'Restaurantes', 'Lazer', 'Assinaturas', 'Saúde', 'Pets', 'Outros']),
+    c('🏠', 'Casa', '#00897b', ['Aluguel / Financiamento', 'Luz', 'Água', 'Internet / Telefone', 'Manutenção']),
+    c('✈️', 'Viagens', '#0284c7', ['Hospedagem', 'Alimentação', 'Transporte', 'Passeios'])
   ];
+}
+// ── Nomes de categorias e subcategorias no idioma de quem vê (20/11/2026) ──
+// O nome guardado (nome) é o que a família digitou e não muda. Para mostrar:
+//  1) a tradução que a família escreveu na categoria (tr.pt / tr.en / tr.fr);
+//  2) se for um nome padrão do app (Carro, Supermercado…), a tradução pronta;
+//  3) senão, o nome como foi digitado.
+var PAD_CAT = {
+  'Carro': ['Car', 'Voiture'], 'Combustível': ['Fuel', 'Essence'], 'Manutenção': ['Maintenance', 'Entretien'], 'Seguro': ['Insurance', 'Assurance'],
+  'Estacionamento': ['Parking', 'Stationnement'], 'Outros': ['Other', 'Autres'], 'Supermercado': ['Groceries', 'Épicerie'], 'Mercado': ['Groceries', 'Épicerie'],
+  'Feira': ['Farmers’ market', 'Marché'], 'Padaria': ['Bakery', 'Boulangerie'], 'Farmácia': ['Pharmacy', 'Pharmacie'], 'Diversos': ['Miscellaneous', 'Divers'],
+  'Roupas': ['Clothing', 'Vêtements'], 'Restaurantes': ['Restaurants', 'Restaurants'], 'Lazer': ['Leisure', 'Loisirs'], 'Assinaturas': ['Subscriptions', 'Abonnements'],
+  'Saúde': ['Health', 'Santé'], 'Pets': ['Pets', 'Animaux'], 'Casa': ['Home', 'Maison'], 'Aluguel / Financiamento': ['Rent / Mortgage', 'Loyer / Hypothèque'],
+  'Luz': ['Electricity', 'Électricité'], 'Água': ['Water', 'Eau'], 'Internet / Telefone': ['Internet / Phone', 'Internet / Téléphone'], 'Viagens': ['Travel', 'Voyages'],
+  'Hospedagem': ['Lodging', 'Hébergement'], 'Alimentação': ['Food', 'Repas'], 'Transporte': ['Transportation', 'Transport'], 'Passeios': ['Outings', 'Sorties'],
+  'Categoria': ['Category', 'Catégorie'], 'Sub': ['Sub', 'Sous']
+};
+function chaveNome(s) { return String(s || '').trim().toLowerCase(); }
+var PAD_IDX = (function () {
+  var m = {};
+  Object.keys(PAD_CAT).forEach(function (pt) { [pt, PAD_CAT[pt][0], PAD_CAT[pt][1]].forEach(function (v) { var k = chaveNome(v); if (!m[k]) m[k] = pt; }); });
+  return m;
+})();
+function padT(pt) { var t = PAD_CAT[pt]; return !t || I18N.lang === 'pt' ? pt : t[I18N.lang === 'en' ? 0 : 1]; }
+function nomeVis(o) {
+  if (!o) return '';
+  var tr = o.tr, L = I18N.lang;
+  if (tr && tr[L]) return tr[L];
+  var p = PAD_IDX[chaveNome(o.nome)];
+  return p ? padT(p) : o.nome;
+}
+// lista em ordem alfabética pelo nome que a pessoa vê
+function ordenarVis(arr) { return arr.slice().sort(function (a, b) { return String(nomeVis(a)).localeCompare(String(nomeVis(b)), I18N.locale, { sensitivity: 'base', numeric: true }); }); }
+var IDIOMAS_TR = ['pt', 'en', 'fr'];
+function limparTr(tr) {
+  if (!tr || typeof tr !== 'object') return null;
+  var o = {}, tem = false;
+  IDIOMAS_TR.forEach(function (l) { var v = txtCurto(String(tr[l] == null ? '' : tr[l]).trim(), 40); if (v) { o[l] = v; tem = true; } });
+  return tem ? o : null;
 }
 function periodoMesAtual() { var m = mesAtual(); return { inicio: m + '-01', fim: ultimoDiaMes(m) }; }
 // Garante o formato v2 (também converte casas criadas na versão 1)
@@ -257,9 +301,11 @@ function limparCfg(c) {
   c.alertaPct = isFinite(+c.alertaPct) && +c.alertaPct > 0 ? Math.min(100, +c.alertaPct) : 80;
   if (!c.periodo || !DATA_OK.test(c.periodo.inicio) || !DATA_OK.test(c.periodo.fim)) c.periodo = periodoMesAtual();
   c.cats = (Array.isArray(c.cats) ? c.cats : []).filter(function (x) { return x && ID_OK.test(x.id); }).map(function (x, i) {
-    return { id: x.id, emoji: txtCurto(x.emoji || '📦', 8), nome: txtCurto(x.nome || T('Categoria'), 40),
+    var o = { id: x.id, emoji: txtCurto(x.emoji || '📦', 8), nome: txtCurto(x.nome || T('Categoria'), 40),
       cor: COR_OK.test(x.cor) ? x.cor : PALETA[i % PALETA.length], orc: isFinite(+x.orc) && +x.orc > 0 ? +x.orc : 0,
-      subs: ordenarSubs((Array.isArray(x.subs) ? x.subs : []).filter(function (u) { return u && ID_OK.test(u.id); }).map(function (u) { return { id: u.id, nome: txtCurto(u.nome || T('Sub'), 40) }; })) };
+      subs: ordenarSubs((Array.isArray(x.subs) ? x.subs : []).filter(function (u) { return u && ID_OK.test(u.id); }).map(function (u) { var s = { id: u.id, nome: txtCurto(u.nome || T('Sub'), 40) }, t = limparTr(u.tr); if (t) s.tr = t; return s; })) };
+    var tc = limparTr(x.tr); if (tc) o.tr = tc;
+    return o;
   });
   return c;
 }
@@ -287,13 +333,13 @@ function catPorId(id) {
   for (var i = 0; i < cs.length; i++) if (cs[i].id === id) return cs[i];
   return null;
 }
-function NOME(id) { var c = catPorId(id); return c ? c.nome : T('Sem categoria'); }
+function NOME(id) { var c = catPorId(id); return c ? nomeVis(c) : T('Sem categoria'); }
 function COR(id) { var c = catPorId(id); return c ? c.cor : '#9ca3af'; }
 function EMO(id) { var c = catPorId(id); return c ? c.emoji : '❔'; }
 function nomeSub(catId, subId) {
   if (!subId) return '';
   var c = catPorId(catId); if (!c) return '';
-  for (var i = 0; i < c.subs.length; i++) if (c.subs[i].id === subId) return c.subs[i].nome;
+  for (var i = 0; i < c.subs.length; i++) if (c.subs[i].id === subId) return nomeVis(c.subs[i]);
   return '';
 }
 function orcDe(id) { var c = catPorId(id); return c ? (+c.orc || 0) : 0; }
@@ -515,7 +561,7 @@ function renderizar() {
       corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + T('</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>');
     }
     return '<div class="card-cat" data-cat="' + cat.id + '">' +
-      '<div class="cat-header"><span class="cat-icon" style="background:' + alfa(cat.cor, '22') + '">' + esc(cat.emoji) + '</span><span class="cat-nome">' + esc(cat.nome) + '</span><span class="cat-qtd">' + qtdTxt + '</span></div>' +
+      '<div class="cat-header"><span class="cat-icon" style="background:' + alfa(cat.cor, '22') + '">' + esc(cat.emoji) + '</span><span class="cat-nome">' + esc(nomeVis(cat)) + '</span><span class="cat-qtd">' + qtdTxt + '</span></div>' +
       corpo + '</div>';
   }).join('');
 
@@ -532,7 +578,7 @@ function renderizarPizza(tots, total) {
     var pct = orc > 0 ? (v / orc * 100).toFixed(0) : (total > 0 ? (v / total * 100).toFixed(0) : 0);
     var cor = v > orc && orc > 0 ? '#f44336' : v < 0 ? '#16a34a' : c.cor;
     return '<div class="pizza-item"><div class="pizza-cor" style="background:' + cor + '"></div>' +
-      '<div class="pizza-txt">' + esc(c.nome) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? T('devolução') : pct + '% ' + (orc > 0 ? T('do orç.') : T('do total'))) + ')</span></div>' +
+      '<div class="pizza-txt">' + esc(nomeVis(c)) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? T('devolução') : pct + '% ' + (orc > 0 ? T('do orç.') : T('do total'))) + ')</span></div>' +
       '<div class="pizza-val" style="color:' + cor + '">' + formatar(v) + '</div></div>';
   }).join('') + '</div>';
 }
@@ -589,7 +635,7 @@ function renderizarBarras(lista, p) {
     '<div class="chart-body"><div class="chart-grid"><div class="chart-gridline"></div><div class="chart-gridline"></div><div class="chart-gridline"></div></div>' +
     (media > 0 ? '<div class="chart-media-line" style="bottom:' + (26 + mediaPos) + T('px"><span class="chart-media-label">méd ') + fmtY(media) + '</span></div>' : '') +
     '<div class="chart-bars" style="height:' + (CHART_H + 26) + 'px">' + bars + '</div></div></div></div>' +
-    '<div class="chart-legenda">' + cats.map(function (c) { return '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:' + c.cor + '"></div>' + esc(c.nome) + '</div>'; }).join('') +
+    '<div class="chart-legenda">' + cats.map(function (c) { return '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:' + c.cor + '"></div>' + esc(nomeVis(c)) + '</div>'; }).join('') +
     T('<div class="chart-leg-item"><div style="width:14px;border-top:2px dashed rgba(29,78,216,.6)"></div>Média</div></div>');
 }
 
@@ -630,7 +676,7 @@ function preencherConfig() {
   $('inp-inicio').value = c.periodo.inicio;
   $('inp-fim').value = c.periodo.fim;
   $('grid-orc').innerHTML = todasCats().map(function (cat) {
-    return '<div class="campo-orc"><label>' + esc(cat.emoji + ' ' + cat.nome) + '</label>' +
+    return '<div class="campo-orc"><label>' + esc(cat.emoji + ' ' + nomeVis(cat)) + '</label>' +
       '<input type="text" inputmode="decimal" data-orc="' + cat.id + '" data-orc-antes="' + (+cat.orc || 0) + '" placeholder="0" value="' + esc(numTxt(cat.orc)) + '"></div>';
   }).join('');
   atualizarSaldoOrc();
@@ -661,7 +707,7 @@ function atualizarSaldoOrc() {
   if (!(lim > 0)) {
     el.className = 'orc-saldo'; el.innerHTML = T('Soma das categorias: <b>') + formatar(soma) + T('</b>. Defina o valor para gastar para controlar a distribuição.');
   } else if (resto > 0.004) {
-    el.className = 'orc-saldo livre'; el.innerHTML = T('Distribuído <b>') + formatar(soma) + '</b> de ' + formatar(lim) + T(' · ainda pode distribuir <b>') + formatar(resto) + '</b>';
+    el.className = 'orc-saldo livre'; el.innerHTML = T('Distribuído <b>') + formatar(soma) + T('</b> de ') + formatar(lim) + T(' · ainda pode distribuir <b>') + formatar(resto) + '</b>';
   } else if (resto > -0.005) {
     el.className = 'orc-saldo cheio'; el.innerHTML = T('✅ Todo o valor para gastar (') + formatar(lim) + T(') está distribuído');
   } else {
@@ -676,7 +722,7 @@ function travarOrcInp(inp) {
   var novo = Math.max(max, antes);
   inp.value = numTxt(novo);
   var cat = catPorId(inp.dataset.orc);
-  mostrarToast('⚠️', (novo > 0 ? T('Máximo para ') + (cat ? cat.nome : T('esta categoria')) + ': ' + formatar(novo) : T('Não sobrou nada do valor para gastar')) +
+  mostrarToast('⚠️', (novo > 0 ? T('Máximo para ') + (cat ? nomeVis(cat) : T('esta categoria')) + ': ' + formatar(novo) : T('Não sobrou nada do valor para gastar')) +
     T('. As categorias não podem passar de ') + formatar(lim) + '.', 4500);
   return true;
 }
@@ -752,7 +798,7 @@ function irParaCategoria(cat, soRender) {
   }
   lista.sort(function (a, b) { return b.data.localeCompare(a.data); });
   $('topo-categoria').style.background = 'linear-gradient(160deg,' + c.cor + 'cc,' + c.cor + ')';
-  $('titulo-categoria').textContent = c.emoji + ' ' + c.nome;
+  $('titulo-categoria').textContent = c.emoji + ' ' + nomeVis(c);
   $('resumo-categoria').innerHTML = '<div style="text-align:center;padding:8px 0 12px"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;margin-bottom:4px">' +
     (cat === PARC ? T('Total Mensal Ativo') : T('Total do Período')) + '</div><div style="font-size:32px;font-weight:900;color:' + c.cor + '">' + formatar(total) + '</div></div>';
   var pm = buildPagasMap(todos);
@@ -881,7 +927,7 @@ function atualizarAvisoValor() {
   $('valor-aviso').textContent = av;
   var u = usoCredito(), d = $('credito-dica');
   if (d) d.textContent = !u ? '' : !u.v ? T('Informe o valor da compra.') :
-    formatar(u.usa) + T(' sai do crédito da loja') + (u.v > u.usa + 0.005 ? T('; o resto (') + formatar(u.v - u.usa) + T(') no cartão ou em dinheiro') : '') + '. Sobra ' + formatar(Math.max(0, u.c.saldo - u.usa)) + T(' de crédito.');
+    formatar(u.usa) + T(' sai do crédito da loja') + (u.v > u.usa + 0.005 ? T('; o resto (') + formatar(u.v - u.usa) + T(') no cartão ou em dinheiro') : '') + T('. Sobra ') + formatar(Math.max(0, u.c.saldo - u.usa)) + T(' de crédito.');
 }
 function renderAdd() {
   var a = S.add, editParc = a.editId && a.cat === PARC;
@@ -889,14 +935,14 @@ function renderAdd() {
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
     return '<div class="cat-tile" data-addcat="' + c.id + '"' + (on ? ' style="border-color:' + c.cor + ';background:' + alfa(c.cor, '12') + ';box-shadow:0 0 0 3px ' + alfa(c.cor, '26') + '"' : '') + '>' +
-      '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm"' + (on ? ' style="color:' + c.cor + '"' : '') + '>' + esc(c.nome) + '</div></div>';
+      '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm"' + (on ? ' style="color:' + c.cor + '"' : '') + '>' + esc(nomeVis(c)) + '</div></div>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
   var hdr = $('add-header');
   if (cat) {
     hdr.style.background = 'linear-gradient(150deg,' + cat.cor + 'aa,' + cat.cor + ')';
     $('add-hdr-icon').textContent = cat.emoji;
-    $('add-hdr-sub').textContent = cat.nome + (cat.subs.length ? T(' · subcategoria e valor') : T(' · valor e data'));
+    $('add-hdr-sub').textContent = nomeVis(cat) + (cat.subs.length ? T(' · subcategoria e valor') : T(' · valor e data'));
     $('btn-salvar-pro').style.background = 'linear-gradient(135deg,' + cat.cor + 'dd,' + cat.cor + ')';
     $('btn-salvar-pro').style.boxShadow = '0 4px 14px ' + alfa(cat.cor, '55');
   } else {
@@ -905,10 +951,10 @@ function renderAdd() {
   }
   if (cat && cat.subs.length && cat.id !== PARC) {
     $('grupo-sub').style.display = '';
-    $('sub-titulo').textContent = T('Subcategoria — ') + cat.nome;
+    $('sub-titulo').textContent = T('Subcategoria — ') + nomeVis(cat);
     $('sub-step').style.background = cat.cor;
-    $('sel-sub').innerHTML = T('<option value="">— Selecione —</option>') + cat.subs.map(function (s) {
-      return '<option value="' + s.id + '"' + (s.id === a.sub ? ' selected' : '') + '>' + esc(s.nome) + '</option>';
+    $('sel-sub').innerHTML = T('<option value="">— Selecione —</option>') + ordenarVis(cat.subs).map(function (s) {
+      return '<option value="' + s.id + '"' + (s.id === a.sub ? ' selected' : '') + '>' + esc(nomeVis(s)) + '</option>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
 }
@@ -964,7 +1010,7 @@ function salvarLancamento() {
     mostrarToast('✅', dev ? T('Devolução atualizada') : T('Lançamento atualizado'));
   } else if (dev) {
     ps.push(gravarLanc(Date.now().toString(36) + rid(6), tipar({ v: Math.round(valor * 100), dt: data, c: a.cat, s: a.sub || null, d: desc, por: S.user.uid, ts: Date.now() })));
-    mostrarToast('↩️', T('Devolução de {v} em {c}', { v: formatar(valor), c: cat.nome }) + (a.lj ? T(' (crédito na loja)') : ''), 3500);
+    mostrarToast('↩️', T('Devolução de {v} em {c}', { v: formatar(valor), c: nomeVis(cat) }) + (a.lj ? T(' (crédito na loja)') : ''), 3500);
   } else if (COM_PARCELADOS && a.nParc > 1) {
     var gid = Date.now().toString(36) + rid(4), parcV = Math.round(valor / a.nParc * 100);
     for (var i = a.parcIni - 1, off = 0; i < a.nParc; i++, off++) {
@@ -976,7 +1022,7 @@ function salvarLancamento() {
     mostrarToast('📦', T('Parcelamento salvo: ') + a.nParc + 'x de ' + formatar(parcV / 100));
   } else {
     ps.push(gravarLanc(Date.now().toString(36) + rid(6), tipar({ v: Math.round(valor * 100), dt: data, c: a.cat, s: a.sub || null, d: desc, por: S.user.uid, ts: Date.now() })));
-    mostrarToast('✅', T('Salvo: {v} em {c}', { v: formatar(valor), c: cat.nome }) + (u && u.usa > 0 ? ' (' + formatar(u.usa) + T(' do crédito da loja)') : ''));
+    mostrarToast('✅', T('Salvo: {v} em {c}', { v: formatar(valor), c: nomeVis(cat) }) + (u && u.usa > 0 ? ' (' + formatar(u.usa) + T(' do crédito da loja)') : ''));
   }
   Promise.all(ps).catch(function () { mostrarToast('⚠️', T('Erro ao salvar. Verifique a conexão.')); });
   var voltar = a.editId ? (S.voltarPara || 'inicio') : (a.voltarConf ? 'ajustes' : 'inicio');
@@ -1097,7 +1143,7 @@ function exportarPDFHistorico() {
 // ═════════════════════════ RELATÓRIO ═════════════════════════
 function renderizarRelatorio() {
   var per = getPer('rel'), el = $('corpo-relatorio');
-  if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
+  if (!per) { el.innerHTML = T('<div class="vazio">Selecione as datas do período</div>'); return; }
   var TT = totaisPeriodo(per), grand = TT.comum, lim = baseDisponivel();
   var disp = lim - grand, pctLim = lim > 0 ? grand / lim * 100 : 0;
   var dias = Object.keys(TT.porDia).filter(function (d) { return TT.porDia[d] > 0; }), diasCom = dias.length, mediaDia = diasCom ? grand / diasCom : 0;
@@ -1112,40 +1158,40 @@ function renderizarRelatorio() {
   var corLim = pctLim > 100 ? '#f44336' : pctLim >= 80 ? '#ff9800' : '#1565c0';
   var excede = projecao > 0 && lim > 0 && projecao > lim, dentro = projecao > 0 && lim > 0 && !excede;
   var met = '<div class="rel-metricas">' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">' + formatar(grand) + '</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">' + diasCom + ' dias c/ gasto</div></div>' +
-    (lim > 0 ? '<div class="rel-met-card"><div class="rel-met-val" style="color:' + (disp < 0 ? '#f44336' : '#43a047') + '">' + formatar(disp) + '</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite: ' + formatar(lim) + '</div></div>' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:' + corLim + '">' + pctLim.toFixed(1) + '%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">' + TT.nComuns + ' lançamentos</div></div>'
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">' + formatar(grand) + T('</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">') + diasCom + T(' dias c/ gasto</div></div>') +
+    (lim > 0 ? '<div class="rel-met-card"><div class="rel-met-val" style="color:' + (disp < 0 ? '#f44336' : '#43a047') + '">' + formatar(disp) + T('</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite: ') + formatar(lim) + '</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:' + corLim + '">' + pctLim.toFixed(1) + T('%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">') + TT.nComuns + T(' lançamentos</div></div>')
     : '') +
     '<div class="rel-met-card" style="background:' + (excede ? '#fef2f2' : dentro ? '#f0fdf4' : 'white') + ';border:' + (excede ? '2px solid #ef4444' : dentro ? '2px solid #22c55e' : 'none') + '">' +
-    '<div class="rel-met-val" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#555') + '">' + formatar(mediaDia) + '</div><div class="rel-met-lbl">Média por dia</div>' +
-    '<div class="rel-met-sub" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#9ca3af') + ';font-weight:700">Projeção: ' + formatar(projecao) + '</div></div>' +
-    (maiorDia ? '<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">' + formatar(maiorVal) + '</div><div class="rel-met-lbl">Maior gasto — ' + formatarData(maiorDia) + '</div></div>' : '') +
+    '<div class="rel-met-val" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#555') + '">' + formatar(mediaDia) + T('</div><div class="rel-met-lbl">Média por dia</div>') +
+    '<div class="rel-met-sub" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#9ca3af') + T(';font-weight:700">Projeção: ') + formatar(projecao) + '</div></div>' +
+    (maiorDia ? '<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">' + formatar(maiorVal) + T('</div><div class="rel-met-lbl">Maior gasto — ') + formatarData(maiorDia) + '</div></div>' : '') +
     '</div>';
-  if (!(lim > 0)) met += '<div class="card" style="cursor:pointer;border:1px solid #fcd34d;background:#fffbeb" id="rel-sem-orc"><div style="color:#b45309;font-size:16px;font-weight:800">Sem orçamento definido</div><div style="font-size:13px;color:#4b5563;margin-top:4px">Toque para informar o limite do período e ver quanto ainda pode gastar. ' + TT.nComuns + ' lançamentos no período.</div></div>';
+  if (!(lim > 0)) met += T('<div class="card" style="cursor:pointer;border:1px solid #fcd34d;background:#fffbeb" id="rel-sem-orc"><div style="color:#b45309;font-size:16px;font-weight:800">Sem orçamento definido</div><div style="font-size:13px;color:#4b5563;margin-top:4px">Toque para informar o limite do período e ver quanto ainda pode gastar. ') + TT.nComuns + T(' lançamentos no período.</div></div>');
 
   // Subtotais por subcategoria
   var subTot = {};
   TT.lista.forEach(function (l) { if (l.cat === PARC || !l.sub) return; var k = l.cat + '|' + l.sub; subTot[k] = (subTot[k] || 0) + l.valor; });
-  var cats = '<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>' +
+  var cats = T('<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>') +
     todasCats().filter(function (c) { return (TT.tots[c.id] || 0) !== 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
       var g = TT.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.max(0, Math.min(g / o * 100, 100)) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
       var corB = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : c.cor, restC = o - g;
       var barra = o > 0 ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:' + pC.toFixed(1) + '%;background:' + corB + '"></div></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px"><span style="color:#6b7280">' + pC.toFixed(0) + '% do orçado ' + formatar(o) + '</span>' +
-        '<span style="color:' + (restC < 0 ? '#f44336' : '#43a047') + ';font-weight:700">' + (restC >= 0 ? 'sobra ' : 'excedeu ') + formatar(Math.abs(restC)) + '</span></div>' : '';
+        '<div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px"><span style="color:#6b7280">' + pC.toFixed(0) + T('% do orçado ') + formatar(o) + '</span>' +
+        '<span style="color:' + (restC < 0 ? '#f44336' : '#43a047') + ';font-weight:700">' + (restC >= 0 ? T('sobra ') : T('excedeu ')) + formatar(Math.abs(restC)) + '</span></div>' : '';
       var subs = c.subs.map(function (s) {
         var v = subTot[c.id + '|' + s.id]; if (!v) return '';
-        return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">' + esc(s.nome) + '</span><span style="font-weight:700;color:' + c.cor + '">' + formatar(v) + '</span></div>';
+        return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">' + esc(nomeVis(s)) + '</span><span style="font-weight:700;color:' + c.cor + '">' + formatar(v) + '</span></div>';
       }).join('');
-      return '<div class="rel-cat-bloco" style="border-color:' + c.cor + '"><div class="rel-cat-header"><span class="rel-cat-nome">' + esc(c.emoji + ' ' + c.nome) + '</span><span class="rel-cat-pct-total">' + (c.id === PARC ? 'compromisso mensal' : g < 0 ? 'só devolução' : pTot.toFixed(1) + '% do total') + '</span></div>' +
-        '<div class="rel-cat-nums"><div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + c.cor + '">' + formatar(g) + '</div><div class="rel-cat-num-lbl">' + (g < 0 ? 'Devolvido' : 'Gasto') + '</div></div>' +
-        (o > 0 ? '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:#555">' + formatar(o) + '</div><div class="rel-cat-num-lbl">Orçado</div></div>' +
-          '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(Math.abs(restC)) + '</div><div class="rel-cat-num-lbl">' + (restC < 0 ? 'Excedeu' : 'Disponível') + '</div></div>' : '') +
+      return '<div class="rel-cat-bloco" style="border-color:' + c.cor + '"><div class="rel-cat-header"><span class="rel-cat-nome">' + esc(c.emoji + ' ' + nomeVis(c)) + '</span><span class="rel-cat-pct-total">' + (c.id === PARC ? T('compromisso mensal') : g < 0 ? T('só devolução') : pTot.toFixed(1) + T('% do total')) + '</span></div>' +
+        '<div class="rel-cat-nums"><div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + c.cor + '">' + formatar(g) + '</div><div class="rel-cat-num-lbl">' + (g < 0 ? T('Devolvido') : T('Gasto')) + '</div></div>' +
+        (o > 0 ? '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:#555">' + formatar(o) + T('</div><div class="rel-cat-num-lbl">Orçado</div></div>') +
+          '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(Math.abs(restC)) + '</div><div class="rel-cat-num-lbl">' + (restC < 0 ? T('Excedeu') : T('Disponível')) + '</div></div>' : '') +
         '</div>' + barra + subs + '</div>';
     }).join('');
 
   var top5 = TT.lista.filter(function (l) { return l.cat !== PARC; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, 5);
-  var top = top5.length ? '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' + top5.map(function (l, i) {
+  var top = top5.length ? T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>') + top5.map(function (l, i) {
     return '<div class="rel-top-item"><div class="rel-top-num">' + (i + 1) + '</div><div class="lanc-ponto" style="background:' + COR(l.cat) + ';flex-shrink:0;width:8px;height:8px;border-radius:50%"></div>' +
       '<div class="rel-top-info"><div class="rel-top-desc">' + esc(descLanc(l)) + '</div><div class="rel-top-meta">' + formatarData(l.data) + ' · ' + esc(NOME(l.cat)) + '</div></div>' +
       '<div class="rel-top-val" style="color:' + COR(l.cat) + '">' + formatar(l.valor) + '</div></div>';
@@ -1160,38 +1206,38 @@ function renderizarRelatorio() {
   var cells = '';
   for (var i = 0; i < (heatDays[0] ? heatDays[0].dow : 0); i++) cells += '<div class="heatmap-cell heatmap-empty"></div>';
   heatDays.forEach(function (h) { cells += '<div class="heatmap-cell ' + (!h.val ? 'heatmap-zero' : h.val <= maxDia * .33 ? 'heatmap-low' : h.val <= maxDia * .67 ? 'heatmap-mid' : 'heatmap-high') + '">' + h.day + '</div>'; });
-  var heat = '<div class="heatmap-card"><div class="card-titulo">🗓️ Mapa de Calor — Gastos por Dia</div><div class="heatmap-dow-row">' +
-    ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(function (l) { return '<div class="heatmap-dow-cell">' + l + '</div>'; }).join('') + '</div><div class="heatmap-grid">' + cells + '</div>' +
-    '<div class="heatmap-leg"><div class="heatmap-leg-dot" style="background:#f3f4f6"></div><span class="heatmap-leg-lbl">Sem gasto</span><div class="heatmap-leg-dot" style="background:#bbf7d0"></div><span class="heatmap-leg-lbl">Baixo</span>' +
-    '<div class="heatmap-leg-dot" style="background:#fde68a"></div><span class="heatmap-leg-lbl">Médio</span><div class="heatmap-leg-dot" style="background:#fca5a5"></div><span class="heatmap-leg-lbl">Alto</span></div></div>';
+  var heat = T('<div class="heatmap-card"><div class="card-titulo">🗓️ Mapa de Calor — Gastos por Dia</div><div class="heatmap-dow-row">') +
+    DIAS_C.map(function (l) { return '<div class="heatmap-dow-cell">' + l + '</div>'; }).join('') + '</div><div class="heatmap-grid">' + cells + '</div>' +
+    T('<div class="heatmap-leg"><div class="heatmap-leg-dot" style="background:#f3f4f6"></div><span class="heatmap-leg-lbl">Sem gasto</span><div class="heatmap-leg-dot" style="background:#bbf7d0"></div><span class="heatmap-leg-lbl">Baixo</span>') +
+    T('<div class="heatmap-leg-dot" style="background:#fde68a"></div><span class="heatmap-leg-lbl">Médio</span><div class="heatmap-leg-dot" style="background:#fca5a5"></div><span class="heatmap-leg-lbl">Alto</span></div></div>');
 
   // Semana a semana
   var semanas = [], st = 0, sd = 0;
-  heatDays.forEach(function (h, i) { st += h.val; sd++; if ((i + 1) % 7 === 0 || i === heatDays.length - 1) { semanas.push({ lbl: 'Sem ' + (semanas.length + 1), total: st, dias: sd }); st = 0; sd = 0; } });
+  heatDays.forEach(function (h, i) { st += h.val; sd++; if ((i + 1) % 7 === 0 || i === heatDays.length - 1) { semanas.push({ lbl: T('Sem ') + (semanas.length + 1), total: st, dias: sd }); st = 0; sd = 0; } });
   var maxSem = semanas.reduce(function (m, s) { return Math.max(m, s.total); }, 0), orcDia = lim > 0 && heatDays.length ? lim / heatDays.length : 0;
-  var sem = '<div class="card" style="margin-bottom:8px"><div class="card-titulo">📅 Semana a Semana</div>' + semanas.map(function (s) {
+  var sem = T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">📅 Semana a Semana</div>') + semanas.map(function (s) {
     var pct = maxSem > 0 ? (s.total / maxSem * 100).toFixed(1) : 0, orcSem = orcDia * s.dias, op = orcSem > 0 ? Math.round(s.total / orcSem * 100) : null;
     var cor = op === null ? '#1d4ed8' : op <= 50 ? '#22c55e' : op <= 85 ? '#f59e0b' : '#ef4444';
     return '<div class="semana-row"><div class="semana-lbl">' + s.lbl + (s.dias < 7 ? ' <span style="font-size:10px;color:#6b7280">(' + s.dias + 'd)</span>' : '') + '</div>' +
       '<div class="semana-barra-bg"><div class="semana-barra-fill" style="width:' + pct + '%;background:' + cor + '"></div></div><div class="semana-val" style="color:' + cor + '">' + formatar(s.total) + '</div>' +
       (op !== null ? '<span style="font-size:11px;font-weight:700;color:' + cor + ';min-width:38px;text-align:right">' + op + '%</span>' : '') + '</div>';
-  }).join('') + (orcDia > 0 ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">Limite: ' + formatar(lim) + ' ÷ ' + heatDays.length + ' dias</div>' : '') + '</div>';
+  }).join('') + (orcDia > 0 ? T('<div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">Limite: ') + formatar(lim) + ' ÷ ' + heatDays.length + T(' dias</div>') : '') + '</div>';
 
   el.innerHTML = '<div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:10px;text-align:center">📅 ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '</div>' +
     met + cats + top + heat + sem +
-    '<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>';
+    T('<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>');
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
   $('rel-wa').onclick = function () {
-    var msg = '📊 *RELATÓRIO — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
-    todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + c.nome + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
-    msg += '━━━━━━━━━━━━━━━━\n💰 *Total gasto: ' + formatar(grand) + '*\n✅ Disponível: ' + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + '\n\n_Enviado via MinhaCasa™_';
+    var msg = T('📊 *RELATÓRIO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
+    todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + nomeVis(c) + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
+    msg += T('━━━━━━━━━━━━━━━━\n💰 *Total gasto: ') + formatar(grand) + T('*\n✅ Disponível: ') + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + T('\n\n_Enviado via MinhaCasa™_');
     compartilharTexto(msg);
   };
 }
 
 // ═════════════════════════ POR CATEGORIA ═════════════════════════
 function renderizarRelcat() {
-  var abas = COM_PARCELADOS ? todasCats().concat([{ id: '_planos', emoji: '📊', nome: 'Planos', cor: '#7c3aed' }]) : todasCats();
+  var abas = COM_PARCELADOS ? todasCats().concat([{ id: '_planos', emoji: '📊', nome: T('Planos'), cor: '#7c3aed' }]) : todasCats();
   // Só aparecem as categorias com gasto no período escolhido (14/11/2026)
   var perAbas = getPer('relcat');
   if (perAbas) {
@@ -1202,20 +1248,20 @@ function renderizarRelcat() {
     if (!abas.length || (abas.length === 1 && abas[0].id === '_planos' && S.rcCat !== '_planos')) {
       $('relcat-tabs').innerHTML = abas.length ? '<button class="relcat-tab" data-rc="_planos">📊<br>Planos</button>' : '';
       $('relcat-per-card').style.display = '';
-      $('corpo-relcat').innerHTML = '<div class="vazio">📭 Nenhum gasto neste período</div>';
+      $('corpo-relcat').innerHTML = T('<div class="vazio">📭 Nenhum gasto neste período</div>');
       return;
     }
   }
   if (!S.rcCat || !abas.some(function (a) { return a.id === S.rcCat; })) S.rcCat = abas[0].id;
   $('relcat-tabs').innerHTML = abas.map(function (a) {
     var on = a.id === S.rcCat;
-    return '<button class="relcat-tab" data-rc="' + a.id + '"' + (on ? ' style="border-color:' + a.cor + ';background:' + alfa(a.cor, '12') + ';color:' + a.cor + '"' : '') + '>' + esc(a.emoji) + '<br>' + esc(a.nome) + '</button>';
+    return '<button class="relcat-tab" data-rc="' + a.id + '"' + (on ? ' style="border-color:' + a.cor + ';background:' + alfa(a.cor, '12') + ';color:' + a.cor + '"' : '') + '>' + esc(a.emoji) + '<br>' + esc(nomeVis(a)) + '</button>';
   }).join('');
   var el = $('corpo-relcat');
   $('relcat-per-card').style.display = S.rcCat === '_planos' ? 'none' : '';
   if (S.rcCat === '_planos') { el.innerHTML = renderizarPlanos(); return; }
   var per = getPer('relcat');
-  if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
+  if (!per) { el.innerHTML = T('<div class="vazio">Selecione as datas do período</div>'); return; }
   var c = catPorId(S.rcCat), cor = c.cor, orc = +c.orc || 0, todos = lancamentos(), lista, total;
   if (c.id === PARC) {
     var ult = {};
@@ -1227,7 +1273,7 @@ function renderizarRelcat() {
     total = lista.reduce(function (s, l) { return s + l.valor; }, 0);
   }
   lista.sort(function (a, b) { return b.data.localeCompare(a.data); });
-  if (!lista.length) { el.innerHTML = '<div class="vazio">📭 Nenhum lançamento neste período</div>'; return; }
+  if (!lista.length) { el.innerHTML = T('<div class="vazio">📭 Nenhum lançamento neste período</div>'); return; }
   var subTots = {};
   lista.forEach(function (l) { var k = c.id === PARC ? descLanc(l) : (nomeSub(l.cat, l.sub) || '—'); subTots[k] = (subTots[k] || 0) + l.valor; });
   var subKeys = Object.keys(subTots).sort(function (a, b) { return subTots[b] - subTots[a]; }), maxSub = subKeys.length ? subTots[subKeys[0]] : 1;
@@ -1238,16 +1284,16 @@ function renderizarRelcat() {
   var maior = lista.reduce(function (m, l) { return l.valor > (m.valor || 0) ? l : m; }, {});
   var pctOrc = orc > 0 ? Math.max(0, Math.min(total / orc * 100, 100)) : 0, corB = total > orc && orc > 0 ? '#f44336' : pctOrc >= 80 ? '#ff9800' : cor;
   var hero = '<div class="card" style="margin-bottom:10px"><div class="relcat-hero"><div class="relcat-hero-val" style="color:' + cor + '">' + formatar(total) + '</div>' +
-    '<div class="relcat-hero-sub">' + (c.id === PARC ? lista.length + ' planos · compromisso mensal' : lista.length + ' lançamentos · ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim)) + '</div></div>' +
+    '<div class="relcat-hero-sub">' + (c.id === PARC ? lista.length + T(' planos · compromisso mensal') : lista.length + T(' lançamentos · ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim)) + '</div></div>' +
     (orc > 0 ? '<div class="orc-barra-fundo" style="height:10px;margin-top:8px"><div class="orc-barra-fill" style="width:' + pctOrc.toFixed(1) + '%;background:' + corB + '"></div></div>' +
-      '<div class="relcat-orc-row"><span style="color:#6b7280">Orçado: ' + formatar(orc) + '</span><span style="color:' + corB + ';font-weight:800">' + pctOrc.toFixed(1) + '% utilizado</span>' +
-      '<span style="color:' + (total > orc ? '#f44336' : '#43a047') + ';font-weight:700">' + (total > orc ? 'Excedeu ' : 'Sobra ') + formatar(Math.abs(orc - total)) + '</span></div>' : '') + '</div>';
+      T('<div class="relcat-orc-row"><span style="color:#6b7280">Orçado: ') + formatar(orc) + '</span><span style="color:' + corB + ';font-weight:800">' + pctOrc.toFixed(1) + '% utilizado</span>' +
+      '<span style="color:' + (total > orc ? '#f44336' : '#43a047') + ';font-weight:700">' + (total > orc ? T('Excedeu ') : T('Sobra ')) + formatar(Math.abs(orc - total)) + '</span></div>' : '') + '</div>';
   var stats = '<div class="relcat-stats">' +
-    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:' + cor + '">' + formatar(mediaDia) + '</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>' +
-    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + diasCom + '</div><div class="relcat-stat-lbl">Dias com gasto</div></div>' +
-    (maior.valor ? '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#e53935">' + formatar(maior.valor) + '</div><div class="relcat-stat-lbl">Maior gasto · ' + formatarData(maior.data) + '</div></div>' : '') +
-    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + (nCompras ? formatar(total / nCompras) : '—') + '</div><div class="relcat-stat-lbl">Média por compra</div></div></div>';
-  var subs = '<div class="card" style="margin-bottom:10px"><div class="card-titulo">' + (c.id === PARC ? 'Por Plano' : 'Por Subcategoria') + '</div>' + subKeys.map(function (k) {
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:' + cor + '">' + formatar(mediaDia) + T('</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>') +
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + diasCom + T('</div><div class="relcat-stat-lbl">Dias com gasto</div></div>') +
+    (maior.valor ? '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#e53935">' + formatar(maior.valor) + T('</div><div class="relcat-stat-lbl">Maior gasto · ') + formatarData(maior.data) + '</div></div>' : '') +
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">' + (nCompras ? formatar(total / nCompras) : '—') + T('</div><div class="relcat-stat-lbl">Média por compra</div></div></div>');
+  var subs = '<div class="card" style="margin-bottom:10px"><div class="card-titulo">' + (c.id === PARC ? T('Por Plano') : T('Por Subcategoria')) + '</div>' + subKeys.map(function (k) {
     var v = subTots[k];
     return '<div class="relcat-sub-row"><div class="relcat-sub-nome">' + esc(k) + '</div><div class="relcat-sub-bar-wrap"><div class="relcat-sub-bar-fill" style="width:' + (v / maxSub * 100).toFixed(1) + '%;background:' + cor + '"></div></div>' +
       '<div class="relcat-sub-val" style="color:' + cor + '">' + formatar(v) + '</div><div class="relcat-sub-pct">' + (total > 0 ? (v / total * 100).toFixed(0) : 0) + '%</div></div>';
@@ -1256,40 +1302,40 @@ function renderizarRelcat() {
   var acoes = '<div class="card" style="display:flex;gap:10px;margin-bottom:10px">' +
     '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:' + cor + ';color:#fff;font-family:inherit" id="rc-pdf">🖨️ PDF</button>' +
     '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#25d366;color:#fff;font-family:inherit" id="rc-wa">📱 WhatsApp</button></div>';
-  var lst = '<div class="card"><div class="card-titulo">Lançamentos (' + lista.length + ')</div>' + lista.map(function (l) { return linhaLanc(l, pm, true); }).join('') + '</div>';
+  var lst = T('<div class="card"><div class="card-titulo">Lançamentos (') + lista.length + ')</div>' + lista.map(function (l) { return linhaLanc(l, pm, true); }).join('') + '</div>';
   el.innerHTML = hero + stats + subs + acoes + lst;
   $('rc-wa').onclick = function () {
-    var msg = c.emoji + ' *' + c.nome.toUpperCase() + '* — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '\n━━━━━━━━━━━━━━━━\n';
+    var msg = c.emoji + ' *' + nomeVis(c).toUpperCase() + '* — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '\n━━━━━━━━━━━━━━━━\n';
     subKeys.forEach(function (k) { msg += '• ' + k + ': ' + formatar(subTots[k]) + '\n'; });
-    msg += '━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*' + (orc ? ' / orçado ' + formatar(orc) : '') + '\n\n_Enviado via MinhaCasa™_';
+    msg += '━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*' + (orc ? T(' / orçado ') + formatar(orc) : '') + T('\n\n_Enviado via MinhaCasa™_');
     compartilharTexto(msg);
   };
   $('rc-pdf').onclick = function () {
-    abrirImpressao('MinhaCasa — ' + c.nome, '<h1>' + esc(c.emoji + ' ' + c.nome) + '</h1><div class="sub">' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + ' · ' + lista.length + ' lançamentos</div>' +
+    abrirImpressao(T('MinhaCasa — ') + nomeVis(c), '<h1>' + esc(c.emoji + ' ' + nomeVis(c)) + '</h1><div class="sub">' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + ' · ' + lista.length + T(' lançamentos</div>') +
       '<table>' + subKeys.map(function (k) { return '<tr><td>' + esc(k) + '</td><td class="v">' + formatar(subTots[k]) + '</td></tr>'; }).join('') + '</table>' +
-      '<h3 style="margin-top:20px">Lançamentos</h3><table>' + lista.map(function (l) { return '<tr><td>' + formatarData(l.data) + '</td><td>' + esc(descLanc(l)) + '</td><td class="v">' + formatar(l.valor) + '</td></tr>'; }).join('') + '</table>' +
-      '<div class="tot">Total: ' + formatar(total) + (orc ? ' · Orçado: ' + formatar(orc) : '') + '</div>');
+      T('<h3 style="margin-top:20px">Lançamentos</h3><table>') + lista.map(function (l) { return '<tr><td>' + formatarData(l.data) + '</td><td>' + esc(descLanc(l)) + '</td><td class="v">' + formatar(l.valor) + '</td></tr>'; }).join('') + '</table>' +
+      T('<div class="tot">Total: ') + formatar(total) + (orc ? T(' · Orçado: ') + formatar(orc) : '') + '</div>');
   };
 }
 function renderizarPlanos() {
   var planos = planosAtivos(lancamentos()).sort(function (a, b) { return (a.quitado - b.quitado) || b.valorParc - a.valorParc; });
-  if (!planos.length) return '<div class="vazio">📦 Nenhum parcelamento.<br>Ao registrar um gasto, toque em <b>À vista</b> para parcelar.</div>';
+  if (!planos.length) return T('<div class="vazio">📦 Nenhum parcelamento.<br>Ao registrar um gasto, toque em <b>À vista</b> para parcelar.</div>');
   return planos.map(function (p) {
     var pct = p.total ? p.pagas / p.total * 100 : 0, restante = (p.total - p.pagas) * p.valorParc;
     var nums = '';
     for (var n = 1; n <= p.total; n++) nums += '<span class="parc-num ' + (n <= p.pagas ? 'parc-num-paga' : p.lancs[n] ? 'parc-num-futura' : 'parc-num-ausente') + '">' + n + '</span>';
     return '<div class="parc-grupo-card"><div class="parc-grupo-hdr"><div><div class="parc-grupo-desc">' + esc(p.desc) + (p.quitado ? ' ✅' : '') + '</div>' +
-      '<div class="parc-grupo-sub">' + p.pagas + '/' + p.total + ' pagas · ' + formatar(p.valorParc) + '/mês' + (p.valorTotal ? ' · total ' + formatar(p.valorTotal) : '') + '</div></div>' +
-      '<div class="parc-grupo-val">' + (p.quitado ? 'Quitado' : formatar(restante)) + '</div></div>' +
+      '<div class="parc-grupo-sub">' + p.pagas + '/' + p.total + T(' pagas · ') + formatar(p.valorParc) + T('/mês') + (p.valorTotal ? ' · total ' + formatar(p.valorTotal) : '') + '</div></div>' +
+      '<div class="parc-grupo-val">' + (p.quitado ? T('Quitado') : formatar(restante)) + '</div></div>' +
       '<div class="parc-barra-wrap"><div class="parc-barra-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
       '<div class="parc-numeros">' + nums + '</div>' +
-      (!p.quitado ? '<button class="aj-btn perigo" style="margin-top:10px" data-cancelar-plano="' + p.gid + '">Cancelar parcelas futuras</button>' : '') + '</div>';
+      (!p.quitado ? '<button class="aj-btn perigo" style="margin-top:10px" data-cancelar-plano="' + p.gid + T('">Cancelar parcelas futuras</button>') : '') + '</div>';
   }).join('');
 }
 function cancelarPlano(gid) {
   var hj = hoje(), fut = lancamentos().filter(function (l) { return l.parcela && l.parcela.grupoId === gid && l.data > hj; });
-  if (!fut.length) { mostrarToast('ℹ️', 'Não há parcelas futuras'); return; }
-  if (!confirm('Excluir ' + fut.length + ' parcela(s) futura(s) deste plano? As já pagas ficam no histórico.')) return;
+  if (!fut.length) { mostrarToast('ℹ️', T('Não há parcelas futuras')); return; }
+  if (!confirm(T('Excluir ') + fut.length + T(' parcela(s) futura(s) deste plano? As já pagas ficam no histórico.'))) return;
   apagar(fut.map(function (l) { return l.id; }));
 }
 
@@ -1346,10 +1392,12 @@ function projecaoFreq(p) {
   return R;
 }
 // frequência em número inteiro ("17 vezes", "1 vez", "menos de 1 vez") e idas nos dias que faltam (16/11/2026)
-function vezesF(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? 'menos de 1 vez' : r === 1 ? '1 vez' : r + ' vezes'; }
+function nVezes(n) { return n === 1 ? T('1 vez') : T('{n} vezes', { n: n }); }
+function nDias(n) { return n === 1 ? T('1 dia') : T('{n} dias', { n: n }); }
+function vezesF(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? T('menos de 1 vez') : nVezes(r); }
 function idasFaltamF(e) {
-  if (e < 0.95) return 'talvez 1 (' + Math.round(e * 100) + '% de chance)';
-  var r = Math.round(e); return Math.abs(e - r) < 0.25 ? 'cerca de ' + r + (r === 1 ? ' vez' : ' vezes') : Math.floor(e) + ' a ' + Math.ceil(e) + ' vezes';
+  if (e < 0.95) return T('talvez 1 ({p}% de chance)', { p: Math.round(e * 100) });
+  var r = Math.round(e); return Math.abs(e - r) < 0.25 ? T('cerca de {vezes}', { vezes: nVezes(r) }) : T('{a} a {b} vezes', { a: Math.floor(e), b: Math.ceil(e) });
 }
 
 // ═════════════════════════ PROJEÇÃO ═════════════════════════
@@ -1369,17 +1417,17 @@ function atualizarProjecao() {
   var metaDia = restantes > 0 ? Math.max(0, orcRest) / restantes : 0, desvio = realDia - metaDia;
   var pctTempo = passados / totalDias * 100, pctGasto = Math.min(120, gasto / lim * 100);
   function fmtD(v) { return formatar(Math.abs(v)); }
-  $('proj-subtitle').textContent = 'Limite ' + formatar(lim) + ' · Gasto: ' + formatar(gasto) + ' · Livre ' + formatar(lim - gasto);
+  $('proj-subtitle').textContent = T('Limite ') + formatar(lim) + T(' · Gasto: ') + formatar(gasto) + T(' · Livre ') + formatar(lim - gasto);
   var badge = $('proj-badge');
-  if (projFinal > lim) { badge.textContent = '⚠️ Vai exceder'; badge.className = 'proj-badge over'; }
+  if (projFinal > lim) { badge.textContent = T('⚠️ Vai exceder'); badge.className = 'proj-badge over'; }
   else if (desvio > metaDia * 0.15) { badge.textContent = '📈 Acima'; badge.className = 'proj-badge warn'; }
-  else { badge.textContent = '✅ No controle'; badge.className = 'proj-badge ok'; }
+  else { badge.textContent = T('✅ No controle'); badge.className = 'proj-badge ok'; }
   $('proj-padrao').textContent = orcRest <= 0 ? formatar(0) : fmtD(metaDia);
-  $('proj-padrao').nextElementSibling.textContent = orcRest <= 0 ? 'limite já passado' : 'meta/dia restante';
+  $('proj-padrao').nextElementSibling.textContent = orcRest <= 0 ? T('limite já passado') : T('meta/dia restante');
   $('proj-real').textContent = fmtD(realDia);
   $('proj-desvio').textContent = (desvio >= 0 ? '+' : '−') + fmtD(desvio);
   $('proj-desvio').style.color = desvio > 0 ? '#f87171' : '#4ade80';
-  $('proj-desvio-sub').textContent = desvio > 0 ? 'acima/dia' : 'abaixo/dia';
+  $('proj-desvio-sub').textContent = desvio > 0 ? T('acima/dia') : T('abaixo/dia');
   $('proj-btempo').style.width = pctTempo.toFixed(1) + '%';
   $('proj-ptempo').textContent = Math.round(pctTempo) + '%';
   var corG = pctGasto > 100 ? '#f87171' : pctGasto > 85 ? '#fbbf24' : '#4ade80';
@@ -1387,10 +1435,10 @@ function atualizarProjecao() {
   $('proj-pgasto').textContent = Math.round(pctGasto) + '%'; $('proj-pgasto').style.color = corG;
   var sa = lim - gasto;
   $('proj-saldo-atual').textContent = (sa >= 0 ? '+ ' : '− ') + formatar(Math.abs(sa)); $('proj-saldo-atual').style.color = sa >= 0 ? '#4ade80' : '#f87171';
-  $('proj-saldo-atual-sub').textContent = sa >= 0 ? 'disponível' : 'acima do limite';
+  $('proj-saldo-atual-sub').textContent = sa >= 0 ? T('disponível') : T('acima do limite');
   var sf = lim - projFinal;
   $('proj-final').textContent = (sf >= 0 ? '+ ' : '− ') + formatar(Math.abs(sf)); $('proj-final').style.color = sf >= 0 ? '#4ade80' : '#f87171';
-  $('proj-final-sub').textContent = hj > p.fim ? (sf >= 0 ? 'sobrou' : 'excedeu') : (sf >= 0 ? 'sobrando' : 'excedendo') + (PF.linear ? ' se mantiver o ritmo por dia' : ' pela sua frequência de compras');
+  $('proj-final-sub').textContent = hj > p.fim ? (sf >= 0 ? T('sobrou') : T('excedeu')) : (sf >= 0 ? (PF.linear ? T('sobrando se mantiver o ritmo por dia') : T('sobrando pela sua frequência de compras')) : (PF.linear ? T('excedendo se mantiver o ritmo por dia') : T('excedendo pela sua frequência de compras')));
   renderizarFreqProjecao(PF, gasto, projFinal, lim, hj > p.fim);
   renderizarGraficoProjecao(TT, p, lim, hj, projFinal);
 }
@@ -1398,25 +1446,26 @@ function atualizarProjecao() {
 function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
   var el = $('proj-freq'); if (!el) return;
   if (acabou) { el.innerHTML = ''; return; }
-  var base = PF.linear ? 'no ritmo por dia (ainda não há período anterior para medir a sua frequência)' : 'pela sua frequência nos ' + PF.nHist + ' períodos anteriores';
-  var h = '<div class="proj-freq-txt">' + (PF.rest > 0 ? 'Faltam <b>' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + '</b>. ' + (PF.aindaVem >= 1 ? 'Ainda devem entrar cerca de <b>' + formatar(PF.aindaVem) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
-    ' → fecha em <b style="color:' + (projFinal > lim ? '#f87171' : '#4ade80') + '">' + formatar(projFinal) + '</b> (' + Math.round(projFinal / lim * 100) + '% do limite).' : 'Último dia do período.') + '</div>';
+  var base = PF.linear ? T('no ritmo por dia (ainda não há período anterior para medir a sua frequência)') : T('pela sua frequência nos {n} períodos anteriores', { n: PF.nHist });
+  var fecha = T('→ fecha em <b style="color:{cor}">{v}</b> ({p}% do limite).', { cor: projFinal > lim ? '#f87171' : '#4ade80', v: formatar(projFinal), p: Math.round(projFinal / lim * 100) });
+  var h = '<div class="proj-freq-txt">' + (PF.rest > 0 ? T('Faltam <b>{dias}</b>.', { dias: nDias(PF.rest) }) + ' ' + (PF.aindaVem >= 1 ? T('Ainda devem entrar cerca de <b>{v}</b>, {base}', { v: formatar(PF.aindaVem), base: base }) : T('Não deve entrar mais nada, {base}', { base: base })) +
+    ' ' + fecha : T('Último dia do período.')) + '</div>';
   if (!PF.linear) {
     var cont = {}; PF.lugares.forEach(function (s) { var k = s.nome.toLowerCase(); cont[k] = (cont[k] || 0) + 1; });
     var nomeL = function (s) { return '<b>' + esc(s.nome) + '</b>' + (cont[s.nome.toLowerCase()] > 1 ? ' <span style="opacity:.6;font-weight:400">(' + esc(NOME(s.cat)) + ')</span>' : ''); };
     var vem = PF.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 5);
     if (PF.rest > 0 && vem.length) {
       var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
-      h += '<div class="proj-freq-tit">O que ainda deve entrar (pelo seu costume)' + aj('proj-vem') + '</div>' + vem.map(function (s) {
-        return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>costuma ir ' + vezesF(s.freq) + ' por período, ' + formatar(s.ticket) + ' cada · neste período: ' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + ' · nos ' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + ' que faltam: ' + idasFaltamF(s.esperN) + '</small></span><span>' + formatar(s.esperV) + '</span></div>'; }).join('') +
-        '<div style="font-size:10.5px;opacity:.55;margin-top:6px;line-height:1.4">Conta só as idas que ainda cabem no seu costume. ' + (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + formatar(ex.ticket) + ' ≈ ' + formatar(ex.esperV) + '. ' : '') + 'Se você não for, fecha abaixo disso.</div>';
+      h += T('<div class="proj-freq-tit">O que ainda deve entrar (pelo seu costume)') + aj('proj-vem') + '</div>' + vem.map(function (s) {
+        return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>' + T('costuma ir {vezes} por período, {v} cada', { vezes: vezesF(s.freq), v: formatar(s.ticket) }) + ' · ' + T('neste período: {x}', { x: s.n ? nVezes(s.n) : T('nenhuma') }) + ' · ' + T('nos {dias} que faltam: {x}', { dias: nDias(PF.rest), x: idasFaltamF(s.esperN) }) + '</small></span><span>' + formatar(s.esperV) + '</span></div>'; }).join('') +
+        '<div style="font-size:10.5px;opacity:.55;margin-top:6px;line-height:1.4">' + T('Conta só as idas que ainda cabem no seu costume.') + ' ' + (ex ? T('Quando é menos de uma ida, entra só a parte da chance: {nome} tem {p}% de chance × {t} ≈ {v}.', { nome: esc(ex.nome), p: Math.round(ex.esperN * 100), t: formatar(ex.ticket), v: formatar(ex.esperV) }) + ' ' : '') + T('Se você não for, fecha abaixo disso.') + '</div>';
     }
     var mais = PF.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
       .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 5);
-    if (mais.length) h += '<div class="proj-freq-tit">Neste período você foi mais vezes que de costume' + aj('proj-mais') + '</div>' + mais.map(function (s) {
-      return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>' + s.n + ' vezes, ' + formatar(s.v) + ' · você costuma ir ' + vezesF(s.freq) + ' por período</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
+    if (mais.length) h += T('<div class="proj-freq-tit">Neste período você foi mais vezes que de costume') + aj('proj-mais') + '</div>' + mais.map(function (s) {
+      return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>' + T('{vezes}, {v} · você costuma ir {f} por período', { vezes: nVezes(s.n), v: formatar(s.v), f: vezesF(s.freq) }) + '</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
     var novos = PF.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
-    if (novos.length) h += '<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)' + aj('proj-novos') + '</div>' + novos.map(function (s) {
+    if (novos.length) h += T('<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)') + aj('proj-novos') + '</div>' + novos.map(function (s) {
       return '<div class="proj-freq-row"><span>' + nomeL(s) + '</span><span>' + formatar(s.v) + '</span></div>'; }).join('');
   }
   el.innerHTML = h;
@@ -1457,9 +1506,9 @@ function renderizarTermometroDivida() {
   var saldoHoje = planos.reduce(function (s, p) { return s + (p.total - p.pagas) * p.valorParc; }, 0);
   var totalOrig = planos.reduce(function (s, p) { return s + p.total * p.valorParc; }, 0), pctPago = totalOrig > 0 ? (totalOrig - saldoHoje) / totalOrig * 100 : 0;
   var base = new Date(); base.setDate(1);
-  var html = '<div class="card" style="margin-bottom:14px;border-left:4px solid #dc2626"><div class="card-titulo" style="color:#7f1d1d">💳 Termômetro da Dívida' + aj('termometro') + '</div>' +
-    '<div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Total ainda a pagar em todos os planos ativos</div>' +
-    '<div class="termo-total-row"><div class="termo-total-val">' + formatar(saldoHoje) + '</div><div class="termo-total-pago"><span style="color:#16a34a;font-weight:800">' + pctPago.toFixed(0) + '%</span> já pago<br><span style="font-size:10px">Total original: ' + formatar(totalOrig) + '</span></div></div>' +
+  var html = T('<div class="card" style="margin-bottom:14px;border-left:4px solid #dc2626"><div class="card-titulo" style="color:#7f1d1d">💳 Termômetro da Dívida') + aj('termometro') + '</div>' +
+    T('<div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Total ainda a pagar em todos os planos ativos</div>') +
+    '<div class="termo-total-row"><div class="termo-total-val">' + formatar(saldoHoje) + '</div><div class="termo-total-pago"><span style="color:#16a34a;font-weight:800">' + pctPago.toFixed(0) + T('%</span> já pago<br><span style="font-size:10px">Total original: ') + formatar(totalOrig) + '</span></div></div>' +
     '<div class="termo-prog-bg"><div class="termo-prog-fill" style="width:' + pctPago.toFixed(1) + '%"></div></div>';
   for (var i = 0; i < 48; i++) {
     var dt = new Date(base); dt.setMonth(base.getMonth() + i);
@@ -1485,7 +1534,7 @@ function renderizarProjecaoParcelados() {
     maxBar = Math.max(maxBar, tot);
     linhas.push({ m: dt.getMonth(), a: dt.getFullYear(), tot: tot, quit: quit, hoje: i === 0 });
   }
-  el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-titulo" style="color:#5b21b6">📦 Projeção de Parcelados — 24 meses' + aj('parcelados') + '</div><div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Compromisso mensal com planos ativos</div>' +
+  el.innerHTML = T('<div class="card" style="margin-bottom:14px"><div class="card-titulo" style="color:#5b21b6">📦 Projeção de Parcelados — 24 meses') + aj('parcelados') + T('</div><div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Compromisso mensal com planos ativos</div>') +
     linhas.filter(function (l) { return l.tot > 0 || l.hoje; }).map(function (l) {
       var badge = (l.hoje ? '<span class="parc-proj-badge parc-proj-hoje">hoje</span>' : '') + l.quit.map(function (d) { return ' <span class="parc-proj-badge parc-proj-fim">✓ ' + esc(d) + '</span>'; }).join('');
       return '<div class="parc-proj-row"><div class="parc-proj-mes">' + MESES_C[l.m] + '/' + String(l.a).slice(2) + '</div><div class="parc-proj-barra-bg"><div class="parc-proj-barra-fill" style="width:' + (maxBar ? l.tot / maxBar * 100 : 0).toFixed(1) + '%"></div></div>' +
@@ -1497,18 +1546,19 @@ function renderizarProjecaoParcelados() {
 // Mesma lógica do "Resumo da semana" do Gastos da Casa: compara a última semana fechada
 // (segunda a domingo) com o SEU normal (média das 12 semanas anteriores) em cada
 // subcategoria, aponta onde mais vazou e sugere até 4 ações para a semana que começa.
-var SEM_BASE = 12, SEM_PEQ = 25, MESC = MESES_C.map(function (m) { return m.toLowerCase(); });
+var SEM_BASE = 12, SEM_PEQ = 25, MESC = MESES_C.map(function (m) { return I18N.lang === 'en' ? m : m.toLowerCase(); });
 function semAdd(s, n) { var d = dataObj(s); d.setDate(d.getDate() + n); return isoDe(d); }
 function semND(a, b) { return diasEntre(a, b) + 1; }
-function semFD(s) { var d = dataObj(s); return d.getDate() + ' ' + MESC[d.getMonth()]; }
+function semFD(s) { return diaMes(s); }
 function m0(n) { return formatar(Math.round(+n || 0)).replace(/[.,]00$/, ''); }
-function semSub(l) { return nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat) + ' sem tipo'; }
+function semSub(l) { return nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat) + T(' sem tipo'); }
+function fimSemTipo(s) { var f = T(' sem tipo'); s = String(s); return s.slice(-f.length) === f || / sem tipo$/.test(s); }
 // com que frequência compra ali nas semanas da base: "2 vezes por semana", "1 vez a cada 4 semanas" (16/11/2026)
 // o que aconteceu ali nas semanas da base, como DADO (não como "costume") (16/11/2026)
-function semHist(x, semBase) { return x.nb ? 'comprou em ' + x.sb + ' das ' + semBase + ' semanas (' + m0(x.base) + ' no total)' : 'não comprou nas ' + semBase + ' semanas'; }
+function semHist(x, semBase) { return x.nb ? T('comprou em {a} das {b} semanas ({v} no total)', { a: x.sb, b: semBase, v: m0(x.base) }) : T('não comprou nas {n} semanas', { n: semBase }); }
 // compras que são esporádicas por natureza: nunca viram "vazamento" só por acontecerem
-var SEM_ESPOR = /roup|vestu|cal[cç]ad|sapat|t[eê]nis|presente|eletr[oô]n|m[oó]ve(l|is)|decora/i;
-function semOutros(nome) { return /^outros?$|^outras( despesas)?$|sem (tipo|categoria)$/i.test(String(nome).trim()); }
+var SEM_ESPOR = /roup|vestu|cal[cç]ad|sapat|t[eê]nis|presente|eletr[oô]n|m[oó]ve(l|is)|decora|cloth|shoe|gift|electron|furnitur|v[eê]tement|chaussur|cadeau|[ée]lectroni|meubl/i;
+function semOutros(nome) { return /^outros?$|^outras( despesas)?$|sem (tipo|categoria)$|^others?$|^autres?$|^uncategorized$|^sans cat[ée]gorie$|untyped$|sans type$/i.test(String(nome).trim()); }
 // fim do ciclo k: período que termina no último dia do mês continua terminando no último dia
 function fimCicloK(fim, k) { var d1 = semAdd(fim, 1); return d1.slice(8) === '01' ? semAdd(addMeses(d1, k), -1) : addMeses(fim, k); }
 function cicloDe(per, h) {
@@ -1557,16 +1607,16 @@ function analisarSemana(hojeRef, parcial) {
   var cats = catsComuns().map(function (c) {
     var sm = Sx.filter(function (l) { return l.cat === c.id; }).reduce(function (a, l) { return a + l.valor; }, 0);
     var o = (+c.orc || 0) * 7 / diasCic * frac;
-    return { cat: c.id, nome: c.nome, emoji: c.emoji, cor: c.cor, sem: sm, orcSem: o, exc: o ? sm - o : 0 };
+    return { cat: c.id, nome: nomeVis(c), emoji: c.emoji, cor: c.cor, sem: sm, orcSem: o, exc: o ? sm - o : 0 };
   }).filter(function (c) { return c.sem > 0 || c.orcSem > 0; });
   var peq = Sx.filter(function (l) { return l.valor > 0 && l.valor < SEM_PEQ; }), peqT = peq.reduce(function (a, l) { return a + l.valor; }, 0);
   // "Mercado": a categoria com nome de mercado/supermercado, se existir
-  var catMerc = catsComuns().filter(function (c) { return /mercad|grocer/i.test(c.nome); }).map(function (c) { return c.id; });
+  var catMerc = catsComuns().filter(function (c) { return /mercad|grocer|[ée]picerie/i.test(c.nome); }).map(function (c) { return c.id; });
   var merc = Sx.filter(function (l) { return l.valor > 0 && catMerc.indexOf(l.cat) >= 0; }).length;
   var mercNormal = B.filter(function (l) { return l.valor > 0 && catMerc.indexOf(l.cat) >= 0; }).length / semBase * frac;
   var dias = {}; Sx.forEach(function (l) { if (l.valor > 0) dias[l.data] = 1; });
-  var outros = Sx.filter(function (l) { return semOutros(semSub(l)) || / sem tipo$/.test(semSub(l)); }).reduce(function (a, l) { return a + l.valor; }, 0);
-  var assin = lugares.filter(function (x) { return /subscri|assinat|netflix|spotify|disney|prime|apple|streaming/i.test(x.nome) && x.exc > 5; })[0];
+  var outros = Sx.filter(function (l) { return semOutros(semSub(l)) || fimSemTipo(semSub(l)); }).reduce(function (a, l) { return a + l.valor; }, 0);
+  var assin = lugares.filter(function (x) { return /subscri|assinat|abonnement|netflix|spotify|disney|prime|apple|streaming/i.test(x.nome) && x.exc > 5; })[0];
   var hjReal = hoje() < cic.fim ? hoje() : cic.fim;
   var noCic = L.filter(function (l) { return l.data >= cic.inicio && l.data <= hjReal; }).reduce(function (a, l) { return a + l.valor; }, 0);
   var decor = semND(cic.inicio, hjReal), resta = Math.max(0, diasCic - decor);
@@ -1576,39 +1626,46 @@ function analisarSemana(hojeRef, parcial) {
   var hjAgora = hoje(), cicAtual = hjAgora >= cic.inicio && hjAgora <= cic.fim;
   var domAtual = semAdd(hjAgora, 6 - ((dataObj(hjAgora).getDay() + 6) % 7)), novoCic = semAdd(cic.fim, 1) <= domAtual ? semAdd(cic.fim, 1) : null;
   var acabou = cicAtual && lim > 0 && livre <= 0;
+  // Frases montadas inteiras (com {marcadores}) para poderem ser traduzidas (20/11/2026)
+  function vezesTxt(n) { return n === 1 ? T('1 vez') : T('{n} vezes', { n: n }); }
   function teto(nome, normal, nVezes) {
-    var vz = nVezes ? 'no máximo <b>' + nVezes + (nVezes === 1 ? ' vez' : ' vezes') + '</b>, com ' : '';
-    if (acabou) return 'O limite do ciclo já acabou: até ' + semFD(cic.fim) + ', <b>nada</b> em ' + esc(nome) + '.';
+    if (acabou) return T('O limite do ciclo já acabou: até {d}, <b>nada</b> em {nome}.', { d: semFD(cic.fim), nome: esc(nome) });
     var t = cicAtual && lim > 0 ? Math.min(normal, livre) : normal;
-    return 'Esta semana, ' + vz + 'teto de <b>' + m0(t) + '</b>' + (t < normal ? ' (é tudo o que sobra do limite até ' + semFD(cic.fim) + ', para todas as compras)' : '') + '.';
+    var s = nVezes ? T('Esta semana, no máximo <b>{vezes}</b>, com teto de <b>{v}</b>', { vezes: vezesTxt(nVezes), v: m0(t) }) : T('Esta semana, teto de <b>{v}</b>', { v: m0(t) });
+    return s + (t < normal ? T(' (é tudo o que sobra do limite até {d}, para todas as compras)', { d: semFD(cic.fim) }) : '') + '.';
   }
 
   var acoes = [];
   vaz.slice(0, 2).forEach(function (x) {
     var nome = x.nome;
-    if (/restaur|lanche|caf[eé]|coffee|tim ?hortons|fast|pizza|delivery|ifood|uber ?eats|skip|bar\b|padaria/i.test(nome))
-      acoes.push('<b>' + esc(nome) + '</b>: ' + x.n + ' vezes ' + (parcial ? 'nesta semana, até agora' : 'na semana passada') + ' (' + m0(x.sem) + '). Você costuma ir ' + Math.max(1, Math.round(x.nNormal)) + (parcial && !acabou ? ' até este dia da semana. Segure as próximas idas até domingo.' : (parcial ? ' até este dia da semana. ' : ' por semana. ') + teto(nome, x.normal, Math.max(1, Math.round(parcial ? x.nb / semBase : x.nNormal)))));
-    else if (semOutros(x.nome) || / sem tipo$/.test(x.nome))
-      acoes.push('<b>' + esc(nome) + ' (' + esc(NOME(x.cat)) + ')</b> subiu para ' + m0(x.sem) + '. Ao lançar, escolha a subcategoria certa: sem saber onde foi, não dá para cortar.');
+    if (/restaur|lanche|caf[eé]|coffee|tim ?hortons|fast|pizza|delivery|ifood|uber ?eats|skip|bar\b|padaria|bakery|boulangerie/i.test(nome)) {
+      var costume = Math.max(1, Math.round(x.nNormal));
+      acoes.push((parcial ? T('<b>{nome}</b>: {vezes} nesta semana, até agora ({v}).', { nome: esc(nome), vezes: vezesTxt(x.n), v: m0(x.sem) }) : T('<b>{nome}</b>: {vezes} na semana passada ({v}).', { nome: esc(nome), vezes: vezesTxt(x.n), v: m0(x.sem) })) + ' ' +
+        (parcial && !acabou ? T('Você costuma ir {vezes} até este dia da semana. Segure as próximas idas até domingo.', { vezes: vezesTxt(costume) }) :
+          (parcial ? T('Você costuma ir {vezes} até este dia da semana.', { vezes: vezesTxt(costume) }) : T('Você costuma ir {vezes} por semana.', { vezes: vezesTxt(costume) })) + ' ' + teto(nome, x.normal, Math.max(1, Math.round(parcial ? x.nb / semBase : x.nNormal)))));
+    } else if (semOutros(x.nome) || fimSemTipo(x.nome))
+      acoes.push(T('<b>{nome} ({cat})</b> subiu para {v}. Ao lançar, escolha a subcategoria certa: sem saber onde foi, não dá para cortar.', { nome: esc(nome), cat: esc(NOME(x.cat)), v: m0(x.sem) }));
     else if (x.raro)
-      acoes.push('<b>' + esc(nome) + '</b>: ' + m0(x.sem) + (parcial ? ' nesta semana, até agora' : ' na semana') + '. Nas ' + semBase + ' semanas antes, você comprou ali em ' + x.sb + (x.sb === 1 ? ' semana' : ' semanas') + ', cerca de ' + m0(x.ticketSem) + ' em cada: desta vez foi mais. ' +
-        (acabou ? 'O limite do ciclo já acabou: até ' + semFD(cic.fim) + ', <b>nada</b> em ' + esc(nome) + '.' : 'Evite comprar de novo nas próximas semanas.'));
+      acoes.push((parcial ? T('<b>{nome}</b>: {v} nesta semana, até agora.', { nome: esc(nome), v: m0(x.sem) }) : T('<b>{nome}</b>: {v} na semana.', { nome: esc(nome), v: m0(x.sem) })) + ' ' +
+        (x.sb === 1 ? T('Nas {n} semanas antes, você comprou ali em 1 semana, cerca de {v} em cada: desta vez foi mais.', { n: semBase, v: m0(x.ticketSem) }) : T('Nas {n} semanas antes, você comprou ali em {s} semanas, cerca de {v} em cada: desta vez foi mais.', { n: semBase, s: x.sb, v: m0(x.ticketSem) })) + ' ' +
+        (acabou ? T('O limite do ciclo já acabou: até {d}, <b>nada</b> em {nome}.', { d: semFD(cic.fim), nome: esc(nome) }) : T('Evite comprar de novo nas próximas semanas.')));
     else
-      acoes.push('<b>' + esc(nome) + '</b>: ' + m0(x.sem) + ' em ' + x.n + (x.n === 1 ? ' compra' : ' compras') + ', ' + m0(x.exc) + ' acima da sua média por semana ali. ' + teto(nome, Math.max(parcial ? x.base / semBase : x.normal, 0)));
+      acoes.push((x.n === 1 ? T('<b>{nome}</b>: {v} em 1 compra, {e} acima da sua média por semana ali.', { nome: esc(nome), v: m0(x.sem), e: m0(x.exc) }) : T('<b>{nome}</b>: {v} em {n} compras, {e} acima da sua média por semana ali.', { nome: esc(nome), v: m0(x.sem), n: x.n, e: m0(x.exc) })) + ' ' + teto(nome, Math.max(parcial ? x.base / semBase : x.normal, 0)));
   });
+  var cicTxt = semFD(cic.inicio) + ' – ' + semFD(cic.fim);
   if (acabou) {
-    acoes.unshift('Ciclo ' + semFD(cic.inicio) + ' – ' + semFD(cic.fim) + ': o limite de ' + m0(lim) + ' já foi passado em <b style="color:#dc2626">' + m0(-livre) + '</b>. Não sobra orçamento: até ' + semFD(cic.fim) + ', só o essencial' + (novoCic ? '. O ciclo novo começa em ' + semFD(novoCic) + '.' : '.'));
+    acoes.unshift(T('Ciclo {c}: o limite de {lim} já foi passado em <b style="color:#dc2626">{v}</b>. Não sobra orçamento: até {d}, só o essencial.', { c: cicTxt, lim: m0(lim), v: m0(-livre), d: semFD(cic.fim) }) + (novoCic ? ' ' + T('O ciclo novo começa em {d}.', { d: semFD(novoCic) }) : ''));
   } else if (lim > 0 && resta > 0) {
-    if (noCic > ideal) acoes.push('Ciclo ' + semFD(cic.inicio) + ' – ' + semFD(cic.fim) + ': ' + m0(noCic - ideal) + ' adiantado. Para fechar no limite, gaste no máximo <b>' + m0(porDia) + ' por dia</b> nos próximos ' + resta + ' dias.');
-    else acoes.push('Ciclo ' + semFD(cic.inicio) + ' – ' + semFD(cic.fim) + ': você tem ' + m0(ideal - noCic) + ' de folga. Dá para gastar até <b>' + m0(porDia) + ' por dia</b> até o fim do ciclo e ainda fechar no limite.');
+    if (noCic > ideal) acoes.push(T('Ciclo {c}: {v} adiantado. Para fechar no limite, gaste no máximo <b>{dia} por dia</b> nos próximos {n} dias.', { c: cicTxt, v: m0(noCic - ideal), dia: m0(porDia), n: resta }));
+    else acoes.push(T('Ciclo {c}: você tem {v} de folga. Dá para gastar até <b>{dia} por dia</b> até o fim do ciclo e ainda fechar no limite.', { c: cicTxt, v: m0(ideal - noCic), dia: m0(porDia) }));
   }
-  if (catMerc.length && merc >= Math.round(mercNormal) + 2) acoes.push('Foram <b>' + merc + ' idas ao mercado</b> (costuma ser ' + Math.round(mercNormal) + '). Junte as compras: lista pronta e 1 ou 2 idas na semana.');
-  if (peq.length >= 6 && (peqT >= 60 || peqT > tot * .15)) acoes.push('<b>' + peq.length + ' compras pequenas</b> (abaixo de ' + m0(SEM_PEQ) + ') somaram ' + m0(peqT) + '. Antes de uma compra pequena por impulso, espere um dia.');
-  if (outros > tot * .2 && outros > 40 && !vaz.slice(0, 2).some(function (x) { return semOutros(x.nome) || / sem tipo$/.test(x.nome); }))
-    acoes.push(m0(outros) + ' (' + Math.round(outros / tot * 100) + '% da semana) foram lançados como <b>"Outros"</b> ou sem subcategoria. Escolha a subcategoria ao lançar.');
-  if (assin) acoes.push('<b>Assinaturas</b> subiram para ' + m0(assin.sem) + '. Revise se todas ainda valem a pena.');
-  if (!parcial && Object.keys(dias).length >= 6) acoes.push('Houve gasto em <b>' + Object.keys(dias).length + ' dos 7 dias</b>. Marque 2 dias sem gasto nesta semana.');
-  if (!acoes.length) acoes.push('Semana dentro da sua média. Mantenha o ritmo.');
+  if (catMerc.length && merc >= Math.round(mercNormal) + 2) acoes.push(T('Foram <b>{n} idas ao mercado</b> (costuma ser {c}). Junte as compras: lista pronta e 1 ou 2 idas na semana.', { n: merc, c: Math.round(mercNormal) }));
+  if (peq.length >= 6 && (peqT >= 60 || peqT > tot * .15)) acoes.push(T('<b>{n} compras pequenas</b> (abaixo de {lim}) somaram {v}. Antes de uma compra pequena por impulso, espere um dia.', { n: peq.length, lim: m0(SEM_PEQ), v: m0(peqT) }));
+  if (outros > tot * .2 && outros > 40 && !vaz.slice(0, 2).some(function (x) { return semOutros(x.nome) || fimSemTipo(x.nome); }))
+    acoes.push(T('{v} ({p}% da semana) foram lançados como <b>"Outros"</b> ou sem subcategoria. Escolha a subcategoria ao lançar.', { v: m0(outros), p: Math.round(outros / tot * 100) }));
+  if (assin) acoes.push(T('<b>Assinaturas</b> subiram para {v}. Revise se todas ainda valem a pena.', { v: m0(assin.sem) }));
+  if (!parcial && Object.keys(dias).length >= 6) acoes.push(T('Houve gasto em <b>{n} dos 7 dias</b>. Marque 2 dias sem gasto nesta semana.', { n: Object.keys(dias).length }));
+  if (!acoes.length) acoes.push(T('Semana dentro da sua média. Mantenha o ritmo.'));
   return { parcial: !!parcial, ate: ate, diasDec: diasDec, seg: seg, dom: dom, semBase: semBase, poucoHist: histDias < 14, tot: tot, n: Sx.length, normalTot: normalTot, alvoSem: alvoSem, lim: lim,
     vaz: vaz.slice(0, 3), esporSem: esporSem, cats: cats, peq: peq.length, peqT: peqT, merc: merc, mercNormal: mercNormal, diasGasto: Object.keys(dias).length,
     outros: outros, ciclo: cic, noCic: noCic, ideal: ideal, resta: resta, porDia: porDia, acoes: acoes.slice(0, 4) };
@@ -1621,15 +1678,15 @@ function pintarCartaoSemana() {
   var r = null; try { r = analisarSemana(); } catch (e) { console.warn('semana:', e && e.message); }
   if (!r || !r.n) { wrap.innerHTML = ''; return; }
   try { if (localStorage.getItem(chaveSemFechado()) === r.seg) { wrap.innerHTML = ''; return; } } catch (e) {}
-  var st = statusSemana(r), cor = corStatus(st), ref = r.alvoSem > 0 ? 'alvo ' + m0(r.alvoSem) : 'sua média ' + m0(r.normalTot), v = r.vaz[0];
+  var st = statusSemana(r), cor = corStatus(st), ref = r.alvoSem > 0 ? T('alvo ') + m0(r.alvoSem) : T('sua média ') + m0(r.normalTot), v = r.vaz[0];
   wrap.innerHTML = '<div style="background:#fff;border-radius:16px;padding:14px 16px;margin:0 0 12px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-left:5px solid ' + cor + ';position:relative">' +
-    '<button type="button" id="sem-fechar" aria-label="Fechar" style="position:absolute;top:8px;right:8px;border:0;background:none;font-size:18px;color:#6b7280;cursor:pointer;padding:4px 8px">×</button>' +
-    '<div style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#6b7280;text-transform:uppercase">📌 Semana ' + semFD(r.seg) + ' – ' + semFD(r.dom) + '</div>' +
+    '<button type="button" id="sem-fechar" aria-label="' + esc(T('Fechar')) + '" style="position:absolute;top:8px;right:8px;border:0;background:none;font-size:18px;color:#6b7280;cursor:pointer;padding:4px 8px">×</button>' +
+    '<div style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#6b7280;text-transform:uppercase">📌 ' + T('Semana') + ' ' + semFD(r.seg) + ' – ' + semFD(r.dom) + '</div>' +
     '<div style="font-size:20px;font-weight:800;margin:4px 0 2px;color:' + cor + '">' + m0(r.tot) + ' <span style="font-size:13px;font-weight:600;color:#6b7280">· ' + ref + '</span></div>' +
-    (v ? '<div style="font-size:13px;color:#374151;margin-top:4px">Maior vazamento: <b>' + esc(v.nome) + '</b>, ' + m0(v.sem) + ' (média por semana ali: ' + m0(v.normal) + ')</div>'
-      : '<div style="font-size:13px;color:#374151;margin-top:4px">Nenhum lugar passou da sua média.</div>') +
+    (v ? T('<div style="font-size:13px;color:#374151;margin-top:4px">Maior vazamento: <b>') + esc(v.nome) + '</b>, ' + m0(v.sem) + T(' (média por semana ali: ') + m0(v.normal) + ')</div>'
+      : T('<div style="font-size:13px;color:#374151;margin-top:4px">Nenhum lugar passou da sua média.</div>')) +
     '<div style="font-size:13px;color:#374151;margin-top:6px">👉 ' + r.acoes[0] + '</div>' +
-    '<button type="button" data-ir="semana" style="margin-top:8px;font-size:13px;font-weight:700;color:#1d4ed8;background:none;border:0;padding:0;cursor:pointer;font-family:inherit">Ver todas as ações ›</button></div>';
+    T('<button type="button" data-ir="semana" style="margin-top:8px;font-size:13px;font-weight:700;color:#1d4ed8;background:none;border:0;padding:0;cursor:pointer;font-family:inherit">Ver todas as ações ›</button></div>');
   $('sem-fechar').onclick = function () { try { localStorage.setItem(chaveSemFechado(), r.seg); } catch (e) {} wrap.innerHTML = ''; };
 }
 // Período (ciclo) com as semanas dentro dele; tocar numa semana abre o relatório dela (14/11/2026)
@@ -1653,7 +1710,7 @@ function semanasDoCiclo(c) {
 }
 function renderizarListaSemanas() {
   var k = S.semCic || 0, c = cicloSemana(k), hj = hoje();
-  $('sem-label').textContent = 'Período ' + semFD(c.inicio) + ' – ' + semFD(c.fim) + ' ' + c.fim.slice(0, 4);
+  $('sem-label').textContent = T('Período ') + semFD(c.inicio) + ' – ' + semFD(c.fim) + ' ' + c.fim.slice(0, 4);
   $('sem-prox').style.visibility = k < 0 ? 'visible' : 'hidden';
   $('sem-prox').title = '';
   var sem = semanasDoCiclo(c);
@@ -1663,20 +1720,20 @@ function renderizarListaSemanas() {
   var lim = baseDisponivel(), pctL = lim > 0 ? gasto / lim * 100 : 0, corL = pctL > 100 ? '#dc2626' : pctL >= 80 ? '#b26b00' : '#16a34a';
   var diasC = semND(c.inicio, c.fim), decor = hj < c.inicio ? 0 : Math.min(diasC, semND(c.inicio, ate));
   var topo = '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:2px 2px 6px">' +
-    '<div><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280">Gasto no período</div>' +
-    '<div style="font-size:22px;font-weight:900;color:' + corL + '">' + m0(gasto) + (lim > 0 ? ' <span style="font-size:13px;font-weight:600;color:#6b7280">de ' + m0(lim) + '</span>' : '') + '</div></div>' +
-    '<div style="text-align:right;font-size:12px;color:#6b7280">' + (k < 0 ? 'período fechado' : 'dia ' + decor + ' de ' + diasC) + (lim > 0 ? '<br><b style="color:' + corL + '">' + pctL.toFixed(0) + '% do limite</b>' : '') + '</div></div>' +
+    T('<div><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280">Gasto no período</div>') +
+    '<div style="font-size:22px;font-weight:900;color:' + corL + '">' + m0(gasto) + (lim > 0 ? T(' <span style="font-size:13px;font-weight:600;color:#6b7280">de ') + m0(lim) + '</span>' : '') + '</div></div>' +
+    '<div style="text-align:right;font-size:12px;color:#6b7280">' + (k < 0 ? T('período fechado') : T('dia ') + decor + T(' de ') + diasC) + (lim > 0 ? '<br><b style="color:' + corL + '">' + pctL.toFixed(0) + T('% do limite</b>') : '') + '</div></div>' +
     (lim > 0 ? '<div class="orc-barra-fundo" style="margin:0 2px 12px"><div class="orc-barra-fill" style="width:' + Math.min(pctL, 100).toFixed(1) + '%;background:' + corL + '"></div></div>' : '');
   var linhas = sem.map(function (x, i) {
     var sel = S.semAberta && !x.futura && x.off === S.semOff, st = x.r && x.r.n ? statusSemana(x.r) : null, cor = st ? corStatus(st) : '#d1d5db';
-    var dir = x.futura ? '<span style="color:#6b7280;font-size:12px">ainda não começou</span>'
-      : !x.r || !x.r.n ? '<span style="color:#6b7280;font-size:12px">sem gastos</span>'
-      : '<b style="color:' + cor + ';font-size:15px">' + m0(x.r.tot) + '</b>' + (x.r.alvoSem > 0 ? '<div style="font-size:11px;color:#6b7280">alvo ' + m0(x.r.alvoSem) + '</div>' : '');
+    var dir = x.futura ? T('<span style="color:#6b7280;font-size:12px">ainda não começou</span>')
+      : !x.r || !x.r.n ? T('<span style="color:#6b7280;font-size:12px">sem gastos</span>')
+      : '<b style="color:' + cor + ';font-size:15px">' + m0(x.r.tot) + '</b>' + (x.r.alvoSem > 0 ? T('<div style="font-size:11px;color:#6b7280">alvo ') + m0(x.r.alvoSem) + '</div>' : '');
     return '<button type="button" class="sem-item' + (sel ? ' sel' : '') + '" data-semoff="' + x.off + '"' + (x.futura ? ' disabled' : '') +
       ' style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;font-family:inherit;padding:10px 12px;margin:0 0 6px;border-radius:12px;cursor:' + (x.futura ? 'default' : 'pointer') + ';' +
       'border:' + (sel ? '2px solid #7c3aed' : '1px solid #e5e7eb') + ';background:' + (sel ? '#f5f3ff' : x.futura ? '#f9fafb' : '#fff') + ';opacity:' + (x.futura ? '.6' : '1') + '">' +
       '<span style="width:6px;align-self:stretch;border-radius:3px;background:' + cor + '"></span>' +
-      '<span style="flex:1;min-width:0"><b style="font-size:14px;color:#111827">Semana ' + (i + 1) + '</b>' + (x.atual ? ' <span style="font-size:10.5px;font-weight:800;color:#7c3aed;background:#ede9fe;border-radius:6px;padding:2px 6px;vertical-align:1px">EM ANDAMENTO</span>' : '') +
+      T('<span style="flex:1;min-width:0"><b style="font-size:14px;color:#111827">Semana ') + (i + 1) + '</b>' + (x.atual ? T(' <span style="font-size:10.5px;font-weight:800;color:#7c3aed;background:#ede9fe;border-radius:6px;padding:2px 6px;vertical-align:1px">EM ANDAMENTO</span>') : '') +
       '<div style="font-size:12px;color:#6b7280">' + semFD(x.seg) + ' – ' + semFD(x.dom) + '</div></span>' +
       '<span style="text-align:right">' + dir + '</span>' + (x.futura ? '' : '<span style="color:' + (sel ? '#7c3aed' : '#9ca3af') + ';font-size:18px;display:inline-block;transform:rotate(' + (sel ? '90' : '0') + 'deg)">›</span>') + '</button>';
   }).join('');
@@ -1685,8 +1742,8 @@ function renderizarListaSemanas() {
   // o relatório da semana fica dentro da lista, logo abaixo da semana aberta; antes de redesenhar, ele volta para fora
   if (el.contains && el.contains(corpo)) el.parentNode.insertBefore(corpo, el.nextSibling);
   el.innerHTML = '<div class="card" style="padding:12px 12px 6px">' + topo +
-    '<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:0 2px 8px">Semanas do período · toque para abrir ou fechar</div>' + linhas +
-    '<div style="font-size:11px;color:#6b7280;margin:2px 2px 6px">Semanas de segunda a domingo. A cor compara o gasto com o alvo semanal: verde abaixo, amarelo perto, vermelho acima.</div></div>';
+    T('<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:0 2px 8px">Semanas do período · toque para abrir ou fechar</div>') + linhas +
+    T('<div style="font-size:11px;color:#6b7280;margin:2px 2px 6px">Semanas de segunda a domingo. A cor compara o gasto com o alvo semanal: verde abaixo, amarelo perto, vermelho acima.</div></div>');
   qsa('#sem-semanas .sem-item').forEach(function (b) {
     if (b.disabled) return;
     if (S.semAberta && b.classList.contains('sel')) b.parentNode.insertBefore(corpo, b.nextSibling);
@@ -1708,34 +1765,34 @@ function renderizarSemana() {
   var w = dataObj(hjRef).getDay(), seg = semAdd(hjRef, -((w + 6) % 7) - (atual ? 0 : 7));
   var el = $('corpo-semana');
   var dica = '';
-  if (!r || !r.n) { el.innerHTML = dica + '<div class="vazio">📭 Nenhum gasto ' + (atual ? 'nesta semana até agora' : 'nesta semana') + '.<br><span style="font-size:12px">' + (atual ? 'Os lançamentos de segunda até hoje aparecem aqui.' : 'Esta tela mostra a semana fechada (segunda a domingo).') + '</span></div>'; return; }
+  if (!r || !r.n) { el.innerHTML = dica + T('<div class="vazio">📭 Nenhum gasto ') + (atual ? T('nesta semana até agora') : T('nesta semana')) + '.<br><span style="font-size:12px">' + (atual ? T('Os lançamentos de segunda até hoje aparecem aqui.') : T('Esta tela mostra a semana fechada (segunda a domingo).')) + '</span></div>'; return; }
   var st = statusSemana(r), cor = corStatus(st);
-  var ref = r.alvoSem > 0 ? (r.parcial ? 'Alvo até hoje pelo limite' : 'Alvo da semana pelo limite') + aj('sem-alvo') + ': <b>' + m0(r.alvoSem) + '</b>' : 'Sem limite definido (defina em Início → Orçamento)';
+  var ref = r.alvoSem > 0 ? (r.parcial ? T('Alvo até hoje pelo limite') : T('Alvo da semana pelo limite')) + aj('sem-alvo') + ': <b>' + m0(r.alvoSem) + '</b>' : T('Sem limite definido (defina em Início → Orçamento)');
   var resumo = '<div class="card sem-st" style="border-left-color:' + cor + '">' +
-    '<div class="card-titulo">' + (r.parcial ? 'Semana em andamento · até hoje (' + r.diasDec + ' de 7 dias)' : 'Resumo da semana') + '</div>' +
+    '<div class="card-titulo">' + (r.parcial ? T('Semana em andamento · até hoje (') + r.diasDec + T(' de 7 dias)') : T('Resumo da semana')) + '</div>' +
     '<div style="font-size:30px;font-weight:900;color:' + cor + ';letter-spacing:-1px">' + m0(r.tot) + '</div>' +
-    '<div style="font-size:13px;color:#6b7280;margin-top:2px">' + r.n + ' lançamentos · ' + r.diasGasto + ' de ' + r.diasDec + ' dias com gasto</div>' +
-    '<div style="font-size:13px;color:#374151;margin-top:8px">' + ref + '<br>Sua média' + aj('sem-media') + ': <b>' + m0(r.normalTot) + '</b> ' + (r.parcial ? 'até este dia da semana' : 'por semana') + ' <span style="color:#6b7280">(média das ' + r.semBase + ' semana' + (r.semBase > 1 ? 's' : '') + ' anteriores)</span></div>' +
-    (r.parcial ? '<div style="font-size:11.5px;color:#6b7280;margin-top:8px">A semana ainda não terminou. Média e alvo são proporcionais aos ' + r.diasDec + ' dias já passados. O relatório completo sai na segunda-feira.</div>' : '') +
-    (r.poucoHist ? '<div class="alerta atencao" style="margin:10px 0 0">Ainda há pouco histórico. A média fica mais precisa depois de algumas semanas de lançamentos.</div>' : '') + '</div>';
+    '<div style="font-size:13px;color:#6b7280;margin-top:2px">' + r.n + T(' lançamentos · ') + r.diasGasto + T(' de ') + r.diasDec + T(' dias com gasto</div>') +
+    '<div style="font-size:13px;color:#374151;margin-top:8px">' + ref + T('<br>Sua média') + aj('sem-media') + ': <b>' + m0(r.normalTot) + '</b> ' + (r.parcial ? T('até este dia da semana') : T('por semana')) + ' <span style="color:#6b7280">' + (r.semBase > 1 ? T('(média das {n} semanas anteriores)', { n: r.semBase }) : T('(média da semana anterior)')) + '</span></div>' +
+    (r.parcial ? T('<div style="font-size:11.5px;color:#6b7280;margin-top:8px">A semana ainda não terminou. Média e alvo são proporcionais aos ') + r.diasDec + T(' dias já passados. O relatório completo sai na segunda-feira.</div>') : '') +
+    (r.poucoHist ? T('<div class="alerta atencao" style="margin:10px 0 0">Ainda há pouco histórico. A média fica mais precisa depois de algumas semanas de lançamentos.</div>') : '') + '</div>';
   var catsH = r.cats.filter(function (c) { return c.orcSem > 0; }).map(function (c) {
     var pct = Math.min(c.sem / c.orcSem * 100, 100), corB = c.exc > 0 ? '#f44336' : pct >= 80 ? '#ff9800' : c.cor;
     return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>' + esc(c.emoji + ' ' + c.nome) + '</span>' +
       '<span><b style="color:' + (c.exc > 0 ? '#dc2626' : '#16a34a') + '">' + m0(c.sem) + '</b> <span style="color:#6b7280">/ ' + m0(c.orcSem) + '</span></span></div>' +
       '<div class="orc-barra-fundo" style="margin-top:4px"><div class="orc-barra-fill" style="width:' + pct.toFixed(1) + '%;background:' + corB + '"></div></div></div>';
   }).join('');
-  var catsCard = catsH ? '<div class="card"><div class="card-titulo">Categorias × orçamento semanal' + aj('sem-cats') + '</div>' + catsH +
-    '<div style="font-size:11px;color:#6b7280;margin-top:6px">Orçamento semanal = orçamento do período ÷ dias do período × 7' + (r.parcial ? ', proporcional aos dias já passados' : '') + '</div></div>' : '';
-  var thMed = r.parcial ? 'Média até este dia' : 'Média por semana';
+  var catsCard = catsH ? T('<div class="card"><div class="card-titulo">Categorias × orçamento semanal') + aj('sem-cats') + '</div>' + catsH +
+    T('<div style="font-size:11px;color:#6b7280;margin-top:6px">Orçamento semanal = orçamento do período ÷ dias do período × 7') + (r.parcial ? T(', proporcional aos dias já passados') : '') + '</div></div>' : '';
+  var thMed = r.parcial ? T('Média até este dia') : T('Média por semana');
   var linhas = r.vaz.length ? r.vaz.map(function (x) {
-    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + ' · nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + '</span></td><td>' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td>' + m0(x.normal) + '</td><td style="color:#dc2626;font-weight:800">+' + m0(x.exc) + '</td></tr>';
-  }).join('') : '<tr><td colspan="4" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>';
-  var vazCard = '<div class="card"><div class="card-titulo">Onde mais vazou' + aj('sem-vazou') + '</div>' +
-    '<div style="font-size:11.5px;color:#6b7280;margin:-4px 0 8px">"Vazou" = gastou mais do que a sua média por semana naquele lugar (' + r.semBase + ' semanas anteriores)</div>' +
-    (r.esporSem.length ? '<div style="font-size:11.5px;color:#374151;margin:0 0 8px">Compras esporádicas na semana (não entram em "vazou"): ' + r.esporSem.map(function (x) { return '<b>' + esc(x.nome) + '</b> ' + m0(x.sem); }).join(' · ') + '</div>' : '') +
-    '<div style="overflow-x:auto"><table class="sem-tab"><thead><tr><th>Onde</th><th>Esta semana</th><th>' + thMed + '</th><th>A mais</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
-    '<div style="font-size:11px;color:#6b7280;margin-top:6px">Média por semana = o que você gastou ali nas ' + r.semBase + ' semanas anteriores ÷ ' + r.semBase + '.' + ' Roupas, calçados, presentes, eletrônicos e móveis não entram aqui. O que você não compra quase toda semana só aparece se a semana passou do que você costuma gastar numa semana em que compra ali.</div></div>';
-  var acoesCard = '<div class="card" style="border-left:5px solid #7c3aed"><div class="card-titulo">✅ O que fazer nesta semana' + aj('sem-acoes') + '</div><ol class="sem-acoes">' +
+    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + T(' · nas ') + r.semBase + T(' semanas antes: ') + semHist(x, r.semBase) + '</span></td><td>' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? T(' compra') : T(' compras')) + '</span></td><td>' + m0(x.normal) + '</td><td style="color:#dc2626;font-weight:800">+' + m0(x.exc) + '</td></tr>';
+  }).join('') : T('<tr><td colspan="4" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>');
+  var vazCard = T('<div class="card"><div class="card-titulo">Onde mais vazou') + aj('sem-vazou') + '</div>' +
+    T('<div style="font-size:11.5px;color:#6b7280;margin:-4px 0 8px">"Vazou" = gastou mais do que a sua média por semana naquele lugar (') + r.semBase + T(' semanas anteriores)</div>') +
+    (r.esporSem.length ? T('<div style="font-size:11.5px;color:#374151;margin:0 0 8px">Compras esporádicas na semana (não entram em "vazou"): ') + r.esporSem.map(function (x) { return '<b>' + esc(x.nome) + '</b> ' + m0(x.sem); }).join(' · ') + '</div>' : '') +
+    T('<div style="overflow-x:auto"><table class="sem-tab"><thead><tr><th>Onde</th><th>Esta semana</th><th>') + thMed + T('</th><th>A mais</th></tr></thead><tbody>') + linhas + '</tbody></table></div>' +
+    T('<div style="font-size:11px;color:#6b7280;margin-top:6px">Média por semana = o que você gastou ali nas ') + r.semBase + T(' semanas anteriores ÷ ') + r.semBase + '.' + T(' Roupas, calçados, presentes, eletrônicos e móveis não entram aqui. O que você não compra quase toda semana só aparece se a semana passou do que você costuma gastar numa semana em que compra ali.</div></div>');
+  var acoesCard = T('<div class="card" style="border-left:5px solid #7c3aed"><div class="card-titulo">✅ O que fazer nesta semana') + aj('sem-acoes') + '</div><ol class="sem-acoes">' +
     r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
     '<div style="display:flex;gap:8px;margin-top:12px"><button id="sem-pdf" style="flex:1;padding:12px 8px;border:0;border-radius:12px;background:#1d4ed8;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDF</button>' +
     '<button class="btn-whatsapp" id="sem-wa" style="flex:1;margin:0">📱 WhatsApp</button></div></div>';
@@ -1743,20 +1800,20 @@ function renderizarSemana() {
   $('sem-pdf').onclick = function () { exportarPDFSemana(r); };
   $('sem-wa').onclick = function () {
     var txt = function (h) { return h.replace(/<b>|<\/b>/g, '*').replace(/<[^>]+>/g, ''); };
-    var msg = '📌 *' + (r.parcial ? 'SEMANA ATUAL (ATÉ ' + semFD(r.ate).toUpperCase() + ') ' : 'SEMANA ') + semFD(r.seg).toUpperCase() + ' – ' + semFD(r.dom).toUpperCase() + '*\n━━━━━━━━━━━━━━━━\n💰 Gasto: *' + m0(r.tot) + '*' + (r.alvoSem > 0 ? ' (alvo ' + m0(r.alvoSem) + ')' : '') + '\n📊 Sua média por semana: ' + m0(r.normalTot) + '\n';
-    if (r.vaz.length) { msg += '\n🔻 *Onde mais vazou*\n'; r.vaz.forEach(function (x) { msg += '• ' + x.nome + ': ' + m0(x.sem) + ' (média por semana ali ' + m0(x.normal) + ', +' + m0(x.exc) + '; nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + ')\n'; }); }
-    msg += '\n✅ *O que fazer nesta semana*\n'; r.acoes.forEach(function (a, i) { msg += (i + 1) + '. ' + txt(a) + '\n'; });
-    compartilharTexto(msg + '\n_Enviado via MinhaCasa™_');
+    var msg = '📌 *' + (r.parcial ? T('SEMANA ATUAL (ATÉ ') + semFD(r.ate).toUpperCase() + ') ' : T('SEMANA ')) + semFD(r.seg).toUpperCase() + ' – ' + semFD(r.dom).toUpperCase() + '*\n━━━━━━━━━━━━━━━━\n💰 ' + T('Gasto:') + ' *' + m0(r.tot) + '*' + (r.alvoSem > 0 ? T(' (alvo ') + m0(r.alvoSem) + ')' : '') + T('\n📊 Sua média por semana: ') + m0(r.normalTot) + '\n';
+    if (r.vaz.length) { msg += T('\n🔻 *Onde mais vazou*\n'); r.vaz.forEach(function (x) { msg += '• ' + x.nome + ': ' + m0(x.sem) + T(' (média por semana ali ') + m0(x.normal) + ', +' + m0(x.exc) + '; nas ' + r.semBase + T(' semanas antes: ') + semHist(x, r.semBase) + ')\n'; }); }
+    msg += T('\n✅ *O que fazer nesta semana*\n'); r.acoes.forEach(function (a, i) { msg += (i + 1) + '. ' + txt(a) + '\n'; });
+    compartilharTexto(msg + T('\n_Enviado via MinhaCasa™_'));
   };
 }
 
 // Relatório semanal em PDF: abre a versão para impressão, e o "Salvar PDF" fica no próprio diálogo (14/11/2026)
 function exportarPDFSemana(r) {
   var st = statusSemana(r), cor = corStatus(st);
-  var titulo = (r.parcial ? 'Semana atual (até ' + semFD(r.ate) + ')' : 'Semana') + ' · ' + semFD(r.seg) + ' – ' + semFD(r.dom);
+  var titulo = (r.parcial ? T('Semana atual (até ') + semFD(r.ate) + ')' : T('Semana')) + ' · ' + semFD(r.seg) + ' – ' + semFD(r.dom);
   var vaz = r.vaz.length ? r.vaz.map(function (x) {
-    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + '</span></td><td class="v">' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td style="font-size:12px;color:#374151">' + semHist(x, r.semBase) + '</td><td class="v" style="color:#6b7280">' + m0(x.normal) + '</td><td class="v" style="color:#dc2626">+' + m0(x.exc) + '</td></tr>';
-  }).join('') : '<tr><td colspan="5" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>';
+    return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + '</span></td><td class="v">' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? T(' compra') : T(' compras')) + '</span></td><td style="font-size:12px;color:#374151">' + semHist(x, r.semBase) + '</td><td class="v" style="color:#6b7280">' + m0(x.normal) + '</td><td class="v" style="color:#dc2626">+' + m0(x.exc) + '</td></tr>';
+  }).join('') : T('<tr><td colspan="5" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>');
   var cats = r.cats.filter(function (c) { return c.orcSem > 0 || c.sem > 0; }).map(function (c) {
     var pct = c.orcSem > 0 ? Math.min(c.sem / c.orcSem * 100, 100) : 0, corB = c.exc > 0 ? '#f44336' : pct >= 80 ? '#ff9800' : c.cor;
     return '<tr><td>' + esc(c.emoji + ' ' + c.nome) + '<div style="height:6px;background:#f1f5f9;border-radius:3px;margin-top:5px"><div style="height:6px;border-radius:3px;width:' + pct.toFixed(1) + '%;background:' + corB + '"></div></div></td>' +
@@ -1764,18 +1821,18 @@ function exportarPDFSemana(r) {
   }).join('');
   var th = function (t, dir) { return '<th style="padding:8px 10px;background:#1d4ed8;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:' + (dir || 'left') + '">' + t + '</th>'; };
   var corpo = '<style>@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}h2{font-size:15px;margin:22px 0 8px;color:#0f172a}ol{margin:0;padding-left:20px}ol li{margin:6px 0;font-size:13.5px;line-height:1.45}</style>' +
-    '<h1>📌 ' + esc(S.cfg.nome || 'MinhaCasa') + ' — Relatório semanal</h1><div class="sub">' + esc(titulo) + '</div>' +
+    '<h1>📌 ' + esc(S.cfg.nome || 'MinhaCasa') + T(' — Relatório semanal</h1><div class="sub">') + esc(titulo) + '</div>' +
     '<div style="background:#f8fafc;border-left:5px solid ' + cor + ';border-radius:10px;padding:14px 18px">' +
-      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6b7280">' + (r.parcial ? 'Gasto até hoje' : 'Gasto da semana') + '</div>' +
+      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6b7280">' + (r.parcial ? T('Gasto até hoje') : T('Gasto da semana')) + '</div>' +
       '<div style="font-size:28px;font-weight:900;color:' + cor + '">' + m0(r.tot) + '</div>' +
-      '<div style="font-size:13px;color:#374151;margin-top:4px">' + r.n + ' lançamentos · ' + r.diasGasto + ' de ' + r.diasDec + ' dias com gasto<br>' +
-      (r.alvoSem > 0 ? (r.parcial ? 'Alvo até hoje: ' : 'Alvo da semana: ') + '<b>' + m0(r.alvoSem) + '</b> · ' : '') +
-      'Sua média por semana: <b>' + m0(r.normalTot) + '</b> <span style="color:#6b7280">(nas ' + r.semBase + ' semana' + (r.semBase > 1 ? 's' : '') + ' anteriores)</span></div></div>' +
-    '<h2>🔻 Onde mais vazou</h2><table><thead><tr>' + th('Onde') + th('Esta semana', 'right') + th('Nas ' + r.semBase + ' semanas antes') + th(r.parcial ? 'Média até este dia' : 'Média por semana', 'right') + th('A mais', 'right') + '</tr></thead><tbody>' + vaz + '</tbody></table>' +
-    '<h2>✅ O que fazer nesta semana</h2><ol>' + r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
-    (cats ? '<h2>📊 Categorias × orçamento semanal</h2><table><thead><tr>' + th('Categoria') + th('Gasto', 'right') + th('Orçamento', 'right') + '</tr></thead><tbody>' + cats + '</tbody></table>' : '') +
-    '<div style="margin-top:22px;font-size:11px;color:#6b7280;text-align:center">Gerado em ' + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' · MinhaCasa™</div>';
-  abrirImpressao('MinhaCasa — ' + titulo, corpo);
+      '<div style="font-size:13px;color:#374151;margin-top:4px">' + r.n + T(' lançamentos · ') + r.diasGasto + T(' de ') + r.diasDec + T(' dias com gasto<br>') +
+      (r.alvoSem > 0 ? (r.parcial ? T('Alvo até hoje: ') : T('Alvo da semana: ')) + '<b>' + m0(r.alvoSem) + '</b> · ' : '') +
+      T('Sua média por semana: <b>') + m0(r.normalTot) + '</b> <span style="color:#6b7280">' + (r.semBase > 1 ? T('(nas {n} semanas anteriores)', { n: r.semBase }) : T('(na semana anterior)')) + '</span></div></div>' +
+    T('<h2>🔻 Onde mais vazou</h2><table><thead><tr>') + th(T('Onde')) + th(T('Esta semana'), 'right') + th(T('Nas ') + r.semBase + T(' semanas antes')) + th(r.parcial ? T('Média até este dia') : T('Média por semana'), 'right') + th(T('A mais'), 'right') + '</tr></thead><tbody>' + vaz + '</tbody></table>' +
+    T('<h2>✅ O que fazer nesta semana</h2><ol>') + r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
+    (cats ? T('<h2>📊 Categorias × orçamento semanal</h2><table><thead><tr>') + th(T('Categoria')) + th(T('Gasto'), 'right') + th(T('Orçamento'), 'right') + '</tr></thead><tbody>' + cats + '</tbody></table>' : '') +
+    T('<div style="margin-top:22px;font-size:11px;color:#6b7280;text-align:center">Gerado em ') + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' · MinhaCasa™</div>';
+  abrirImpressao(T('MinhaCasa — ') + titulo, corpo);
 }
 
 // ═════════════════════════ RELATÓRIO COMPLETO (vários ciclos) ═════════════════════════
@@ -1783,12 +1840,24 @@ function exportarPDFSemana(r) {
 // Abre numa janela própria com os dados já decifrados deste aparelho; nada é enviado para fora.
 var REL_CSS = ":root{\n  --bg:#f6f7f9; --s1:#fff; --line:#e3e6ea; --grid:#eceef1;\n  --tx:#14171c; --tx2:#4b5361; --tx3:#7a8392;\n    --bad:#c23a2b; --warn:#b26b00; --good:#1f7a3a; --acc:#1d4ed8;\n  --mono:ui-monospace,\"SF Mono\",Menlo,Consolas,monospace;\n}\n*{box-sizing:border-box}\nhtml,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,system-ui,\"Segoe UI\",Roboto,sans-serif;-webkit-text-size-adjust:100%}\n.wrap{max-width:1040px;margin:0 auto;padding:18px 16px 40px}\na{color:var(--acc)}\n.voltar{display:inline-block;margin-bottom:10px;font-size:13px;text-decoration:none;font-weight:600}\nheader.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--tx);padding-bottom:10px;margin-bottom:12px}\n.kick{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}\nh1{font-size:26px;margin:6px 0 0;letter-spacing:-.02em}\n.stamp{font:12px/1.5 var(--mono);color:var(--tx2);text-align:right}\n.barra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}\n.barra .fonte{font-size:12px;color:var(--tx3);flex:1;min-width:200px}\n.periodo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 14px}\n.periodo .plab{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-right:4px}\n.periodo .pb{font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--tx2);cursor:pointer;min-height:36px}\n.periodo .pb[aria-pressed=\"true\"]{background:var(--tx);border-color:var(--tx);color:#fff}\n.periodo .pcustom[hidden]{display:none}\n.periodo .pcustom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--tx2)}\n.periodo input[type=date]{font:13px var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--tx);min-height:36px}\n.periodo .btn{min-height:36px;padding:6px 14px}\n.paviso{margin:-6px 0 14px;padding:9px 12px;border-radius:9px;background:#fff7e6;border:1px solid #f3d9a4;color:#7a4b00;font-size:13px}\n.paviso[hidden]{display:none}\n.btn{font:inherit;font-weight:700;font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid var(--tx);background:var(--tx);color:#fff;cursor:pointer;min-height:40px}\n.btn.sec{background:transparent;color:var(--tx)}\n.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:start}\n.card{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;grid-column:span 12}\n.c6{grid-column:span 6}\n@media(max-width:760px){.c6{grid-column:span 12}}\n.card h2{font-size:17px;margin:0;letter-spacing:-.01em}\n.ch{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}\n.note{font-size:12px;color:var(--tx3)}\n.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--s1);overflow:hidden}\n.kpi{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}\n.kpi .l{font-size:12px;color:var(--tx2)}\n.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:3px 0 2px;white-space:nowrap}\n.kpi .s{font:11px/1.35 var(--mono);color:var(--tx3)}\n@media(max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi .v{font-size:20px}}\n.bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}\n.alvo{border-left:4px solid var(--bad)}\n.alvo ol{margin:6px 0 0;padding-left:20px}\n.alvo li{margin:7px 0}\n.alvo li b.v{white-space:nowrap}\n.ok-msg{border-left:4px solid var(--good)}\ntable{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}\nth,td{padding:6px 7px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}\nth{font:600 10px/1.25 var(--mono);color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:normal;vertical-align:bottom}\ntd:first-child,th:first-child{text-align:left}\ntd.t{text-align:left;white-space:normal}\ntr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}\n.tw{overflow-x:auto}\n.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}\n.tag{font:600 10px/1 var(--mono);padding:2px 5px;border-radius:4px;border:1px solid var(--line);color:var(--tx3);margin-left:5px;vertical-align:1px}\n.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--tx2);margin:2px 0 6px}\n.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}\nsvg{display:block;width:100%;height:auto;overflow:visible}\nsvg text{font-family:var(--mono);font-size:10.5px;fill:var(--tx3)}\nsvg .lbl{fill:var(--tx);font-weight:600}\n.vazio{padding:30px 10px;text-align:center;color:var(--tx3)}\n.hit{cursor:default}\n.bul{display:grid;grid-template-columns:minmax(0,30%) minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--grid)}\n.bul:last-child{border-bottom:0}\n.bul .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.bul .trk{position:relative;height:16px;background:var(--grid);border-radius:4px}\n.bul .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}\n.bul .orc{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tx)}\n.bul .vv{font:12px var(--mono);text-align:right;white-space:nowrap}\n.q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:5px;border-radius:50%;border:1.5px solid var(--acc);background:#eff6ff;color:var(--acc);font:800 11px/1 -apple-system,system-ui,sans-serif;cursor:pointer;vertical-align:2px;padding:0;text-transform:none;letter-spacing:0}\n#ajp{position:fixed;left:12px;right:12px;bottom:12px;max-width:560px;margin:0 auto;background:#14171c;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:50;font-size:14px;line-height:1.5}\n#ajp b:first-child{display:block;font-size:15px;margin-bottom:4px}\n#ajp .btn{margin-top:10px;background:#fff;color:#14171c;border-color:#fff}\n.foot{font-size:11.5px;color:var(--tx3);margin-top:16px;line-height:1.5}\n@media print{\n  @page{size:A4;margin:11mm}\n  html,body{background:#fff}\n  .wrap{max-width:none;padding:0}\n  .barra,.periodo,.paviso,.q,#ajp{display:none!important}\n  .grid,.kpis{display:block!important}\n  .card,.card.c6,.card.longa{display:block;width:auto;margin:0 0 10px;border-color:#ccc;break-inside:auto;page-break-inside:auto}\n  .kpis{border:1px solid #ccc}\n  .kpi{display:inline-block;width:24.6%;vertical-align:top;border-bottom:0}\n  svg,tr,li,.bul{break-inside:avoid;page-break-inside:avoid}\n  .ch,h2{break-after:avoid;page-break-after:avoid}\n  .legend span{display:inline-block;margin-right:12px}\n  thead{display:table-header-group}\n  .tw{overflow:visible}\n  table{font-size:10.5px}\n  th,td{padding:4px 4px}\n  th{font-size:8.5px}\n}";
 function motorRelatorio(D) {
+  // Roda numa janela própria (toString): traduções chegam em D.i18n (texto em português → idioma escolhido).
+  var T = (function (d) {
+    d = d || {};
+    function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+    return function (s, v) {
+      s = String(s);
+      var r = d[s];
+      if (r == null) { var n = norm(s); r = d[n]; if (r == null) r = s; else r = /^\s*/.exec(s)[0] + r + /\s*$/.exec(s)[0]; }
+      if (v) r = r.replace(/\{(\w+)\}/g, function (m, k) { return v[k] != null ? v[k] : m; });
+      return r;
+    };
+  })(D.i18n);
   var NOMES = {}, COR = {}, ORC = {}, COMUNS = [];
   D.cats.forEach(function (c) { NOMES[c.id] = c.nome; COR[c.id] = c.cor || '#9ca3af'; ORC[c.id] = +c.orc || 0; COMUNS.push(c.id); });
-  var DIASEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-  var MESC = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']; // roda numa janela própria (toString): sem acesso a MESES_C
+  var DIASEM = D.diasem || ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  var MESC = D.mesesc || ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']; // roda numa janela própria (toString): vêm em D
   var PEQUENO = 25;
-  var catMerc = D.cats.filter(function (c) { return /mercado/i.test(c.nome); })[0];
+  var catMerc = D.cats.filter(function (c) { return /mercad|grocer|[ée]picerie/i.test(c.nome); })[0];
   function addMeses(s, m) {
     var p = s.split('-'), ano = +p[0], mes = +p[1] - 1, dia = +p[2];
     var nm = mes + m, na = ano + Math.floor(nm / 12); nm = ((nm % 12) + 12) % 12;
@@ -1799,8 +1868,8 @@ function motorRelatorio(D) {
   function dt(s) { return new Date(s + 'T12:00:00'); }
   function dias(a, b) { return Math.round((dt(b) - dt(a)) / 864e5) + 1; }
   function addDias(s, n) { var d = dt(s); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function fD(s) { var d = dt(s); return d.getDate() + ' ' + MESC[d.getMonth()]; }
-  function fDA(s) { var d = dt(s); return d.getDate() + ' ' + MESC[d.getMonth()] + ' ' + d.getFullYear(); }
+  function fD(s) { var d = dt(s); return D.lang === 'en' ? MESC[d.getMonth()] + ' ' + d.getDate() : d.getDate() + ' ' + MESC[d.getMonth()]; }
+  function fDA(s) { var d = dt(s); return D.lang === 'en' ? MESC[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() : d.getDate() + ' ' + MESC[d.getMonth()] + ' ' + d.getFullYear(); }
   function money(n, dec) {
     n = +n || 0; var neg = n < 0; n = Math.abs(n);
     var s = n.toFixed(dec === 0 ? 0 : 2), int = dec === 0 ? s : s.slice(0, -3), cent = dec === 0 ? '' : s.slice(-2);
@@ -1812,8 +1881,8 @@ function motorRelatorio(D) {
   function pct(x) { return isFinite(x) ? Math.round(x * 100) + '%' : '—'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function val(l) { return +l.valor || 0; }
-  function subDe(l) { return l.sub || (l.desc ? String(l.desc).trim() : '') || (NOMES[l.cat] || 'Sem categoria') + ' (sem tipo)'; }
-  function nomeCat(k) { return NOMES[k] || 'Sem categoria'; }
+  function subDe(l) { return l.sub || (l.desc ? String(l.desc).trim() : '') || (NOMES[l.cat] || T('Sem categoria')) + T(' (sem tipo)'); }
+  function nomeCat(k) { return NOMES[k] || T('Sem categoria'); }
   function corCat(k) { return COR[k] || '#9ca3af'; }
   var d = { lancamentos: D.lanc, periodo: D.periodo, limite: +D.limite || 0 };
   var $ = function (id) { return document.getElementById(id); };
@@ -1850,8 +1919,8 @@ function motorRelatorio(D) {
     return out.map(function (c) { return prepara(c, h); });
   }
   function rotPeriodo(nF) {
-    if (PER.n) return 'nos ' + nF + ' últimos ciclos fechados';
-    return 'de ' + fDA(PER.de) + ' a ' + fDA(PER.ate > hojeIso() ? hojeIso() : PER.ate);
+    if (PER.n) return T('nos {n} últimos ciclos fechados', { n: nF });
+    return T('de {a} a {b}', { a: fDA(PER.de), b: fDA(PER.ate > hojeIso() ? hojeIso() : PER.ate) });
   }
   function calcular(lista) {
     var C = lista || ciclos(), L = d.lancamentos, h = hojeIso();
@@ -1904,37 +1973,38 @@ function motorRelatorio(D) {
     R.lugares.sort(function (a, b) { return b.esperV - a.esperV; });
     return R;
   }
-  function vezes(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? 'menos de 1 vez' : r === 1 ? '1 vez' : r + ' vezes'; }
+  function nVezesM(n) { return n === 1 ? T('1 vez') : T('{n} vezes', { n: n }); }
+  function vezes(x) { x = +x || 0; var r = Math.round(x); return x < 0.75 ? T('menos de 1 vez') : nVezesM(r); }
   function idasFaltam(e) {
-    if (e < 0.95) return 'talvez 1 (' + Math.round(e * 100) + '% de chance)';
-    var r = Math.round(e); return Math.abs(e - r) < 0.25 ? 'cerca de ' + r + (r === 1 ? ' vez' : ' vezes') : Math.floor(e) + ' a ' + Math.ceil(e) + ' vezes';
+    if (e < 0.95) return T('talvez 1 (') + Math.round(e * 100) + T('% de chance)');
+    var r = Math.round(e); return Math.abs(e - r) < 0.25 ? T('cerca de {vezes}', { vezes: nVezesM(r) }) : T('{a} a {b} vezes', { a: Math.floor(e), b: Math.ceil(e) });
   }
   function blocoFrequencia(at, lim) {
     var R = at.R; if (!R) return '';
-    var base = R.linear ? 'no ritmo por dia (ainda não há ciclo fechado para medir a sua frequência)' : 'pela sua frequência nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos');
+    var base = R.linear ? T('no ritmo por dia (ainda não há ciclo fechado para medir a sua frequência)') : T('pela sua frequência nos últimos ') + R.nHist + (R.nHist === 1 ? T(' ciclo') : T(' ciclos'));
     var cls = lim > 0 && at.proj > lim ? 'bad' : '';
-    var x = '<p style="margin:0 0 8px">' + (R.rest > 0 ? 'Faltam ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + '. ' + (R.tot >= 1 ? 'Ainda devem entrar cerca de <b>' + m0(R.tot) + '</b>, ' + base : 'Não deve entrar mais nada, ' + base) +
-      ' → o ciclo fecha em <b class="' + cls + '">' + m0(at.proj) + '</b>' + (lim > 0 ? ' (' + pct(at.proj / lim) + ' do limite)' : '') + '.' : 'O ciclo fecha hoje em <b class="' + cls + '">' + m0(at.proj) + '</b>.') + '</p>';
+    var x = '<p style="margin:0 0 8px">' + (R.rest > 0 ? T('Faltam ') + R.rest + (R.rest === 1 ? T(' dia') : T(' dias')) + '. ' + (R.tot >= 1 ? T('Ainda devem entrar cerca de <b>') + m0(R.tot) + '</b>, ' + base : T('Não deve entrar mais nada, ') + base) +
+      T(' → o ciclo fecha em <b class="') + cls + '">' + m0(at.proj) + '</b>' + (lim > 0 ? ' (' + pct(at.proj / lim) + T(' do limite)') : '') + '.' : T('O ciclo fecha hoje em <b class="') + cls + '">' + m0(at.proj) + '</b>.') + '</p>';
     if (R.linear) return x;
     var cont = {}; R.lugares.forEach(function (s) { var k = s.nome.toLowerCase(); cont[k] = (cont[k] || 0) + 1; });
     function nomeL(s) { return '<b>' + esc(s.nome) + '</b>' + (cont[s.nome.toLowerCase()] > 1 ? ' <span class="note">(' + esc(nomeCat(s.cat)) + ')</span>' : ''); }
     var vem = R.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 6);
     if (R.rest > 0 && vem.length) {
       var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
-      x += '<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ' + fD(R.ciclo.fim) + '</b> · pelo seu costume nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos') + '</p>' +
-        '<div class="tw"><table><thead><tr><th>Onde</th><th>Você costuma ir' + q('costuma') + '</th><th>Neste ciclo, até hoje' + q('nociclo') + '</th><th>Nos ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + ' que faltam' + q('faltam') + '</th><th>Entra na projeção' + q('entra') + '</th></tr></thead><tbody>' +
-        vem.map(function (s) { return '<tr><td class="t">' + nomeL(s) + '</td><td class="t">' + vezes(s.freq) + ' por ciclo, ' + m0(s.ticket) + ' cada</td><td>' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + '</td><td class="t">' + idasFaltam(s.esperN) + '</td><td><b>' + m0(s.esperV) + '</b></td></tr>'; }).join('') +
-        '</tbody></table></div><p class="note" style="margin:4px 0 10px">Como ler: nos dias que faltam, conta só as idas que ainda cabem no seu costume. ' +
-        (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + m0(ex.ticket) + ' por ida ≈ ' + m0(ex.esperV) + '. ' : '') +
-        'Se você não for, o ciclo fecha abaixo da projeção.</p>';
+      x += T('<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ') + fD(R.ciclo.fim) + T('</b> · pelo seu costume nos últimos ') + R.nHist + (R.nHist === 1 ? T(' ciclo') : T(' ciclos')) + '</p>' +
+        T('<div class="tw"><table><thead><tr><th>Onde</th><th>Você costuma ir') + q('costuma') + T('</th><th>Neste ciclo, até hoje') + q('nociclo') + T('</th><th>Nos ') + R.rest + (R.rest === 1 ? T(' dia') : T(' dias')) + T(' que faltam') + q('faltam') + T('</th><th>Entra na projeção') + q('entra') + '</th></tr></thead><tbody>' +
+        vem.map(function (s) { return '<tr><td class="t">' + nomeL(s) + '</td><td class="t">' + vezes(s.freq) + T(' por ciclo, ') + m0(s.ticket) + ' cada</td><td>' + (s.n ? s.n + (s.n === 1 ? T(' vez') : T(' vezes')) : T('nenhuma')) + '</td><td class="t">' + idasFaltam(s.esperN) + '</td><td><b>' + m0(s.esperV) + '</b></td></tr>'; }).join('') +
+        T('</tbody></table></div><p class="note" style="margin:4px 0 10px">Como ler: nos dias que faltam, conta só as idas que ainda cabem no seu costume. ') +
+        (ex ? T('Quando é menos de uma ida, entra só a parte da chance: ') + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + T('% de chance × ') + m0(ex.ticket) + T(' por ida ≈ ') + m0(ex.esperV) + '. ' : '') +
+        T('Se você não for, o ciclo fecha abaixo da projeção.</p>');
     }
     var mais = R.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
       .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 6);
-    if (mais.length) x += '<p class="note" style="margin:0 0 4px"><b>Neste ciclo você foi mais vezes que de costume</b></p><ul style="margin:0 0 10px;padding-left:20px">' +
-      mais.map(function (s) { return '<li>' + nomeL(s) + ': ' + s.n + ' vezes, ' + m0(s.v) + ' (você costuma ir ' + vezes(s.freq) + ' por ciclo, cerca de ' + m0(s.vH / R.nHist) + ') → <span class="bad">' + m0(s.extraV) + ' a mais</span></li>'; }).join('') + '</ul>';
+    if (mais.length) x += T('<p class="note" style="margin:0 0 4px"><b>Neste ciclo você foi mais vezes que de costume</b></p><ul style="margin:0 0 10px;padding-left:20px">') +
+      mais.map(function (s) { return '<li>' + nomeL(s) + ': ' + s.n + T(' vezes, ') + m0(s.v) + T(' (você costuma ir ') + vezes(s.freq) + T(' por ciclo, cerca de ') + m0(s.vH / R.nHist) + ') → <span class="bad">' + m0(s.extraV) + T(' a mais</span></li>'); }).join('') + '</ul>';
     var novos = R.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
-    if (novos.length) x += '<p class="note" style="margin:0 0 4px"><b>Gastos que não aparecem nos ciclos anteriores</b> (não foram projetados de novo)</p><ul style="margin:0 0 10px;padding-left:20px">' +
-      novos.map(function (s) { return '<li>' + nomeL(s) + ': ' + m0(s.v) + (s.n > 1 ? ' em ' + s.n + ' vezes' : '') + '</li>'; }).join('') + '</ul>';
+    if (novos.length) x += T('<p class="note" style="margin:0 0 4px"><b>Gastos que não aparecem nos ciclos anteriores</b> (não foram projetados de novo)</p><ul style="margin:0 0 10px;padding-left:20px">') +
+      novos.map(function (s) { return '<li>' + nomeL(s) + ': ' + m0(s.v) + (s.n > 1 ? T(' em {n} vezes', { n: s.n }) : '') + '</li>'; }).join('') + '</ul>';
     return x;
   }
 
@@ -1942,23 +2012,23 @@ function motorRelatorio(D) {
 
   // Ajuda "?" (20/11/2026): toque abre uma explicação embaixo; some ao imprimir/salvar PDF.
   var AJ = {
-    proj: ['Gasto projetado no ciclo', 'Quanto o ciclo atual deve fechar: o que você já gastou + o que ainda deve entrar pelo seu costume de compras nos últimos ciclos. Com outros períodos escolhidos, mostra a média por ciclo.'],
-    acima: ['Ciclos acima do limite', 'Em quantos dos ciclos analisados o gasto passou do limite. Ciclos cortados pelas datas escolhidas contam proporcionalmente.'],
-    atual: ['Ciclo atual até hoje', 'Quanto já foi gasto no ciclo atual, do primeiro dia até hoje, e em qual dia do ciclo você está. A projeção é onde ele deve fechar.'],
-    pordia: ['Pode gastar por dia', 'Quanto ainda sobra do limite, dividido pelos dias que faltam no ciclo. Se o limite já foi passado, fica em zero: o recado é gastar só o essencial.'],
-    atacar: ['Onde atacar primeiro', 'Categorias que estão (ou vão ficar, pela projeção) acima do orçamento, da maior diferença para a menor, com os lugares que mais pesam em cada uma.'],
-    porciclo: ['Gasto por ciclo', 'Cada barra é um ciclo (o seu período, mês a mês), dividida por categoria. A linha tracejada é o limite. O ciclo com * está em andamento.'],
-    catciclo: ['Categorias: ciclo a ciclo × orçamento', 'Quanto cada categoria gastou em cada ciclo.<br><br><b>Projeção do atual</b>: onde o ciclo em curso deve fechar.<br><b>Base / Média por ciclo</b>: o número usado para comparar com o orçamento.<br><b>× orç.</b>: Base ÷ orçamento. Acima de 100% (vermelho) = acima do orçamento.'],
-    ritmo: ['Ritmo do ciclo atual', 'Compara o que você já gastou com o que <b>deveria</b> ter gasto até hoje se dividisse o limite igualmente pelos dias.<br><br>"Adiantado" = gastou mais rápido que o limite permite. Mostra também quanto pode gastar por dia daqui para a frente e o que ainda deve entrar.'],
-    costuma: ['Você costuma ir', 'Quantas vezes você vai a esse lugar por ciclo e quanto gasta por ida, pela média dos últimos ciclos fechados (até 6).'],
-    nociclo: ['Neste ciclo, até hoje', 'Quantas vezes você já foi a esse lugar desde o começo do ciclo atual.'],
-    faltam: ['Nos dias que faltam', 'Quantas idas ainda devem acontecer até o fim do ciclo, pelo seu costume. Só conta as idas que ainda cabem: se você já foi as vezes de sempre, não conta mais. Menos de uma ida aparece como chance (ex.: "talvez 1, 40% de chance").'],
-    entra: ['Entra na projeção', 'Quanto esse lugar soma na projeção do ciclo: idas que faltam × gasto por ida. Com chance de ida, entra só a parte da chance (40% × CA$ 80 = CA$ 32). Se você não for, o ciclo fecha abaixo da projeção.'],
-    onde: ['Para onde o dinheiro vai', 'Os lugares (subcategoria ou descrição) onde mais foi dinheiro.<br><br><b>Por ciclo</b>: quanto vai ali, em média, em cada ciclo.<br><b>Média por compra</b>: total ÷ número de compras.<br><b>Último × anterior</b>: quanto subiu (▲) ou caiu (▼) do penúltimo para o último ciclo fechado.'],
-    indices: ['Índices de comportamento', 'Números que mostram <b>hábitos</b>: muitos gastos pequenos, idas ao mercado, dias com gasto, fim de semana e concentração em poucos lugares. A coluna da direita explica cada um.'],
-    diasem: ['Gasto por dia da semana', 'Quanto você gasta, em média, em cada dia da semana. Laranja = sábado e domingo.']
+    proj: [T('Gasto projetado no ciclo'), T('Quanto o ciclo atual deve fechar: o que você já gastou + o que ainda deve entrar pelo seu costume de compras nos últimos ciclos. Com outros períodos escolhidos, mostra a média por ciclo.')],
+    acima: [T('Ciclos acima do limite'), T('Em quantos dos ciclos analisados o gasto passou do limite. Ciclos cortados pelas datas escolhidas contam proporcionalmente.')],
+    atual: [T('Ciclo atual até hoje'), T('Quanto já foi gasto no ciclo atual, do primeiro dia até hoje, e em qual dia do ciclo você está. A projeção é onde ele deve fechar.')],
+    pordia: [T('Pode gastar por dia'), T('Quanto ainda sobra do limite, dividido pelos dias que faltam no ciclo. Se o limite já foi passado, fica em zero: o recado é gastar só o essencial.')],
+    atacar: [T('Onde atacar primeiro'), T('Categorias que estão (ou vão ficar, pela projeção) acima do orçamento, da maior diferença para a menor, com os lugares que mais pesam em cada uma.')],
+    porciclo: [T('Gasto por ciclo'), T('Cada barra é um ciclo (o seu período, mês a mês), dividida por categoria. A linha tracejada é o limite. O ciclo com * está em andamento.')],
+    catciclo: [T('Categorias: ciclo a ciclo × orçamento'), T('Quanto cada categoria gastou em cada ciclo.<br><br><b>Projeção do atual</b>: onde o ciclo em curso deve fechar.<br><b>Base / Média por ciclo</b>: o número usado para comparar com o orçamento.<br><b>× orç.</b>: Base ÷ orçamento. Acima de 100% (vermelho) = acima do orçamento.')],
+    ritmo: [T('Ritmo do ciclo atual'), T('Compara o que você já gastou com o que <b>deveria</b> ter gasto até hoje se dividisse o limite igualmente pelos dias.<br><br>"Adiantado" = gastou mais rápido que o limite permite. Mostra também quanto pode gastar por dia daqui para a frente e o que ainda deve entrar.')],
+    costuma: [T('Você costuma ir'), T('Quantas vezes você vai a esse lugar por ciclo e quanto gasta por ida, pela média dos últimos ciclos fechados (até 6).')],
+    nociclo: [T('Neste ciclo, até hoje'), T('Quantas vezes você já foi a esse lugar desde o começo do ciclo atual.')],
+    faltam: [T('Nos dias que faltam'), T('Quantas idas ainda devem acontecer até o fim do ciclo, pelo seu costume. Só conta as idas que ainda cabem: se você já foi as vezes de sempre, não conta mais. Menos de uma ida aparece como chance (ex.: "talvez 1, 40% de chance").')],
+    entra: [T('Entra na projeção'), T('Quanto esse lugar soma na projeção do ciclo: idas que faltam × gasto por ida. Com chance de ida, entra só a parte da chance (40% × CA$ 80 = CA$ 32). Se você não for, o ciclo fecha abaixo da projeção.')],
+    onde: [T('Para onde o dinheiro vai'), T('Os lugares (subcategoria ou descrição) onde mais foi dinheiro.<br><br><b>Por ciclo</b>: quanto vai ali, em média, em cada ciclo.<br><b>Média por compra</b>: total ÷ número de compras.<br><b>Último × anterior</b>: quanto subiu (▲) ou caiu (▼) do penúltimo para o último ciclo fechado.')],
+    indices: [T('Índices de comportamento'), T('Números que mostram <b>hábitos</b>: muitos gastos pequenos, idas ao mercado, dias com gasto, fim de semana e concentração em poucos lugares. A coluna da direita explica cada um.')],
+    diasem: [T('Gasto por dia da semana'), T('Quanto você gasta, em média, em cada dia da semana. Laranja = sábado e domingo.')]
   };
-  var KQ = { 'Gasto projetado no ciclo': 'proj', 'Gasto médio por ciclo': 'proj', 'Ciclos acima do limite': 'acima', 'Ciclo atual até hoje': 'atual', 'Pode gastar por dia': 'pordia' };
+  var KQ = {}; KQ[T('Gasto projetado no ciclo')] = 'proj'; KQ[T('Gasto médio por ciclo')] = 'proj'; KQ[T('Ciclos acima do limite')] = 'acima'; KQ[T('Ciclo atual até hoje')] = 'atual'; KQ[T('Pode gastar por dia')] = 'pordia';
   function q(k) { return PRINT ? '' : '<button type="button" class="q" data-q="' + k + '" aria-label="O que é isto?">?</button>'; }
   document.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('[data-q]') : null, box = document.getElementById('ajp');
@@ -1967,7 +2037,7 @@ function motorRelatorio(D) {
     var a = AJ[b.getAttribute('data-q')]; if (!a) return;
     if (box) box.remove();
     box = document.createElement('div'); box.id = 'ajp'; box.setAttribute('role', 'dialog');
-    box.innerHTML = '<b>' + a[0] + '</b><div>' + a[1] + '</div><button type="button" class="btn" onclick="this.parentNode.remove()">Entendi</button>';
+    box.innerHTML = '<b>' + a[0] + '</b><div>' + a[1] + T('</div><button type="button" class="btn" onclick="this.parentNode.remove()">Entendi</button>');
     document.body.appendChild(box);
   });
   function niceMax(v) { if (v <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; var st = [1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10].find(function (x) { return f <= x * 1.0001; }); return st * p; }
@@ -2010,7 +2080,7 @@ function motorRelatorio(D) {
     var X = function (i) { return ml + iw * i / Math.max(1, N - 1); }, Y = function (v) { return mt + ih - ih * v / mx; };
     var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gasto acumulado no ciclo">';
     for (var i = 0; i <= 4; i++) { var y = Y(mx * i / 4); g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y + '" y2="' + y + '" stroke="var(--grid)"/><text x="' + (ml - 6) + '" y="' + (y + 3.5) + '" text-anchor="end">' + semS(mx * i / 4) + '</text>'; }
-    if (lim > 0) g += '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(N - 1) + '" y2="' + Y(lim) + '" stroke="var(--bad)" stroke-dasharray="6 4" stroke-width="1.3"/><text x="' + X(Math.round(N * .55)) + '" y="' + (Y(lim * .55) + 16) + '" text-anchor="start" style="fill:var(--bad);font-weight:600">ritmo do limite</text>';
+    if (lim > 0) g += '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(N - 1) + '" y2="' + Y(lim) + '" stroke="var(--bad)" stroke-dasharray="6 4" stroke-width="1.3"/><text x="' + X(Math.round(N * .55)) + '" y="' + (Y(lim * .55) + 16) + T('" text-anchor="start" style="fill:var(--bad);font-weight:600">ritmo do limite</text>');
     var cores = ['#c3c9d2', '#9aa3b0', '#5b6573', 'var(--acc)'];
     series.forEach(function (s, j) {
       if (!s.length) return; var p = '';
@@ -2018,10 +2088,10 @@ function motorRelatorio(D) {
       var cor = cores[j + (4 - series.length)];
       g += '<path d="' + p + '" fill="none" stroke="' + cor + '" stroke-width="' + (j === series.length - 1 ? 2.6 : 1.6) + '"/>';
       var u = s.length - 1; g += '<circle cx="' + X(u) + '" cy="' + Y(s[u]) + '" r="3.5" fill="' + cor + '"/>';
-      if (j === series.length - 1) g += '<text class="lbl" x="' + (X(u) + 7) + '" y="' + (Y(s[u]) - 7) + '">' + m0(s[u]) + ' até hoje</text>';
+      if (j === series.length - 1) g += '<text class="lbl" x="' + (X(u) + 7) + '" y="' + (Y(s[u]) - 7) + '">' + m0(s[u]) + T(' até hoje</text>');
     });
-    [1, 8, 15, 22, 29].forEach(function (dd) { if (dd <= N) g += '<text x="' + X(dd - 1) + '" y="' + (H - mb + 16) + '" text-anchor="middle">dia ' + dd + '</text>'; });
-    return g + '</svg><div class="legend">' + C.map(function (c, j) { return '<span><i style="background:' + cores[j + (4 - C.length)] + '"></i>' + esc(c.rot) + (c.emCurso ? ' (atual)' : ' · fechou em ' + m0(c.comum)) + '</span>'; }).join('') + '</div>';
+    [1, 8, 15, 22, 29].forEach(function (dd) { if (dd <= N) g += '<text x="' + X(dd - 1) + '" y="' + (H - mb + 16) + '" text-anchor="middle">' + T('dia ') + dd + '</text>'; });
+    return g + '</svg><div class="legend">' + C.map(function (c, j) { return '<span><i style="background:' + cores[j + (4 - C.length)] + '"></i>' + esc(c.rot) + (c.emCurso ? T(' (atual)') : T(' · fechou em ') + m0(c.comum)) + '</span>'; }).join('') + '</div>';
   }
   function colunas(rows, o) {
     var W = largura(o.w || 470), H = o.h || 200, ml = 50, mr = 8, mt = 20, mb = 26, iw = W - ml - mr, ih = H - mt - mb;
@@ -2054,12 +2124,12 @@ function motorRelatorio(D) {
 
   function render() {
     var el = $('conteudo');
-    if (!d.lancamentos.length) { el.innerHTML = '<div class="vazio">Ainda não há lançamentos.</div>'; return; }
+    if (!d.lancamentos.length) { el.innerHTML = T('<div class="vazio">Ainda não há lançamentos.</div>'); return; }
     var C = calcular(), lim = d.limite;
     var atual = calcular([cicloAtual()])[0], fech = C.filter(function (c) { return !c.emCurso; }), temAtual = C.some(function (c) { return c.emCurso; });
     var h = hojeIso();
-    if (!C.length) { el.innerHTML = '<div class="vazio">Não há lançamentos nesse período. Escolha outras datas.</div>'; $('stamp').innerHTML = ''; return; }
-    $('stamp').innerHTML = 'Período <b>' + fDA(C[0].inicio) + ' – ' + fDA(C[C.length - 1].fim) + '</b><br>' + d.lancamentos.length + ' lançamentos no app<br>Gerado em ' + fDA(h);
+    if (!C.length) { el.innerHTML = T('<div class="vazio">Não há lançamentos nesse período. Escolha outras datas.</div>'); $('stamp').innerHTML = ''; return; }
+    $('stamp').innerHTML = T('Período <b>') + fDA(C[0].inicio) + ' – ' + fDA(C[C.length - 1].fim) + '</b><br>' + d.lancamentos.length + T(' lançamentos no app<br>Gerado em ') + fDA(h);
     var MIN_PESO = 0.5;
     fech.forEach(function (c) { c.naMedia = c.peso >= MIN_PESO; });
     var curtos = fech.filter(function (c) { return !c.naMedia; });
@@ -2067,36 +2137,36 @@ function motorRelatorio(D) {
     if (usaAtual) { atual.peso = 1; atual.naMedia = true; F = [atual]; }
     var R = atual.R, restam = atual.dias - atual.decorridos;
     var nC = F.length || 1, nEq = F.reduce(function (s, c) { return s + c.peso; }, 0) || 1;
-    var RP = usaAtual ? 'ciclo atual (' + esc(atual.rot) + ', dia ' + atual.decorridos + ' de ' + atual.dias + ')' : rotPeriodo(F.length);
-    var notaCurtos = curtos.length ? 'Ciclos cortados com menos da metade dos dias (' + curtos.map(function (c) { return esc(c.rot); }).join(', ') + ') aparecem só como referência e não entram nas médias. ' : '';
+    var RP = usaAtual ? T('ciclo atual (') + esc(atual.rot) + T(', dia ') + atual.decorridos + T(' de ') + atual.dias + ')' : rotPeriodo(F.length);
+    var notaCurtos = curtos.length ? T('Ciclos cortados com menos da metade dos dias (') + curtos.map(function (c) { return esc(c.rot); }).join(', ') + T(') aparecem só como referência e não entram nas médias. ') : '';
     // Aviso quando os botões de período não mudam nada porque os lançamentos começam depois (17/11/2026)
     var prim = d.lancamentos.reduce(function (m, l) { return l.data && l.data < m ? l.data : m; }, h);
     var semHist = prim >= atual.inicio;
     var av = $('pAviso');
     if (av) {
       var msgAv = '';
-      if (semHist) msgAv = 'Seus lançamentos começam em <b>' + fDA(prim) + '</b>, dentro do ciclo atual. Por isso 3, 6 e 12 ciclos mostram o mesmo relatório por enquanto. O primeiro ciclo fecha em <b>' + fDA(atual.fim) + '</b> e, a partir daí, os botões passam a comparar ciclos.';
-      else if (PER.n && fech.length < PER.n) msgAv = 'Seus lançamentos começam em <b>' + fDA(prim) + '</b>: só há <b>' + fech.length + (fech.length === 1 ? ' ciclo fechado' : ' ciclos fechados') + '</b> com dados, então ' + PER.n + ' ciclos mostra o mesmo que ' + fech.length + '.';
+      if (semHist) msgAv = T('Seus lançamentos começam em <b>') + fDA(prim) + T('</b>, dentro do ciclo atual. Por isso 3, 6 e 12 ciclos mostram o mesmo relatório por enquanto. O primeiro ciclo fecha em <b>') + fDA(atual.fim) + T('</b> e, a partir daí, os botões passam a comparar ciclos.');
+      else if (PER.n && fech.length < PER.n) msgAv = T('Seus lançamentos começam em <b>') + fDA(prim) + T('</b>: só há <b>') + fech.length + (fech.length === 1 ? T(' ciclo fechado') : T(' ciclos fechados')) + T('</b> com dados, então ') + PER.n + T(' ciclos mostra o mesmo que ') + fech.length + '.';
       av.innerHTML = msgAv; av.hidden = !msgAv;
     }
-    var dicaSemFech = semHist ? 'o primeiro ciclo fecha em ' + fD(atual.fim) : 'nenhum ciclo fechado no período; escolha "3 ciclos"';
-    var notaBase = usaAtual ? 'Não há ciclo fechado no período escolhido: a base é o ciclo atual (o que já gastou + o que ainda deve entrar pela sua frequência). ' + (semHist ? 'Os ciclos fechados aparecem a partir de ' + fD(atual.fim) + '. ' : 'Para comparar com ciclos inteiros, escolha "3 ciclos". ') : '';
+    var dicaSemFech = semHist ? T('o primeiro ciclo fecha em ') + fD(atual.fim) : T('nenhum ciclo fechado no período; escolha "3 ciclos"');
+    var notaBase = usaAtual ? T('Não há ciclo fechado no período escolhido: a base é o ciclo atual (o que já gastou + o que ainda deve entrar pela sua frequência). ') + (semHist ? T('Os ciclos fechados aparecem a partir de ') + fD(atual.fim) + '. ' : T('Para comparar com ciclos inteiros, escolha "3 ciclos". ')) : '';
     function mediaCat(k) { return usaAtual ? (atual.projCat[k] || 0) : F.reduce(function (s, c) { return s + (c.cat[k] || 0); }, 0) / nEq; }
     var mediaComum = usaAtual ? atual.proj : F.reduce(function (s, c) { return s + c.comum; }, 0) / nEq;
     var acima = F.filter(function (c) { return lim > 0 && c.comum / c.peso > lim; }).length;
     var cats = COMUNS.concat(Object.keys(C.reduce(function (m, c) { Object.keys(c.cat).forEach(function (k) { if (COMUNS.indexOf(k) < 0 && c.cat[k]) m[k] = 1; }); return m; }, {})));
 
     var html = '<div class="kpis">' +
-      kpi(usaAtual ? 'Gasto projetado no ciclo' : 'Gasto médio por ciclo', m0(mediaComum), lim > 0 ? '<span class="' + (mediaComum > lim ? 'bad' : 'good') + '">' + pct(mediaComum / lim) + ' do limite de ' + m0(lim) + '</span>' : 'sem limite definido no app') +
-      (usaAtual ? kpi('Ciclos acima do limite', '—', dicaSemFech) :
-        kpi('Ciclos acima do limite', lim > 0 ? acima + ' de ' + nC : '—', lim > 0 ? RP + (F.some(function (c) { return c.parcial; }) ? ' (cortados, proporcional)' : '') : 'defina o limite no app')) +
-      kpi('Ciclo atual até hoje', m0(atual.comum), 'dia ' + atual.decorridos + ' de ' + atual.dias + ' · projeção <b class="' + (lim > 0 && atual.proj > lim ? 'bad' : '') + '">' + m0(atual.proj) + '</b>') +
+      kpi(usaAtual ? T('Gasto projetado no ciclo') : T('Gasto médio por ciclo'), m0(mediaComum), lim > 0 ? '<span class="' + (mediaComum > lim ? 'bad' : 'good') + '">' + pct(mediaComum / lim) + T(' do limite de ') + m0(lim) + '</span>' : T('sem limite definido no app')) +
+      (usaAtual ? kpi(T('Ciclos acima do limite'), '—', dicaSemFech) :
+        kpi(T('Ciclos acima do limite'), lim > 0 ? acima + T(' de ') + nC : '—', lim > 0 ? RP + (F.some(function (c) { return c.parcial; }) ? T(' (cortados, proporcional)') : '') : T('defina o limite no app'))) +
+      kpi(T('Ciclo atual até hoje'), m0(atual.comum), T('dia ') + atual.decorridos + T(' de ') + atual.dias + T(' · projeção <b class="') + (lim > 0 && atual.proj > lim ? 'bad' : '') + '">' + m0(atual.proj) + '</b>') +
       (function () {
         var rest = atual.dias - atual.decorridos, livre = lim - atual.comum;
-        if (!(lim > 0)) return kpi('Pode gastar por dia', '—', 'defina o limite no app');
-        if (rest <= 0) return kpi('Pode gastar por dia', '—', 'último dia do ciclo');
-        if (livre <= 0) return kpi('Pode gastar por dia', '<span class="bad">' + m0(0) + '</span>', 'limite passado em ' + m0(-livre) + ' · só o essencial até ' + fD(atual.fim));
-        return kpi('Pode gastar por dia', m0(livre / rest), m0(livre) + ' livres · ' + rest + ' dias até ' + fD(atual.fim));
+        if (!(lim > 0)) return kpi(T('Pode gastar por dia'), '—', T('defina o limite no app'));
+        if (rest <= 0) return kpi(T('Pode gastar por dia'), '—', T('último dia do ciclo'));
+        if (livre <= 0) return kpi(T('Pode gastar por dia'), '<span class="bad">' + m0(0) + '</span>', T('limite passado em ') + m0(-livre) + T(' · só o essencial até ') + fD(atual.fim));
+        return kpi(T('Pode gastar por dia'), m0(livre / rest), m0(livre) + T(' livres · ') + rest + T(' dias até ') + fD(atual.fim));
       })() + '</div>';
 
     var alvos = COMUNS.map(function (k) {
@@ -2108,36 +2178,36 @@ function motorRelatorio(D) {
     var subsTop = topSubs(F, nEq, usaAtual ? R : null);
     html += '<div class="grid" style="margin-top:12px">';
     if (ruins.length) {
-      html += '<section class="card alvo"><div class="ch"><h2>Onde atacar primeiro' + q('atacar') + '</h2><span class="note">' + (usaAtual ? 'projeção' : 'média por ciclo') + ', ' + RP + ' × orçamento da categoria</span></div><ol>' +
+      html += T('<section class="card alvo"><div class="ch"><h2>Onde atacar primeiro') + q('atacar') + '</h2><span class="note">' + (usaAtual ? T('projeção') : T('média por ciclo')) + ', ' + RP + T(' × orçamento da categoria</span></div><ol>') +
         ruins.map(function (a) {
           var sub = subsTop.filter(function (s) { return s.cat === a.k; }).slice(0, 2);
           if (usaAtual) {
             var ja = atual.cat[a.k] || 0, vem = R.cat[a.k] || 0;
-            return '<li><b>' + esc(nomeCat(a.k)) + '</b>: já gastou <b class="v">' + m0(ja) + '</b> de <b class="v">' + m0(a.orc) + '</b>' +
-              (restam > 0 ? (vem >= 1 ? '; pela sua frequência ainda devem entrar <b class="v">' + m0(vem) + '</b>' : '; pela sua frequência não deve entrar mais nada') + ' → fecha em <b class="v">' + m0(a.med) + '</b>' : '') +
-              ', <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>.' +
-              (sub.length ? ' O peso maior está em ' + sub.map(function (s) {
+            return '<li><b>' + esc(nomeCat(a.k)) + T('</b>: já gastou <b class="v">') + m0(ja) + T('</b> de <b class="v">') + m0(a.orc) + '</b>' +
+              (restam > 0 ? (vem >= 1 ? T('; pela sua frequência ainda devem entrar <b class="v">') + m0(vem) + '</b>' : T('; pela sua frequência não deve entrar mais nada')) + T(' → fecha em <b class="v">') + m0(a.med) + '</b>' : '') +
+              ', <b class="v bad">' + m0(a.exc) + T(' acima (') + pct(a.med / a.orc) + T(' do orçamento)</b>.') +
+              (sub.length ? T(' O peso maior está em ') + sub.map(function (s) {
                 var f = R.porChave[s.cat + '|' + (normNome(s.nome) || s.nome.toLowerCase())];
-                return '<b>' + esc(s.nome) + '</b> (' + m0(s.tot) + ' em ' + s.n + (s.n === 1 ? ' ida' : ' idas') + (f && f.nH ? '; você costuma ir ' + vezes(f.freq) + ' por ciclo' : '') + ')';
+                return '<b>' + esc(s.nome) + '</b> (' + m0(s.tot) + T(' em ') + s.n + (s.n === 1 ? T(' ida') : T(' idas')) + (f && f.nH ? T('; você costuma ir ') + vezes(f.freq) + T(' por ciclo') : '') + ')';
               }).join(' e ') + '.' : '') + '</li>';
           }
-          return '<li><b>' + esc(nomeCat(a.k)) + '</b>: gasta em média <b class="v">' + m0(a.med) + '</b> por ciclo, orçamento <b class="v">' + m0(a.orc) + '</b> → <b class="v bad">' + m0(a.exc) + ' acima (' + pct(a.med / a.orc) + ' do orçamento)</b>. Estourou em ' + a.estouros + ' de ' + nC + ' ciclos.' +
-            (sub.length ? ' O peso maior está em ' + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + '/ciclo: ' + vezes(s.n / nEq) + ' por ciclo, ' + m0(s.tot / s.n) + ' cada)'; }).join(' e ') + '.' : '') + '</li>';
+          return '<li><b>' + esc(nomeCat(a.k)) + T('</b>: gasta em média <b class="v">') + m0(a.med) + T('</b> por ciclo, orçamento <b class="v">') + m0(a.orc) + '</b> → <b class="v bad">' + m0(a.exc) + T(' acima (') + pct(a.med / a.orc) + T(' do orçamento)</b>. Estourou em ') + a.estouros + T(' de ') + nC + T(' ciclos.') +
+            (sub.length ? T(' O peso maior está em ') + sub.map(function (s) { return '<b>' + esc(s.nome) + '</b> (' + m0(s.porCiclo) + T('/ciclo: ') + vezes(s.n / nEq) + T(' por ciclo, ') + m0(s.tot / s.n) + T(' cada)'); }).join(T(' e ')) + '.' : '') + '</li>';
         }).join('') +
         '</ol>' + (lim > 0 && mediaComum > lim ? '<p class="note" style="margin:8px 0 0">' + (usaAtual ?
-          (restam > 0 ? 'Faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '. ' + (atual.comum >= lim ? 'O limite de ' + m0(lim) + ' já foi passado em <b class="bad">' + m0(atual.comum - lim) + '</b>: o que dá para fazer agora é não somar mais, só o essencial até ' + fD(atual.fim) + '.' : 'Sobram <b>' + m0(lim - atual.comum) + '</b> do limite, mas pela sua frequência devem entrar ' + m0(R.tot) + '. Corte ou adie ' + m0(mediaComum - lim) + ' disso.') : 'O ciclo fecha hoje.') + ' Para o próximo ciclo, veja no Ritmo onde você foi mais vezes que de costume.'
-          : 'Para voltar ao limite, o gasto precisa cair <b class="bad">' + m0(mediaComum - lim) + ' por ciclo</b> (cerca de ' + m0((mediaComum - lim) / (atual.dias / 7)) + ' por semana).') + '</p>' : '') + '</section>';
+          (restam > 0 ? T('Faltam ') + restam + (restam === 1 ? T(' dia') : T(' dias')) + '. ' + (atual.comum >= lim ? T('O limite de ') + m0(lim) + T(' já foi passado em <b class="bad">') + m0(atual.comum - lim) + T('</b>: o que dá para fazer agora é não somar mais, só o essencial até ') + fD(atual.fim) + '.' : T('Sobram <b>') + m0(lim - atual.comum) + T('</b> do limite, mas pela sua frequência devem entrar ') + m0(R.tot) + T('. Corte ou adie ') + m0(mediaComum - lim) + T(' disso.')) : T('O ciclo fecha hoje.')) + T(' Para o próximo ciclo, veja no Ritmo onde você foi mais vezes que de costume.')
+          : T('Para voltar ao limite, o gasto precisa cair <b class="bad">') + m0(mediaComum - lim) + T(' por ciclo</b> (cerca de ') + m0((mediaComum - lim) / (atual.dias / 7)) + T(' por semana).')) + '</p>' : '') + '</section>';
     } else {
-      html += '<section class="card ok-msg"><div class="ch"><h2>Onde atacar primeiro' + q('atacar') + '</h2></div><p style="margin:0">' + (alvos.some(function (a) { return a.orc > 0; }) ? 'Nenhuma categoria com orçamento está acima na média, ' + RP + '.' : 'Nenhuma categoria tem orçamento definido no app, então não há com o que comparar.') +
-        (lim > 0 && mediaComum > lim ? ' Mas o <b>total</b> está ' + m0(mediaComum - lim) + ' acima do limite por ciclo: o limite é menor que a soma dos orçamentos, ou há gasto em categoria sem orçamento.' : '') + '</p></section>';
+      html += T('<section class="card ok-msg"><div class="ch"><h2>Onde atacar primeiro') + q('atacar') + '</h2></div><p style="margin:0">' + (alvos.some(function (a) { return a.orc > 0; }) ? T('Nenhuma categoria com orçamento está acima na média, ') + RP + '.' : T('Nenhuma categoria tem orçamento definido no app, então não há com o que comparar.')) +
+        (lim > 0 && mediaComum > lim ? T(' Mas o <b>total</b> está ') + m0(mediaComum - lim) + T(' acima do limite por ciclo: o limite é menor que a soma dos orçamentos, ou há gasto em categoria sem orçamento.') : '') + '</p></section>';
     }
 
-    html += '<section class="card"><div class="ch"><h2>Gasto por ciclo' + q('porciclo') + '</h2><span class="note">' + D.simb + ' por categoria · * ciclo em curso, até hoje</span></div>' +
-      '<div class="legend">' + cats.filter(function (k) { return C.some(function (c) { return c.cat[k]; }); }).map(function (k) { return '<span><i style="background:' + corCat(k) + '"></i>' + esc(nomeCat(k)) + '</span>'; }).join('') + (lim > 0 ? '<span><i style="background:none;border-top:2px dashed var(--bad);border-radius:0;height:0;vertical-align:3px"></i>Limite ' + m0(lim) + '</span>' : '') + '<span><i style="background:none;border:1px dashed var(--tx3)"></i>Projeção do ciclo atual</span></div>' +
+    html += T('<section class="card"><div class="ch"><h2>Gasto por ciclo') + q('porciclo') + '</h2><span class="note">' + D.simb + T(' por categoria · * ciclo em curso, até hoje</span></div>') +
+      '<div class="legend">' + cats.filter(function (k) { return C.some(function (c) { return c.cat[k]; }); }).map(function (k) { return '<span><i style="background:' + corCat(k) + '"></i>' + esc(nomeCat(k)) + '</span>'; }).join('') + (lim > 0 ? T('<span><i style="background:none;border-top:2px dashed var(--bad);border-radius:0;height:0;vertical-align:3px"></i>Limite ') + m0(lim) + '</span>' : '') + T('<span><i style="background:none;border:1px dashed var(--tx3)"></i>Projeção do ciclo atual</span></div>') +
       barrasCiclo(C, lim, cats) + '</section>';
 
-    html += '<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento' + q('catciclo') + '</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção pela sua frequência</span></div><div class="tw"><table><thead><tr><th>Categoria</th>' +
-      C.map(function (c) { return '<th>' + esc(c.rot) + (c.emCurso ? ' *' : c.parcial ? ' (parcial)' : '') + '</th>'; }).join('') + (temAtual ? '<th>Projeção do atual</th>' : '') + '<th>' + (usaAtual ? 'Base (projeção)' : 'Média por ciclo') + '</th><th>Orçamento</th><th>' + (usaAtual ? 'Base' : 'Média') + ' × orç.</th></tr></thead><tbody>' +
+    html += T('<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento') + q('catciclo') + T('</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção pela sua frequência</span></div><div class="tw"><table><thead><tr><th>Categoria</th>') +
+      C.map(function (c) { return '<th>' + esc(c.rot) + (c.emCurso ? ' *' : c.parcial ? ' (parcial)' : '') + '</th>'; }).join('') + (temAtual ? T('<th>Projeção do atual</th>') : '') + '<th>' + (usaAtual ? T('Base (projeção)') : T('Média por ciclo')) + T('</th><th>Orçamento</th><th>') + (usaAtual ? T('Base') : T('Média')) + T(' × orç.</th></tr></thead><tbody>') +
       cats.map(function (k) {
         var orc = ORC[k] || 0, vals = C.map(function (c) { return c.cat[k] || 0; });
         var proj = atual.projCat[k] || 0, med = mediaCat(k);
@@ -2147,26 +2217,26 @@ function motorRelatorio(D) {
           vals.map(function (v, i) { var cl = orc && !C[i].emCurso && C[i].naMedia && v / C[i].peso > orc ? ' class="bad"' : ''; return '<td' + cl + '>' + m0(v) + '</td>'; }).join('') +
           (temAtual ? '<td' + (orc && proj > orc ? ' class="bad"' : '') + '>' + m0(proj) + '</td>' : '') + '<td><b>' + m0(med) + '</b></td><td>' + (orc ? m0(orc) : '—') + '</td><td class="' + (r > 1 ? 'bad' : r > .9 ? 'warn' : 'good') + '">' + (orc ? pct(r) : '—') + '</td></tr>';
       }).join('') +
-      '<tr class="tot"><td>Total</td>' + C.map(function (c) { return '<td' + (lim && !c.emCurso && c.naMedia && c.comum / c.peso > lim ? ' class="bad"' : '') + '>' + m0(c.comum) + '</td>'; }).join('') +
+      T('<tr class="tot"><td>Total</td>') + C.map(function (c) { return '<td' + (lim && !c.emCurso && c.naMedia && c.comum / c.peso > lim ? ' class="bad"' : '') + '>' + m0(c.comum) + '</td>'; }).join('') +
       (temAtual ? '<td' + (lim && atual.proj > lim ? ' class="bad"' : '') + '>' + m0(atual.proj) + '</td>' : '') + '<td>' + m0(mediaComum) + '</td><td>' + (lim ? m0(lim) : '—') + '</td><td class="' + (lim && mediaComum > lim ? 'bad' : 'good') + '">' + (lim ? pct(mediaComum / lim) : '—') + '</td></tr>' +
-      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (temAtual ? '* ciclo em curso, até ' + fD(h) + '. ' : '') + notaBase + notaCurtos + (F.some(function (c) { return c.parcial && !c.emCurso; }) ? 'Ciclos cortados nas datas escolhidas contam proporcionalmente na média. ' : '') + 'Vermelho = acima do orçamento.' + (semOrc.length ? ' Sem orçamento no app: ' + semOrc.map(function (a) { return esc(nomeCat(a.k)); }).join(', ') + '.' : '') + '</p></section>';
+      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (temAtual ? T('* ciclo em curso, até ') + fD(h) + '. ' : '') + notaBase + notaCurtos + (F.some(function (c) { return c.parcial && !c.emCurso; }) ? T('Ciclos cortados nas datas escolhidas contam proporcionalmente na média. ') : '') + T('Vermelho = acima do orçamento.') + (semOrc.length ? T(' Sem orçamento no app: ') + semOrc.map(function (a) { return esc(nomeCat(a.k)); }).join(', ') + '.' : '') + '</p></section>';
 
     var livre = lim - atual.comum, idealHoje = lim * atual.decorridos / atual.dias;
-    html += '<section class="card"><div class="ch"><h2>Ritmo do ciclo atual' + q('ritmo') + '</h2><span class="note">' + esc(atual.rot) + ' · dia ' + atual.decorridos + ' de ' + atual.dias + '</span></div>' +
-      (lim > 0 && livre <= 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>. Você já passou do limite de ' + m0(lim) + ' em <b class="bad">' + m0(-livre) + '</b>.' +
-        (restam > 0 ? ' Até ' + fD(atual.fim) + ' (faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '), só o essencial.' : '') + '</p>' :
-      lim > 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>; no ritmo do limite seriam <b>' + m0(idealHoje) + '</b> ' +
-        (atual.comum > idealHoje ? '→ <b class="bad">' + m0(atual.comum - idealHoje) + ' adiantado</b>.' : '→ <b class="good">' + m0(idealHoje - atual.comum) + ' de folga</b>.') +
-        (restam > 0 ? ' Para fechar dentro do limite, sobram <b class="' + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre)) + '</b> para ' + restam + ' dias: <b>' + m0(Math.max(0, livre) / restam) + ' por dia</b> (até agora a média foi ' + m0(atual.comum / Math.max(1, atual.decorridos)) + ' por dia).' : '') + '</p>' : '') +
+    html += T('<section class="card"><div class="ch"><h2>Ritmo do ciclo atual') + q('ritmo') + '</h2><span class="note">' + esc(atual.rot) + T(' · dia ') + atual.decorridos + T(' de ') + atual.dias + '</span></div>' +
+      (lim > 0 && livre <= 0 ? T('<p style="margin:0 0 8px">Até hoje você gastou <b>') + m0(atual.comum) + T('</b>. Você já passou do limite de ') + m0(lim) + T(' em <b class="bad">') + m0(-livre) + '</b>.' +
+        (restam > 0 ? T(' Até ') + fD(atual.fim) + T(' (faltam ') + restam + (restam === 1 ? T(' dia') : T(' dias')) + T('), só o essencial.') : '') + '</p>' :
+      lim > 0 ? T('<p style="margin:0 0 8px">Até hoje você gastou <b>') + m0(atual.comum) + T('</b>; no ritmo do limite seriam <b>') + m0(idealHoje) + '</b> ' +
+        (atual.comum > idealHoje ? '→ <b class="bad">' + m0(atual.comum - idealHoje) + ' adiantado</b>.' : '→ <b class="good">' + m0(idealHoje - atual.comum) + T(' de folga</b>.')) +
+        (restam > 0 ? T(' Para fechar dentro do limite, sobram <b class="') + (livre < 0 ? 'bad' : '') + '">' + m0(Math.max(0, livre)) + T('</b> para ') + restam + T(' dias: <b>') + m0(Math.max(0, livre) / restam) + T(' por dia</b> (até agora a média foi ') + m0(atual.comum / Math.max(1, atual.decorridos)) + T(' por dia).') : '') + '</p>' : '') +
       blocoFrequencia(atual, lim) +
       acumulado(fech.filter(function (c) { return !c.parcial; }).slice(-3).concat([atual]), lim) + '</section>';
 
-    html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai' + q('onde') + '</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
+    html += T('<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai') + q('onde') + T('</h2><span class="note">subcategoria ou descrição · ') + RP + T('</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>') +
       subsTop.slice(0, 15).map(function (s) {
         var vr = s.ant > 0 ? (s.ult - s.ant) / s.ant : NaN;
         return '<tr><td class="t"><b>' + esc(s.nome) + '</b></td><td><span class="sw" style="background:' + corCat(s.cat) + '"></span>' + esc(nomeCat(s.cat)) + '</td><td>' + s.n + '</td><td>' + m0(s.tot) + '</td><td>' + m0(s.porCiclo) + '</td><td>' + money(s.tot / s.n) + '</td><td>' + pct(s.share) + '</td><td class="' + (vr > .1 ? 'bad' : vr < -.1 ? 'good' : '') + '">' + (isFinite(vr) ? (vr > 0 ? '▲ ' : '▼ ') + pct(Math.abs(vr)) : '—') + '</td></tr>';
       }).join('') +
-      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (usaAtual ? 'Total = ciclo atual até hoje; "por ciclo" = total + o que ainda deve entrar pela sua frequência. ' : 'Total = soma dos ciclos usados na média; "por ciclo" = total ÷ ciclos. ') + '"Último × anterior" compara os dois últimos ciclos fechados' + (F.length < 2 || usaAtual ? ' (precisa de 2 ciclos fechados)' : '') + '.</p></section>';
+      '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (usaAtual ? T('Total = ciclo atual até hoje; "por ciclo" = total + o que ainda deve entrar pela sua frequência. ') : T('Total = soma dos ciclos usados na média; "por ciclo" = total ÷ ciclos. ')) + T('"Último × anterior" compara os dois últimos ciclos fechados') + (F.length < 2 || usaAtual ? T(' (precisa de 2 ciclos fechados)') : '') + '.</p></section>';
 
     var comuns = []; F.forEach(function (c) { c.l.forEach(function (l) { comuns.push(l); }); });
     var totC = comuns.reduce(function (s, l) { return s + val(l); }, 0) || 1;
@@ -2175,24 +2245,24 @@ function motorRelatorio(D) {
     var diasCom = {}; comuns.forEach(function (l) { if (val(l) > 0) diasCom[l.data] = 1; });
     var diasTot = F.reduce(function (s, c) { return s + c.decorridos; }, 0) || 1, nDias = Object.keys(diasCom).length;
     var fds = comuns.filter(function (l) { var w = dt(l.data).getDay(); return w === 0 || w === 6; }).reduce(function (s, l) { return s + val(l); }, 0);
-    html += '<section class="card"><div class="ch"><h2>Índices de comportamento' + q('indices') + '</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>' +
-      linhaI('Gastos pequenos (abaixo de ' + D.simb + ' ' + PEQUENO + ')', peq.length + ' compras · ' + m0(peqT) + ' (' + pct(peqT / totC) + ')', 'O "vazamento": cada um parece nada, somados ' + (usaAtual ? 'já são ' + m0(peqT) + ' neste ciclo.' : 'viram ' + m0(peqT / nEq) + ' por ciclo.')) +
-      (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (usaAtual ? merc.length + ' neste ciclo até hoje' + (R && R.nHist ? ' (costuma ser ' + vezes(R.lugares.filter(function (s) { return s.cat === catMerc.id; }).reduce(function (t, s) { return t + s.freq; }, 0)).replace('×', '') + ' por ciclo)' : '') : (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo') + ' · média por compra ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
-      linhaI('Dias com gasto', nDias + ' de ' + diasTot + ' dias (' + pct(nDias / diasTot) + ')', 'Dias "sem gasto" são o jeito mais simples de cortar sem sentir.') +
-      linhaI('Gasto médio por dia', money(totC / diasTot), lim > 0 ? 'O limite permite ' + money(lim / atual.dias) + ' por dia.' : '') +
-      linhaI('Fim de semana', m0(fds) + ' (' + pct(fds / totC) + ')', 'Sáb e dom são 29% dos dias; acima disso, o fim de semana pesa.') +
-      linhaI('Concentração', pct(subsTop.slice(0, 3).reduce(function (s, x) { return s + x.tot; }, 0) / totC) + ' em 3 lugares', 'Os 3 maiores destinos: ' + subsTop.slice(0, 3).map(function (s) { return esc(s.nome); }).join(', ') + '.') +
+    html += T('<section class="card"><div class="ch"><h2>Índices de comportamento') + q('indices') + '</h2><span class="note">' + RP + T('</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>') +
+      linhaI(T('Gastos pequenos (abaixo de ') + D.simb + ' ' + PEQUENO + ')', peq.length + T(' compras · ') + m0(peqT) + ' (' + pct(peqT / totC) + ')', T('O "vazamento": cada um parece nada, somados ') + (usaAtual ? T('já são ') + m0(peqT) + T(' neste ciclo.') : 'viram ' + m0(peqT / nEq) + T(' por ciclo.'))) +
+      (catMerc ? linhaI(T('Idas ao ') + esc(catMerc.nome.toLowerCase()), (usaAtual ? merc.length + T(' neste ciclo até hoje') + (R && R.nHist ? T(' (costuma ser ') + vezes(R.lugares.filter(function (s) { return s.cat === catMerc.id; }).reduce(function (t, s) { return t + s.freq; }, 0)).replace('×', '') + T(' por ciclo)') : '') : (merc.length / nEq).toFixed(1).replace('.', ',') + T(' por ciclo')) + T(' · média por compra ') + money(merc.length ? mercT / merc.length : 0), T('Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.')) : '') +
+      linhaI(T('Dias com gasto'), nDias + T(' de ') + diasTot + T(' dias (') + pct(nDias / diasTot) + ')', T('Dias "sem gasto" são o jeito mais simples de cortar sem sentir.')) +
+      linhaI(T('Gasto médio por dia'), money(totC / diasTot), lim > 0 ? T('O limite permite ') + money(lim / atual.dias) + T(' por dia.') : '') +
+      linhaI(T('Fim de semana'), m0(fds) + ' (' + pct(fds / totC) + ')', T('Sáb e dom são 29% dos dias; acima disso, o fim de semana pesa.')) +
+      linhaI(T('Concentração'), pct(subsTop.slice(0, 3).reduce(function (s, x) { return s + x.tot; }, 0) / totC) + T(' em 3 lugares'), T('Os 3 maiores destinos: ') + subsTop.slice(0, 3).map(function (s) { return esc(s.nome); }).join(', ') + '.') +
       '</tbody></table></div></section>';
 
     var porDS = [0, 0, 0, 0, 0, 0, 0], ocDS = [0, 0, 0, 0, 0, 0, 0];
     F.forEach(function (c) { for (var i = 0; i < c.decorridos; i++) ocDS[dt(addDias(c.inicio, i)).getDay()]++; });
     comuns.forEach(function (l) { porDS[dt(l.data).getDay()] += val(l); });
-    html += '<section class="card c6"><div class="ch"><h2>Gasto por dia da semana' + q('diasem') + '</h2><span class="note">média por dia, ' + D.simb + '</span></div>' +
-      colunas([1, 2, 3, 4, 5, 6, 0].map(function (w) { var v = ocDS[w] ? porDS[w] / ocDS[w] : 0; return { lab: DIASEM[w], v: v, c: (w === 0 || w === 6) ? '#eb6834' : 'var(--acc)' }; }), { aria: 'Gasto médio por dia da semana', w: 470, h: 210 }) + '</section>';
-    html += '<section class="card c6"><div class="ch"><h2>10 maiores gastos</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Data</th><th>Onde</th><th>Valor</th></tr></thead><tbody>' +
+    html += T('<section class="card c6"><div class="ch"><h2>Gasto por dia da semana') + q('diasem') + T('</h2><span class="note">média por dia, ') + D.simb + '</span></div>' +
+      colunas([1, 2, 3, 4, 5, 6, 0].map(function (w) { var v = ocDS[w] ? porDS[w] / ocDS[w] : 0; return { lab: DIASEM[w], v: v, c: (w === 0 || w === 6) ? '#eb6834' : 'var(--acc)' }; }), { aria: T('Gasto médio por dia da semana'), w: 470, h: 210 }) + '</section>';
+    html += T('<section class="card c6"><div class="ch"><h2>10 maiores gastos</h2><span class="note">') + RP + T('</span></div><div class="tw"><table><thead><tr><th>Data</th><th>Onde</th><th>Valor</th></tr></thead><tbody>') +
       comuns.slice().sort(function (a, b) { return val(b) - val(a); }).slice(0, 10).map(function (l) { return '<tr><td>' + fD(l.data) + '</td><td class="t"><span class="sw" style="background:' + corCat(l.cat) + '"></span>' + esc(l.desc || subDe(l)) + '</td><td>' + money(val(l)) + '</td></tr>'; }).join('') +
       '</tbody></table></div></section>';
-    html += '</div><p class="foot">Total = soma de todas as categorias do app (sem parcelados). Ciclos = o Período do app (' + fD(d.periodo.inicio) + ' → ' + fD(d.periodo.fim) + '), repetido mês a mês. Projeção do ciclo atual = o que já gastou + o que ainda deve entrar pela sua frequência: para cada lugar, quantas vezes você vai por ciclo e quanto gasta por ida (últimos ciclos fechados, até 6); nos dias que faltam conta só as idas que ainda cabem no seu costume (se já foi as vezes de sempre, não conta mais). Compra sem histórico não é repetida. Médias, índices e "onde atacar" usam os ciclos fechados do período escolhido (' + RP + '); ciclo cortado com menos da metade dos dias fica fora; sem nenhum ciclo fechado, a base é o ciclo atual com essa projeção. O Ritmo mostra sempre o ciclo de hoje.</p>';
+    html += T('</div><p class="foot">Total = soma de todas as categorias do app (sem parcelados). Ciclos = o Período do app (') + fD(d.periodo.inicio) + ' → ' + fD(d.periodo.fim) + T('), repetido mês a mês. Projeção do ciclo atual = o que já gastou + o que ainda deve entrar pela sua frequência: para cada lugar, quantas vezes você vai por ciclo e quanto gasta por ida (últimos ciclos fechados, até 6); nos dias que faltam conta só as idas que ainda cabem no seu costume (se já foi as vezes de sempre, não conta mais). Compra sem histórico não é repetida. Médias, índices e "onde atacar" usam os ciclos fechados do período escolhido (') + RP + T('); ciclo cortado com menos da metade dos dias fica fora; sem nenhum ciclo fechado, a base é o ciclo atual com essa projeção. O Ritmo mostra sempre o ciclo de hoje.</p>');
     el.innerHTML = html;
   }
 
@@ -2235,24 +2305,25 @@ function abrirRelatorioCompleto() {
   var lanc = lancamentos().filter(function (l) { return l.cat !== PARC && l.data; }).map(function (l) {
     return { data: l.data, valor: l.valor, cat: l.cat, sub: nomeSub(l.cat, l.sub) || '', desc: l.desc || '' };
   });
-  if (!lanc.length) { mostrarToast('⚠️', 'Ainda não há lançamentos'); return; }
-  var D = { lanc: lanc, cats: catsComuns().map(function (c) { return { id: c.id, nome: c.nome, cor: c.cor, orc: +c.orc || 0 }; }),
-    limite: baseDisponivel(), periodo: S.cfg.periodo || periodoMesAtual(), simb: SIMB[moeda()] || '$', br: moeda() === 'BRL' || moeda() === 'EUR' };
+  if (!lanc.length) { mostrarToast('⚠️', T('Ainda não há lançamentos')); return; }
+  var D = { lanc: lanc, cats: catsComuns().map(function (c) { return { id: c.id, nome: nomeVis(c), cor: c.cor, orc: +c.orc || 0 }; }),
+    limite: baseDisponivel(), periodo: S.cfg.periodo || periodoMesAtual(), simb: SIMB[moeda()] || '$', br: moeda() === 'BRL' || moeda() === 'EUR',
+    i18n: I18N.dicionario ? I18N.dicionario() : null, lang: I18N.lang, mesesc: MESES_C.map(function (m) { return I18N.lang === 'en' ? m : m.toLowerCase(); }), diasem: DIAS_C.map(function (d) { return d.toLowerCase(); }) };
   var w = window.open('', '_blank');
-  if (!w) { mostrarToast('⚠️', 'Permita pop-ups para abrir o relatório'); return; }
+  if (!w) { mostrarToast('⚠️', T('Permita pop-ups para abrir o relatório')); return; }
   var json = JSON.stringify(D).replace(/</g, '\\u003c');
   var nome = esc(S.cfg.nome || 'MinhaCasa');
   w.document.open();
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">' +
-    '<title>' + nome + ' — Relatório</title><style>' + REL_CSS + '</style></head><body><div class="wrap">' +
-    '<header class="top"><div><div class="kick">' + nome + ' · Relatório</div><h1>Onde o orçamento está quebrando</h1></div><div class="stamp" id="stamp"></div></header>' +
-    '<div class="barra"><div class="fonte">Dados do app, lidos agora</div><button class="btn sec" id="btFechar" type="button">Fechar</button><button class="btn" id="btPdf" type="button">Salvar PDF</button></div>' +
-    '<div class="periodo" role="group" aria-label="Período do relatório"><span class="plab">Período</span>' +
-    '<button type="button" class="pb" data-n="3">3 ciclos</button><button type="button" class="pb" data-n="6">6 ciclos</button><button type="button" class="pb" data-n="12">12 ciclos</button>' +
-    '<button type="button" class="pb" data-n="ano">Este ano</button><button type="button" class="pb" data-n="custom">Escolher datas</button>' +
-    '<span class="pcustom" id="pCustom" hidden><label>de <input type="date" id="pDe"></label><label>até <input type="date" id="pAte"></label><button type="button" class="btn" id="pOk">Aplicar</button></span></div>' +
+    '<title>' + nome + T(' — Relatório</title><style>') + REL_CSS + '</style></head><body><div class="wrap">' +
+    '<header class="top"><div><div class="kick">' + nome + T(' · Relatório</div><h1>Onde o orçamento está quebrando</h1></div><div class="stamp" id="stamp"></div></header>') +
+    T('<div class="barra"><div class="fonte">Dados do app, lidos agora</div><button class="btn sec" id="btFechar" type="button">Fechar</button><button class="btn" id="btPdf" type="button">Salvar PDF</button></div>') +
+    T('<div class="periodo" role="group" aria-label="Período do relatório"><span class="plab">Período</span>') +
+    T('<button type="button" class="pb" data-n="3">3 ciclos</button><button type="button" class="pb" data-n="6">6 ciclos</button><button type="button" class="pb" data-n="12">12 ciclos</button>') +
+    T('<button type="button" class="pb" data-n="ano">Este ano</button><button type="button" class="pb" data-n="custom">Escolher datas</button>') +
+    T('<span class="pcustom" id="pCustom" hidden><label>de <input type="date" id="pDe"></label><label>até <input type="date" id="pAte"></label><button type="button" class="btn" id="pOk">Aplicar</button></span></div>') +
     '<p class="paviso" id="pAviso" hidden></p>' +
-    '<div id="conteudo"><div class="vazio">Carregando…</div></div></div>' +
+    T('<div id="conteudo"><div class="vazio">Carregando…</div></div></div>') +
     '<script>(' + motorRelatorio.toString() + ')(' + json + ');<\/script></body></html>');
   w.document.close();
 }
@@ -2279,7 +2350,7 @@ function renderAjustes() {
   if (document.activeElement !== $('aj-nome')) { $('aj-nome').value = S.cfg.nome || ''; $('aj-moeda').value = moeda(); }
   $('aj-cats').innerHTML = todasCats().map(function (c) {
     return '<div class="aj-linha"><div class="aj-ic" style="background:' + alfa(c.cor, '22') + '">' + esc(c.emoji) + '</div>' +
-      '<div class="aj-nm">' + esc(c.nome) + '<small>' + (c.id === PARC ? T('Fixa · recebe as compras parceladas') : (c.subs.length === 1 ? T('1 subcategoria') : T('{n} subcategorias', { n: c.subs.length }))) +
+      '<div class="aj-nm">' + esc(nomeVis(c)) + '<small>' + (c.id === PARC ? T('Fixa · recebe as compras parceladas') : (c.subs.length === 1 ? T('1 subcategoria') : T('{n} subcategorias', { n: c.subs.length }))) +
       T(' · orçamento ') + (+c.orc ? formatar(c.orc) : '—') + '</small></div>' +
       (c.id === PARC ? '<button class="aj-btn" data-editcat="' + PARC + T('">Orçamento</button>') :
         '<button class="aj-btn" data-subircat="' + c.id + '" aria-label="Subir">↑</button><button class="aj-btn" data-editcat="' + c.id + T('">Editar</button>')) + '</div>';
@@ -2438,11 +2509,31 @@ function desenharCat() {
     T('<label class="aj-label">Subcategorias</label>') +
     c.subs.map(function (s, i) { return '<div class="sub-ed"><input class="aj-input" data-subnome="' + i + '" maxlength="40" value="' + esc(s.nome) + '"><button class="aj-btn perigo" data-subdel="' + i + T('">Excluir</button></div>'); }).join('') +
     T('<div class="sub-ed"><input class="aj-input" id="ed-novasub" maxlength="40" placeholder="Nova subcategoria"><button class="aj-btn" id="ed-addsub">Adicionar</button></div>') +
+    htmlTraducoes(c) +
     '<div class="hv-erro" id="ed-erro"></div>' +
     T('<button class="aj-btn pri aj-full" id="ed-salvar">Salvar categoria</button>') +
     T('<button class="aj-btn aj-full" data-fechar>Cancelar</button>') +
     (c.nova ? '' : T('<button class="aj-btn perigo aj-full" id="ed-excluir">Excluir categoria</button>')));
   $('ed-orc').oninput = infoOrcCat; infoOrcCat();
+  var st = $('ed-trlang'); if (st) st.onchange = function () { lerCatInputs(); _ed.trLang = st.value; _ed.trAberto = true; desenharCat(); var bx = $('ed-trbox'); if (bx && bx.scrollIntoView) bx.scrollIntoView({ block: 'nearest' }); };
+  var dt = $('ed-trbox'); if (dt) dt.ontoggle = function () { _ed.trAberto = dt.open; };
+}
+// Traduções opcionais do nome (20/11/2026): cada pessoa da casa vê no idioma dela.
+var NOME_IDIOMA = { pt: 'Português', en: 'English', fr: 'Français' };
+function htmlTraducoes(c) {
+  if (!c.trLang) c.trLang = I18N.lang === 'pt' ? 'en' : I18N.lang;
+  var L = c.trLang, itens = [{ k: 'cat', o: c }].concat(c.subs.map(function (s, i) { return { k: i, o: s }; }));
+  var algum = [c].concat(c.subs).some(function (o) { return o.tr && Object.keys(o.tr).length; });
+  return '<details class="ed-tr" id="ed-trbox"' + (c.trAberto || algum && c.trAberto !== false ? ' open' : '') + '><summary>' + T('🌐 Nomes em outros idiomas') + ' <span class="opt-badge">' + T('opcional') + '</span></summary>' +
+    '<div class="ed-tr-dica">' + T('Cada pessoa da casa vê o nome no idioma dela. Deixe em branco para mostrar o nome original.') + '</div>' +
+    '<label class="aj-label" for="ed-trlang">' + T('Idioma') + '</label><select class="aj-input" id="ed-trlang" data-i18n-nao>' +
+    IDIOMAS_TR.map(function (l) { return '<option value="' + l + '"' + (l === L ? ' selected' : '') + ' lang="' + l + '">' + NOME_IDIOMA[l] + '</option>'; }).join('') + '</select>' +
+    itens.map(function (it) {
+      var o = it.o, v = (o.tr && o.tr[L]) || '', ph = o.nome || '', pad = PAD_IDX[chaveNome(o.nome)];
+      if (pad && L !== 'pt') ph = PAD_CAT[pad][L === 'en' ? 0 : 1]; else if (pad) ph = pad;
+      return '<div class="ed-tr-linha"><span class="ed-tr-orig">' + (it.k === 'cat' ? '🏷️ ' : '↳ ') + esc(o.nome || '—') + '</span>' +
+        '<input class="aj-input" data-tr="' + it.k + '" maxlength="40" lang="' + L + '" value="' + esc(v) + '" placeholder="' + esc(ph) + '"></div>';
+    }).join('') + '</details>';
 }
 // Trava do orçamento na edição da categoria: quanto ainda sobra do valor para gastar para esta categoria.
 function maxOrcCat(id) {
@@ -2465,6 +2556,12 @@ function lerCatInputs() {
   _ed.nome = $('ed-nome').value;
   var v = lerValor($('ed-orc').value); _ed.orc = v > 0 ? v : 0;
   qsa('[data-subnome]').forEach(function (inp) { _ed.subs[+inp.dataset.subnome].nome = inp.value; });
+  var L = _ed.trLang;
+  if (L) qsa('[data-tr]').forEach(function (inp) {
+    var o = inp.dataset.tr === 'cat' ? _ed : _ed.subs[+inp.dataset.tr]; if (!o) return;
+    var v = inp.value.trim(); o.tr = o.tr || {};
+    if (v) o.tr[L] = v; else delete o.tr[L];
+  });
 }
 function salvarCat() {
   lerCatInputs();
@@ -2478,7 +2575,8 @@ function salvarCat() {
   delete c.orcAntes;
   var pend = $('ed-novasub').value.trim();
   if (pend) c.subs.push({ id: rid(8), nome: pend });
-  c.subs = ordenarSubs(c.subs.map(function (s) { return { id: s.id, nome: s.nome.trim() }; }).filter(function (s) { return s.nome; }));
+  c.subs = ordenarSubs(c.subs.map(function (s) { var o = { id: s.id, nome: s.nome.trim() }, t = limparTr(s.tr); if (t) o.tr = t; return o; }).filter(function (s) { return s.nome; }));
+  var tc = limparTr(c.tr); if (tc) c.tr = tc; else delete c.tr; delete c.trLang; delete c.trAberto;
   var nova = c.nova; delete c.nova;
   if (nova) S.cfg.cats.push(c);
   else S.cfg.cats = S.cfg.cats.map(function (x) { return x.id === c.id ? c : x; });
@@ -2487,7 +2585,7 @@ function salvarCat() {
 }
 function excluirCat() {
   var c = _ed, usados = lancamentos().filter(function (l) { return l.cat === c.id; }).length;
-  if (!confirm(T('Excluir a categoria "') + c.nome + '"?' + (usados ? '\n\n' + usados + T(' lançamento(s) ficarão como "Sem categoria".') : ''))) return;
+  if (!confirm(T('Excluir a categoria "') + nomeVis(c) + '"?' + (usados ? '\n\n' + usados + T(' lançamento(s) ficarão como "Sem categoria".') : ''))) return;
   S.cfg.cats = S.cfg.cats.filter(function (x) { return x.id !== c.id; });
   fecharSheet(); renderTela(); salvarCfg();
 }
@@ -2578,38 +2676,38 @@ function bancoPorId(id) { return MCBanco.BANCOS.filter(function (b) { return b.i
 // bancos sem leitura própria: o app usa o leitor automático e, se precisar, pergunta as colunas uma vez (20/11/2026)
 var SEM_LEITOR = ['desjardins', 'outro'];
 function abrirConferencia() {
-  if (!window.MCBanco) { mostrarToast('⚠️', 'Atualize o app para usar a conferência'); return; }
+  if (!window.MCBanco) { mostrarToast('⚠️', T('Atualize o app para usar a conferência')); return; }
   if (!_conf.banco) _conf.banco = lsGet('mc_banco') || (moeda() === 'BRL' ? 'nubank' : 'cibc');
   var b = bancoPorId(_conf.banco);
   var grupo = function (pais, rot) {
     return '<optgroup label="' + rot + '">' + MCBanco.BANCOS.filter(function (x) { return x.pais === pais; }).map(function (x) {
-      return '<option value="' + x.id + '"' + (x.id === b.id ? ' selected' : '') + '>' + esc(x.nome) + '</option>'; }).join('') + '</optgroup>';
+      return '<option value="' + x.id + '"' + (x.id === b.id ? ' selected' : '') + '>' + esc(T(x.nome)) + '</option>'; }).join('') + '</optgroup>';
   };
   // Tela em passos, para quem nunca usou (20/11/2026)
-  abrirSheet('<h3>🏦 Conferir com o banco</h3>' +
-    '<div class="cf-intro">Compare os gastos do seu cartão com o que está no app e descubra <b>o que faltou lançar</b>. O arquivo é lido só neste aparelho.</div>' +
-    '<div class="cf-passo"><span class="cf-n">1</span><div><b>Escolha o banco</b>' +
-      '<select class="aj-input" id="cf-banco" style="margin-top:6px">' + grupo('BR', 'Brasil') + grupo('CA', 'Canadá') + grupo('', 'Outro') + '</select></div></div>' +
-    '<div class="cf-passo"><span class="cf-n">2</span><div><b>Baixe o extrato no site do ' + esc(b.nome) + '</b> <span class="cf-fmt">' + esc(b.formato) + '</span>' +
-      '<details class="cf-det"><summary>Ver como baixar</summary><ol class="cf-passos">' + b.como.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' +
-      '<div style="font-size:12px;color:#6b7280;margin:-4px 0 6px">Os nomes dos menus podem mudar no site do banco.</div></details>' +
-      (SEM_LEITOR.indexOf(b.id) >= 0 ? '<div class="cf-aviso-banco"><b>' + (b.id === 'outro' ? 'Banco que o app ainda não conhece' : 'O app ainda não tem leitura própria do ' + esc(b.nome)) + '.</b> Funciona assim mesmo:' +
-        '<ol><li>Baixe o extrato em <b>CSV</b> (ou <b>OFX</b>, se o banco oferecer: é lido sem perguntas).</li>' +
-        '<li>Escolha o arquivo normalmente. O app tenta entender sozinho.</li>' +
-        '<li>Se ele não conseguir, mostra as primeiras linhas do arquivo e pergunta <b>qual coluna é a data, o valor e a descrição</b>. É só olhar a tabela e escolher.</li>' +
-        '<li>Você responde <b>uma vez só</b>: o app guarda para as próximas conferências desse banco.</li></ol></div>' : '') +
-      '<div class="cf-dica">💳 Tem <b>mais de um cartão</b>, até de bancos diferentes? Baixe <b>um arquivo de cada</b>. No próximo passo você escolhe todos juntos.</div></div></div>' +
-    '<div class="cf-passo"><span class="cf-n">3</span><div><b>Escolha os arquivos</b>' +
-      '<div class="cf-dica" style="margin-top:6px">📱 No iPhone, na janela de arquivos: abra a pasta <b>Downloads</b> (ou onde salvou), toque em <b>Selecionar</b> em cima, marque os arquivos e toque em <b>Abrir</b>.</div>' +
-      '<label class="aj-btn pri aj-full" for="cf-arq" style="display:block;text-align:center;cursor:pointer;margin-top:8px">Escolher os arquivos</label>' +
+  abrirSheet(T('<h3>🏦 Conferir com o banco</h3>') +
+    T('<div class="cf-intro">Compare os gastos do seu cartão com o que está no app e descubra <b>o que faltou lançar</b>. O arquivo é lido só neste aparelho.</div>') +
+    T('<div class="cf-passo"><span class="cf-n">1</span><div><b>Escolha o banco</b>') +
+      '<select class="aj-input" id="cf-banco" style="margin-top:6px">' + grupo('BR', T('Brasil')) + grupo('CA', T('Canadá')) + grupo('', T('Outro')) + '</select></div></div>' +
+    T('<div class="cf-passo"><span class="cf-n">2</span><div><b>Baixe o extrato no site do ') + esc(T(b.nome)) + '</b> <span class="cf-fmt">' + esc(T(b.formato)) + '</span>' +
+      T('<details class="cf-det"><summary>Ver como baixar</summary><ol class="cf-passos">') + b.como.map(function (p) { return '<li>' + esc(T(p)) + '</li>'; }).join('') + '</ol>' +
+      T('<div style="font-size:12px;color:#6b7280;margin:-4px 0 6px">Os nomes dos menus podem mudar no site do banco.</div></details>') +
+      (SEM_LEITOR.indexOf(b.id) >= 0 ? '<div class="cf-aviso-banco"><b>' + (b.id === 'outro' ? T('Banco que o app ainda não conhece') : T('O app ainda não tem leitura própria do ') + esc(T(b.nome))) + T('.</b> Funciona assim mesmo:') +
+        T('<ol><li>Baixe o extrato em <b>CSV</b> (ou <b>OFX</b>, se o banco oferecer: é lido sem perguntas).</li>') +
+        T('<li>Escolha o arquivo normalmente. O app tenta entender sozinho.</li>') +
+        T('<li>Se ele não conseguir, mostra as primeiras linhas do arquivo e pergunta <b>qual coluna é a data, o valor e a descrição</b>. É só olhar a tabela e escolher.</li>') +
+        T('<li>Você responde <b>uma vez só</b>: o app guarda para as próximas conferências desse banco.</li></ol></div>') : '') +
+      T('<div class="cf-dica">💳 Tem <b>mais de um cartão</b>, até de bancos diferentes? Baixe <b>um arquivo de cada</b>. No próximo passo você escolhe todos juntos.</div></div></div>') +
+    T('<div class="cf-passo"><span class="cf-n">3</span><div><b>Escolha os arquivos</b>') +
+      T('<div class="cf-dica" style="margin-top:6px">📱 No iPhone, na janela de arquivos: abra a pasta <b>Downloads</b> (ou onde salvou), toque em <b>Selecionar</b> em cima, marque os arquivos e toque em <b>Abrir</b>.</div>') +
+      T('<label class="aj-btn pri aj-full" for="cf-arq" style="display:block;text-align:center;cursor:pointer;margin-top:8px">Escolher os arquivos</label>') +
       '<input type="file" id="cf-arq" multiple accept=".ofx,.qfx,.csv,.txt,text/csv,application/x-ofx" style="display:none"></div></div>' +
-    '<div class="cf-passo"><span class="cf-n">4</span><div><b>Veja o resultado</b><div class="cf-leg">' +
-      '<span><i style="background:#ef4444"></i>Falta no app: toque em <b>Lançar</b></span>' +
-      '<span><i style="background:#f59e0b"></i>Valor diferente: toque em <b>Corrigir</b></span>' +
-      '<span><i style="background:#a855f7"></i>Só no app: pago com outro cartão ou dinheiro</span>' +
-      '<span><i style="background:#22c55e"></i>Batem: está tudo certo</span></div></div></div>' +
-    (_conf.res ? '<button class="aj-btn aj-full" id="cf-ver">Ver a última conferência (' + esc(_conf.nomeArq || '') + ')</button>' : '') +
-    '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
+    T('<div class="cf-passo"><span class="cf-n">4</span><div><b>Veja o resultado</b><div class="cf-leg">') +
+      T('<span><i style="background:#ef4444"></i>Falta no app: toque em <b>Lançar</b></span>') +
+      T('<span><i style="background:#f59e0b"></i>Valor diferente: toque em <b>Corrigir</b></span>') +
+      T('<span><i style="background:#a855f7"></i>Só no app: pago com outro cartão ou dinheiro</span>') +
+      T('<span><i style="background:#22c55e"></i>Batem: está tudo certo</span></div></div></div>') +
+    (_conf.res ? T('<button class="aj-btn aj-full" id="cf-ver">Ver a última conferência (') + esc(_conf.nomeArq || '') + ')</button>' : '') +
+    T('<button class="aj-btn aj-full" data-fechar>Fechar</button>'));
   $('cf-banco').onchange = function () { _conf.banco = this.value; lsSet('mc_banco', this.value); abrirConferencia(); };
   if ($('cf-ver')) $('cf-ver').onclick = recalcularConferencia;
   $('cf-arq').onchange = function () {
@@ -2618,7 +2716,7 @@ function abrirConferencia() {
       .then(function (lidos) {
         var vistos = {}, arqs = [];
         lidos.forEach(function (a) {
-          if (a.erro) { mostrarToast('⚠️', 'Não consegui ler ' + a.nome); return; }
+          if (a.erro) { mostrarToast('⚠️', T('Não consegui ler ') + a.nome); return; }
           var k = a.texto.length + '|' + a.texto.slice(0, 200); if (vistos[k]) return; vistos[k] = 1; // o mesmo arquivo escolhido duas vezes
           arqs.push({ nome: a.nome, texto: a.texto, banco: MCBanco.detectarBanco ? (MCBanco.detectarBanco(a.texto, a.nome) || _conf.banco) : _conf.banco });
         });
@@ -2649,7 +2747,7 @@ function lerArq(a, mapaManual) {
 function abrirMapaArq(i) {
   var a = _conf.arqs[i];
   _conf.idxArq = i; _conf.texto = a.texto; _conf.leitura = a.r; _conf.bancoMapa = a.banco;
-  _conf.rotMapa = _conf.arqs.length > 1 ? 'Arquivo ' + (i + 1) + ' de ' + _conf.arqs.length + ': ' + a.nome : a.nome;
+  _conf.rotMapa = _conf.arqs.length > 1 ? T('Arquivo ') + (i + 1) + T(' de ') + _conf.arqs.length + ': ' + a.nome : a.nome;
   mostrarMapa();
 }
 function continuarArquivos() {
@@ -2662,13 +2760,13 @@ function continuarArquivos() {
   juntarArquivos();
 }
 function rotuloArq(a) {
-  var A = _conf.arqs || [], nome = bancoPorId(a.banco).nome;
+  var A = _conf.arqs || [], nome = T(bancoPorId(a.banco).nome);
   var mesmo = A.filter(function (x) { return x.banco === a.banco && !x.pular && x.r && x.r.transacoes.length; }).length > 1;
   return mesmo ? nome + ' · ' + a.nome.replace(/\.(csv|ofx|qfx|txt)$/i, '').slice(0, 24) : nome;
 }
 function juntarArquivos() {
   var A = (_conf.arqs || []).filter(function (a) { return a.r && a.r.transacoes.length; });
-  if (!A.length) { mostrarToast('⚠️', 'Nenhum lançamento nos arquivos escolhidos'); abrirConferencia(); return; }
+  if (!A.length) { mostrarToast('⚠️', T('Nenhum lançamento nos arquivos escolhidos')); abrirConferencia(); return; }
   var deb = [], cred = [];
   A.forEach(function (a) {
     var rot = rotuloArq(a);
@@ -2681,7 +2779,7 @@ function juntarArquivos() {
 }
 // chamado ao confirmar as colunas de um arquivo
 function processarConferencia(mapaManual) {
-  if (!_conf.arqs) { mostrarToast('⚠️', 'Escolha o arquivo de novo'); abrirConferencia(); return; }
+  if (!_conf.arqs) { mostrarToast('⚠️', T('Escolha o arquivo de novo')); abrirConferencia(); return; }
   var a = _conf.arqs[_conf.idxArq];
   if (a) { lerArq(a, mapaManual); a.pular = false; }
   _conf.idxArq++;
@@ -2725,29 +2823,29 @@ function mostrarMapa() {
   var amostra = rows.slice(Math.max(0, ini - 1), ini + 5);
   var opc = function (sel, comNenhum) {
     var h = comNenhum ? '<option value="-1">—</option>' : '';
-    for (var c = 0; c < nCol; c++) h += '<option value="' + c + '"' + (sel === c ? ' selected' : '') + '>Coluna ' + (c + 1) + '</option>';
+    for (var c = 0; c < nCol; c++) h += '<option value="' + c + '"' + (sel === c ? ' selected' : '') + T('>Coluna ') + (c + 1) + '</option>';
     return h;
   };
   var duas = m.debito != null && m.debito >= 0;
   var bm = bancoPorId(_conf.bancoMapa || _conf.banco);
-  abrirSheet('<h3>Quais colunas são quais?</h3>' +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45">' + (r.aviso ? 'O app não conseguiu entender este arquivo sozinho. ' : '') + 'A tabela abaixo mostra as primeiras linhas do arquivo, com as colunas numeradas. ' +
-      'Olhe onde estão a <b>data</b>, o <b>valor</b> e a <b>descrição</b> (o nome da loja) e escolha nas listas embaixo. Você só faz isso <b>uma vez</b>: o app guarda para o ' + esc(bm.nome) + '.</div>' +
+  abrirSheet(T('<h3>Quais colunas são quais?</h3>') +
+    '<div style="font-size:13px;color:#4b5563;line-height:1.45">' + (r.aviso ? T('O app não conseguiu entender este arquivo sozinho. ') : '') + T('A tabela abaixo mostra as primeiras linhas do arquivo, com as colunas numeradas. ') +
+      T('Olhe onde estão a <b>data</b>, o <b>valor</b> e a <b>descrição</b> (o nome da loja) e escolha nas listas embaixo. Você só faz isso <b>uma vez</b>: o app guarda para o ') + esc(T(bm.nome)) + '.</div>' +
     (_conf.rotMapa ? '<div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-top:6px">📄 ' + esc(_conf.rotMapa) + '</div>' : '') +
-    '<table class="cf-map"><tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<th>Coluna ' + (c + 1) + '</th>'; }).join('') + '</tr>' +
+    '<table class="cf-map"><tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return T('<th>Coluna ') + (c + 1) + '</th>'; }).join('') + '</tr>' +
     amostra.map(function (row) { return '<tr>' + Array.apply(null, Array(nCol)).map(function (_, c) { return '<td>' + esc(row[c] || '') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>' +
-    '<label class="aj-label">Data</label><select class="aj-input" id="mp-data">' + opc(m.data) + '</select>' +
-    '<label class="aj-label">Formato da data</label><select class="aj-input" id="mp-ordem"><option value="dmy"' + (m.ordem !== 'mdy' ? ' selected' : '') + '>dia/mês/ano (Brasil)</option><option value="mdy"' + (m.ordem === 'mdy' ? ' selected' : '') + '>mês/dia/ano (EUA)</option></select>' +
-    '<label class="aj-label">Descrição</label><select class="aj-input" id="mp-desc">' + opc(m.desc, true) + '</select>' +
-    '<label class="aj-label">Os valores vêm em</label><select class="aj-input" id="mp-modo"><option value="1"' + (!duas ? ' selected' : '') + '>Uma coluna (com sinal)</option><option value="2"' + (duas ? ' selected' : '') + '>Duas colunas: débito e crédito</option></select>' +
-    '<div id="mp-um"' + (duas ? ' style="display:none"' : '') + '><label class="aj-label">Valor</label><select class="aj-input" id="mp-valor">' + opc(m.valor) + '</select>' +
-    '<label class="aj-label">Os gastos aparecem como</label><select class="aj-input" id="mp-sinal"><option value="negativo"' + (m.sinal !== 'positivo' ? ' selected' : '') + '>Negativos (ex.: -45,90)</option><option value="positivo"' + (m.sinal === 'positivo' ? ' selected' : '') + '>Positivos (ex.: fatura de cartão)</option></select></div>' +
-    '<div id="mp-dois"' + (duas ? '' : ' style="display:none"') + '><label class="aj-label">Débito (gastos)</label><select class="aj-input" id="mp-deb">' + opc(m.debito) + '</select>' +
-    '<label class="aj-label">Crédito (entradas)</label><select class="aj-input" id="mp-cred">' + opc(m.credito) + '</select></div>' +
-    '<label class="aj-label">Primeira linha com lançamento</label><input class="aj-input" id="mp-ini" type="number" min="1" value="' + (ini + 1) + '">' +
-    '<button class="aj-btn pri aj-full" id="mp-ok" style="margin-top:12px">Usar estas colunas</button>' +
-    (_conf.arqs && _conf.arqs.length > 1 ? '<button class="aj-btn aj-full" id="mp-pular">Deixar este arquivo de fora</button>' : '') +
-    '<button class="aj-btn aj-full" id="mp-voltar">Voltar</button>');
+    T('<label class="aj-label">Data</label><select class="aj-input" id="mp-data">') + opc(m.data) + '</select>' +
+    T('<label class="aj-label">Formato da data</label><select class="aj-input" id="mp-ordem"><option value="dmy"') + (m.ordem !== 'mdy' ? ' selected' : '') + T('>dia/mês/ano (Brasil)</option><option value="mdy"') + (m.ordem === 'mdy' ? ' selected' : '') + T('>mês/dia/ano (EUA)</option></select>') +
+    T('<label class="aj-label">Descrição</label><select class="aj-input" id="mp-desc">') + opc(m.desc, true) + '</select>' +
+    T('<label class="aj-label">Os valores vêm em</label><select class="aj-input" id="mp-modo"><option value="1"') + (!duas ? ' selected' : '') + T('>Uma coluna (com sinal)</option><option value="2"') + (duas ? ' selected' : '') + T('>Duas colunas: débito e crédito</option></select>') +
+    '<div id="mp-um"' + (duas ? ' style="display:none"' : '') + T('><label class="aj-label">Valor</label><select class="aj-input" id="mp-valor">') + opc(m.valor) + '</select>' +
+    T('<label class="aj-label">Os gastos aparecem como</label><select class="aj-input" id="mp-sinal"><option value="negativo"') + (m.sinal !== 'positivo' ? ' selected' : '') + T('>Negativos (ex.: -45,90)</option><option value="positivo"') + (m.sinal === 'positivo' ? ' selected' : '') + T('>Positivos (ex.: fatura de cartão)</option></select></div>') +
+    '<div id="mp-dois"' + (duas ? '' : ' style="display:none"') + T('><label class="aj-label">Débito (gastos)</label><select class="aj-input" id="mp-deb">') + opc(m.debito) + '</select>' +
+    T('<label class="aj-label">Crédito (entradas)</label><select class="aj-input" id="mp-cred">') + opc(m.credito) + '</select></div>' +
+    T('<label class="aj-label">Primeira linha com lançamento</label><input class="aj-input" id="mp-ini" type="number" min="1" value="') + (ini + 1) + '">' +
+    T('<button class="aj-btn pri aj-full" id="mp-ok" style="margin-top:12px">Usar estas colunas</button>') +
+    (_conf.arqs && _conf.arqs.length > 1 ? T('<button class="aj-btn aj-full" id="mp-pular">Deixar este arquivo de fora</button>') : '') +
+    T('<button class="aj-btn aj-full" id="mp-voltar">Voltar</button>'));
   if ($('mp-pular')) $('mp-pular').onclick = function () { var a = _conf.arqs[_conf.idxArq]; if (a) { a.pular = true; a.r = { formato: 'CSV', transacoes: [], aviso: '' }; } _conf.idxArq++; continuarArquivos(); };
   $('mp-modo').onchange = function () { $('mp-um').style.display = this.value === '1' ? '' : 'none'; $('mp-dois').style.display = this.value === '2' ? '' : 'none'; };
   $('mp-voltar').onclick = abrirConferencia;
@@ -2757,7 +2855,7 @@ function mostrarMapa() {
     if (dois) { novo.debito = +$('mp-deb').value; novo.credito = +$('mp-cred').value; } else { novo.valor = +$('mp-valor').value; novo.sinal = $('mp-sinal').value; }
     _conf.ajustando = false;
     var teste = MCBanco.ler(_conf.texto, { mapa: novo });
-    if (!teste.transacoes.length) { mostrarToast('⚠️', 'Com essas colunas não encontrei nenhum lançamento. Confira a data e o valor.', 4500); return; }
+    if (!teste.transacoes.length) { mostrarToast('⚠️', T('Com essas colunas não encontrei nenhum lançamento. Confira a data e o valor.'), 4500); return; }
     processarConferencia(novo);
   };
 }
@@ -2771,45 +2869,45 @@ function mostrarConferencia() {
   };
   var multi = (_conf.arqs || []).length > 1;
   var org = function (l) { return multi && l.banco && l.banco.origem ? ' · <span class="cf-org">' + esc(l.banco.origem) + '</span>' : ''; };
-  var html = '<h3>🏦 Banco × app</h3><div style="font-size:12px;color:#6b7280">' + esc(_conf.nomeArq) + ' · ' + formatarData(c.inicio) + ' a ' + formatarData(c.fim) + ' · gastos e devoluções' + (_conf.ignorados ? ' (' + _conf.ignorados + ' outro' + (_conf.ignorados > 1 ? 's' : '') + ' crédito' + (_conf.ignorados > 1 ? 's' : '') + ' ignorado' + (_conf.ignorados > 1 ? 's' : '') + ': pagamentos, salário, transferências)' : '') + '</div>' +
-    '<div class="cf-resumo"><div class="cf-ok"><b>' + por.ok.length + '</b>batem</div><div class="cf-data"><b>' + por.data.length + '</b>data dif.</div><div class="cf-valor"><b>' + por.valor.length + '</b>valor dif.</div><div class="cf-falta"><b>' + por.falta.length + '</b>faltam</div></div>';
-  if (por.falta.length) html += '<div class="cf-grupo">No banco e não no app' + aj('cf-falta') + '</div>' + por.falta.map(function (l) {
+  var html = T('<h3>🏦 Banco × app</h3><div style="font-size:12px;color:#6b7280">') + esc(_conf.nomeArq) + ' · ' + formatarData(c.inicio) + T(' a ') + formatarData(c.fim) + T(' · gastos e devoluções') + (_conf.ignorados ? ' (' + (_conf.ignorados > 1 ? T('{n} outros créditos ignorados', { n: _conf.ignorados }) : T('1 outro crédito ignorado')) + T(': pagamentos, salário, transferências)') : '') + '</div>' +
+    '<div class="cf-resumo"><div class="cf-ok"><b>' + por.ok.length + T('</b>batem</div>') + '<div class="cf-data"><b>' + por.data.length + T('</b>data dif.</div><div class="cf-valor"><b>') + por.valor.length + T('</b>valor dif.</div><div class="cf-falta"><b>') + por.falta.length + T('</b>faltam</div></div>');
+  if (por.falta.length) html += T('<div class="cf-grupo">No banco e não no app') + aj('cf-falta') + '</div>' + por.falta.map(function (l) {
     var i = c.linhas.indexOf(l);
-    return item('cf-falta', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l), formatar(l.banco.valor), '<button class="aj-btn pri" data-cflancar="' + i + '">Lançar</button>');
+    return item('cf-falta', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + org(l), formatar(l.banco.valor), '<button class="aj-btn pri" data-cflancar="' + i + T('">Lançar</button>'));
   }).join('');
   var D = _conf.dev || { ok: [], falta: [], soApp: [] };
-  if (D.falta.length) html += '<div class="cf-grupo">Devolução no banco e não no app' + aj('cf-dev') + '</div>' + D.falta.map(function (l, i) {
+  if (D.falta.length) html += T('<div class="cf-grupo">Devolução no banco e não no app') + aj('cf-dev') + '</div>' + D.falta.map(function (l, i) {
     var o = compraDaDevolucao(l.banco);
-    return item('cf-dev', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l) + (o ? ' · da compra ' + esc(descLanc(o)) + ' de ' + formatarData(o.data) : ''), '+' + formatar(l.banco.valor), '<button class="aj-btn pri" data-cfdev="' + i + '">Lançar</button>');
+    return item('cf-dev', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + org(l) + (o ? T(' · da compra ') + esc(descLanc(o)) + T(' de ') + formatarData(o.data) : ''), '+' + formatar(l.banco.valor), '<button class="aj-btn pri" data-cfdev="' + i + T('">Lançar</button>'));
   }).join('');
-  if (por.valor.length) html += '<div class="cf-grupo">Valor diferente' + aj('cf-valor') + '</div>' + por.valor.map(function (l) {
+  if (por.valor.length) html += T('<div class="cf-grupo">Valor diferente') + aj('cf-valor') + '</div>' + por.valor.map(function (l) {
     var i = c.linhas.indexOf(l);
-    return item('cf-valor', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l) + ' · no app: ' + nomeApp(l.app) + ' ' + formatar(l.app.valor) + (l.app.credLoja ? ' no cartão (+' + formatar(l.app.credLoja) + ' de crédito da loja)' : ''), formatar(l.banco.valor), '<button class="aj-btn" data-cfcorrigir="' + i + '">Corrigir</button>');
+    return item('cf-valor', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + org(l) + T(' · no app: ') + nomeApp(l.app) + ' ' + formatar(l.app.valor) + (l.app.credLoja ? T(' no cartão (+') + formatar(l.app.credLoja) + T(' de crédito da loja)') : ''), formatar(l.banco.valor), '<button class="aj-btn" data-cfcorrigir="' + i + T('">Corrigir</button>'));
   }).join('');
-  if (c.soApp.length) html += '<div class="cf-grupo">No app e não no banco' + aj('cf-soapp') + '</div>' + c.soApp.map(function (a) {
-    return item('cf-soapp', nomeApp(a), formatarData(a.data) + ' · pode ter sido pago com outro cartão ou conta', formatar(a.valor));
+  if (c.soApp.length) html += T('<div class="cf-grupo">No app e não no banco') + aj('cf-soapp') + '</div>' + c.soApp.map(function (a) {
+    return item('cf-soapp', nomeApp(a), formatarData(a.data) + T(' · pode ter sido pago com outro cartão ou conta'), formatar(a.valor));
   }).join('');
-  if (D.soApp.length) html += '<div class="cf-grupo">Devolução no app e não no banco' + aj('cf-devapp') + '</div>' + D.soApp.map(function (a) {
-    return item('cf-soapp', nomeApp(a), formatarData(a.data) + ' · pode ter voltado em outro cartão ou conta, ou ainda não caiu', '+' + formatar(a.valor));
+  if (D.soApp.length) html += T('<div class="cf-grupo">Devolução no app e não no banco') + aj('cf-devapp') + '</div>' + D.soApp.map(function (a) {
+    return item('cf-soapp', nomeApp(a), formatarData(a.data) + T(' · pode ter voltado em outro cartão ou conta, ou ainda não caiu'), '+' + formatar(a.valor));
   }).join('');
-  if (D.ok.length) html += '<div class="cf-grupo">Devoluções que batem (' + D.ok.length + ')</div>' + D.ok.map(function (l) {
-    return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + (l.status === 'data' ? ' (app ' + formatarData(l.app.data) + ')' : l.status === 'valor' ? ' (app ' + formatar(l.app.valor) + ')' : ''), '+' + formatar(l.banco.valor));
+  if (D.ok.length) html += T('<div class="cf-grupo">Devoluções que batem (') + D.ok.length + ')</div>' + D.ok.map(function (l) {
+    return item('cf-ok', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + (l.status === 'data' ? ' (app ' + formatarData(l.app.data) + ')' : l.status === 'valor' ? ' (app ' + formatar(l.app.valor) + ')' : ''), '+' + formatar(l.banco.valor));
   }).join('');
   // mesmo valor, data diferente: corrigir a data do app para a do banco, um a um ou todos (16/11/2026)
-  if (por.data.length) html += '<div class="cf-grupo">Mesmo valor, data diferente' + aj('cf-data') + '</div>' + por.data.map(function (l) {
+  if (por.data.length) html += T('<div class="cf-grupo">Mesmo valor, data diferente') + aj('cf-data') + '</div>' + por.data.map(function (l) {
     var i = c.linhas.indexOf(l);
-    return item('cf-data', esc(l.banco.desc || '(sem descrição)'), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')' + org(l), formatar(l.banco.valor), '<button class="aj-btn" data-cfdata="' + i + '">Corrigir data</button>');
-  }).join('') + (por.data.length > 1 ? '<button class="aj-btn aj-full" id="cf-datas">Corrigir as ' + por.data.length + ' datas para as do banco</button>' : '');
-  if (por.ok.length) html += '<div class="cf-grupo">Batem (' + por.ok.length + ')</div>' + (_conf.verOk ? por.ok.map(function (l) {
-    return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + org(l), formatar(l.banco.valor));
-  }).join('') : '<button class="aj-btn aj-full" id="cf-verok">Mostrar os ' + por.ok.length + ' que batem</button>');
+    return item('cf-data', esc(l.banco.desc || T('(sem descrição)')), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')' + org(l), formatar(l.banco.valor), '<button class="aj-btn" data-cfdata="' + i + T('">Corrigir data</button>'));
+  }).join('') + (por.data.length > 1 ? T('<button class="aj-btn aj-full" id="cf-datas">Corrigir as ') + por.data.length + T(' datas para as do banco</button>') : '');
+  if (por.ok.length) html += T('<div class="cf-grupo">Batem (') + por.ok.length + ')</div>' + (_conf.verOk ? por.ok.map(function (l) {
+    return item('cf-ok', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + org(l), formatar(l.banco.valor));
+  }).join('') : T('<button class="aj-btn aj-full" id="cf-verok">Mostrar os ') + por.ok.length + T(' que batem</button>'));
   var A = _conf.arqs || [];
-  html += '<div class="cf-grupo">' + (A.length > 1 ? 'Arquivos (' + A.length + ')' : 'Arquivo') + '</div>' + A.map(function (a, i) {
+  html += '<div class="cf-grupo">' + (A.length > 1 ? T('Arquivos (') + A.length + ')' : T('Arquivo')) + '</div>' + A.map(function (a, i) {
     var n = a.r ? a.r.transacoes.filter(function (x) { return x.tipo === 'debito'; }).length : 0;
-    return '<div class="cf-item cf-arq"><div class="cf-tx">' + esc(a.nome) + '<small>' + esc(bancoPorId(a.banco).nome) + ' · ' + (a.pular ? 'deixado de fora' : n + (n === 1 ? ' gasto' : ' gastos') + (a.r && a.r.formato === 'OFX' ? ' · OFX' : '')) + '</small></div>' +
-      (a.r && a.r.formato === 'CSV' ? '<button class="aj-btn" data-cfajarq="' + i + '">Ajustar colunas</button>' : '') + '</div>';
+    return '<div class="cf-item cf-arq"><div class="cf-tx">' + esc(a.nome) + '<small>' + esc(T(bancoPorId(a.banco).nome)) + ' · ' + (a.pular ? T('deixado de fora') : n + (n === 1 ? T(' gasto') : T(' gastos')) + (a.r && a.r.formato === 'OFX' ? ' · OFX' : '')) + '</small></div>' +
+      (a.r && a.r.formato === 'CSV' ? '<button class="aj-btn" data-cfajarq="' + i + T('">Ajustar colunas</button>') : '') + '</div>';
   }).join('');
-  html += '<div style="height:8px"></div><button class="aj-btn aj-full" id="cf-outro">Escolher outros arquivos</button><button class="aj-btn aj-full" data-fechar>Fechar</button>';
+  html += T('<div style="height:8px"></div><button class="aj-btn aj-full" id="cf-outro">Escolher outros arquivos</button><button class="aj-btn aj-full" data-fechar>Fechar</button>');
   abrirSheet(html);
   if ($('cf-verok')) $('cf-verok').onclick = function () { _conf.verOk = true; mostrarConferencia(); };
   qsa('#sheet-box [data-cfajarq]').forEach(function (bt) { bt.onclick = function () { var i = +bt.dataset.cfajarq, a = _conf.arqs[i]; if (!a.r || !a.r.linhas) lerArq(a); abrirMapaArq(i); }; });
@@ -2819,7 +2917,7 @@ function mostrarConferencia() {
     fecharSheet(); irPara('add');
     S.add.voltarConf = true;
     $('inp-valor').value = numTxt(l.banco.valor.toFixed(2)); $('inp-data').value = l.banco.data; $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
-    mostrarToast('🏦', 'Escolha a categoria e salve. Depois o app volta para a conferência.', 4000);
+    mostrarToast('🏦', T('Escolha a categoria e salve. Depois o app volta para a conferência.'), 4000);
   }; });
   qsa('#sheet-box [data-cfdev]').forEach(function (bt) { bt.onclick = function () {
     var l = D.falta[+bt.dataset.cfdev], o = compraDaDevolucao(l.banco);
@@ -2829,7 +2927,7 @@ function mostrarConferencia() {
     pintarTipoAdd();
     if (o) escolherOrig(o.id, true);
     if (!$('inp-desc').value.trim()) $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
-    mostrarToast('↩️', o ? 'Confira a compra e salve. Depois o app volta para a conferência.' : 'Escolha a compra ou a categoria e salve.', 4000);
+    mostrarToast('↩️', o ? T('Confira a compra e salve. Depois o app volta para a conferência.') : T('Escolha a compra ou a categoria e salve.'), 4000);
   }; });
   var corrigirDatas = function (linhas) {
     var ps = [], n = 0;
@@ -2838,55 +2936,55 @@ function mostrarConferencia() {
       var novo = Object.assign({}, reg); novo.dt = l.banco.data;
       ps.push(gravarLanc(l.app.id, novo)); n++;
     });
-    if (!n) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
-    Promise.all(ps).then(function () { mostrarToast('📅', n === 1 ? 'Data corrigida para ' + formatarData(linhas[0].banco.data) : n + ' datas corrigidas para as do banco'); }, function () { mostrarToast('⚠️', 'Erro ao salvar'); });
+    if (!n) { mostrarToast('⚠️', T('Lançamento não encontrado')); return; }
+    Promise.all(ps).then(function () { mostrarToast('📅', n === 1 ? T('Data corrigida para ') + formatarData(linhas[0].banco.data) : n + T(' datas corrigidas para as do banco')); }, function () { mostrarToast('⚠️', T('Erro ao salvar')); });
     recalcularConferencia();
   };
   qsa('#sheet-box [data-cfdata]').forEach(function (bt) { bt.onclick = function () { corrigirDatas([c.linhas[+bt.dataset.cfdata]]); }; });
   if ($('cf-datas')) $('cf-datas').onclick = function () { corrigirDatas(por.data); };
   qsa('#sheet-box [data-cfcorrigir]').forEach(function (bt) { bt.onclick = function () {
     var l = c.linhas[+bt.dataset.cfcorrigir], reg = S.raw[l.app.id];
-    if (!reg) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
+    if (!reg) { mostrarToast('⚠️', T('Lançamento não encontrado')); return; }
     var novo = Object.assign({}, reg); novo.v = Math.round((l.banco.valor + (l.app.credLoja || 0)) * 100);
-    gravarLanc(l.app.id, novo).then(function () { mostrarToast('✅', 'Corrigido para ' + formatar(l.banco.valor)); }, function () { mostrarToast('⚠️', 'Erro ao salvar'); });
+    gravarLanc(l.app.id, novo).then(function () { mostrarToast('✅', T('Corrigido para ') + formatar(l.banco.valor)); }, function () { mostrarToast('⚠️', T('Erro ao salvar')); });
     recalcularConferencia();
   }; });
 }
 
 // ═════════════════ AJUDA (?) E NOVIDADES (20/11/2026) ═════════════════
 var AJUDA = {
-  'proj-padrao': ['Padrão/dia', 'Quanto você ainda pode gastar <b>por dia</b>, de hoje até o fim do período, para fechar dentro do limite.<br><br>Conta: (limite − o que já gastou) ÷ dias que faltam.<br><br>Se já passou do limite, fica em zero.'],
-  'proj-real': ['Real/dia', 'Quanto você gastou <b>em média por dia</b> até agora neste período.<br><br>Conta: o que já gastou ÷ dias já passados (contando hoje).'],
-  'proj-desvio': ['Desvio', 'A diferença entre o <b>Real/dia</b> e o <b>Padrão/dia</b>.<br><br><span style="color:#dc2626">Vermelho</span>: você está gastando mais por dia do que o limite permite.<br><span style="color:#16a34a">Verde</span>: está gastando menos, sobra folga.'],
-  'proj-barras': ['Tempo × Gasto', '<b>Tempo</b>: quanto do período já passou.<br><b>Gasto</b>: quanto do limite você já gastou.<br><br>Se a barra do Gasto está <b>na frente</b> da do Tempo, você está gastando mais rápido do que o período anda. Exemplo: metade do mês passou (50%) e já gastou 70% do limite.'],
-  'proj-saldo': ['Saldo real agora', 'Quanto ainda sobra do limite <b>hoje</b>: limite − o que já foi gasto no período.<br><br>Negativo (vermelho) = já passou do limite.'],
-  'proj-final': ['Saldo no fim do período', 'Quanto deve sobrar (ou faltar) <b>no último dia</b> do período, se você mantiver o seu costume de compras.<br><br>Conta: limite − (o que já gastou + o que ainda deve entrar). "O que ainda deve entrar" vem da sua frequência: veja o ? de "O que ainda deve entrar".'],
-  'proj-grafico': ['Gasto acumulado × orçamento', 'Mostra o gasto <b>somando dia a dia</b> desde o início do período.<br><br><b>Orçamento previsto</b> (tracejado claro): o limite dividido igualmente pelos dias. É onde você "deveria" estar em cada dia.<br><b>Gasto real</b> (linha cheia): o que você gastou de verdade até hoje.<br><b>Projeção</b> (tracejado colorido): de hoje até onde o período deve fechar, pelo seu costume.<br><b>Limite livre</b> (amarelo): o limite total do período.<br><br>Linha cheia acima da tracejada clara = gastando mais rápido que o previsto.'],
-  'proj-vem': ['O que ainda deve entrar', 'Uma estimativa do que você ainda vai gastar até o fim do período, <b>lugar por lugar</b>.<br><br>Para cada lugar (mercado, posto…), o app olha os últimos períodos (até 6): quantas vezes você costuma ir e quanto gasta por ida.<br><br>Nos dias que faltam, conta só as idas que ainda cabem no seu costume. Se você já foi as vezes de sempre, não conta mais. Quando falta menos de uma ida, entra só a chance (ex.: 50% de chance × CA$ 80 = CA$ 40).'],
-  'proj-mais': ['Foi mais vezes que de costume', 'Lugares onde você foi <b>pelo menos uma vez a mais</b> do que costuma ir num período inteiro.<br><br>O valor em vermelho é quanto essas idas a mais custaram, comparado com o seu costume.'],
-  'proj-novos': ['Gastos que não aparecem antes', 'Compras em lugares onde você <b>não comprou</b> nos períodos anteriores.<br><br>Elas contam no total, mas o app <b>não repete</b> esses gastos na projeção, porque não há costume para medir.'],
-  'termometro': ['Termômetro da Dívida', 'Soma de <b>tudo o que ainda falta pagar</b> nos parcelamentos ativos.<br><br>Cada linha mostra quanto ainda vai faltar no começo de cada mês, até zerar. O ✓ marca o mês em que um parcelamento termina.'],
-  'parcelados': ['Projeção de Parcelados', 'Quanto das suas parcelas cai <b>em cada mês</b>, nos próximos 24 meses.<br><br>Ajuda a ver quando o compromisso mensal diminui (✓ = parcelamento que termina naquele mês).'],
-  'sem-alvo': ['Alvo pelo limite', 'Quanto o limite do período permite gastar <b>numa semana</b>.<br><br>Conta: limite ÷ dias do período × 7.<br><br>Com a semana em andamento, é proporcional aos dias que já passaram (ex.: na quinta, 4 de 7 dias).'],
-  'sem-media': ['Sua média', 'Quanto você costuma gastar numa semana, pela <b>média das semanas anteriores</b>.<br><br>Com a semana em andamento, a média é só até o mesmo dia da semana, para comparar igual com igual.'],
-  'sem-vazou': ['Onde mais vazou', 'Lugares onde você gastou <b>mais do que a sua média por semana</b> ali.<br><br><b>Esta semana</b>: quanto gastou ali nesta semana.<br><b>Média</b>: quanto costuma gastar ali por semana (soma das semanas anteriores ÷ número de semanas).<br><b>A mais</b>: a diferença.<br><br>Compras de vez em quando (roupas, presentes, eletrônicos, móveis) não entram. Um lugar onde você não costuma comprar pode aparecer com tudo "a mais"; nesse caso veja se não foi só troca de loja (ex.: mercado diferente).'],
-  'sem-cats': ['Categorias × orçamento semanal', 'O orçamento de cada categoria convertido para <b>uma semana</b>: orçamento do período ÷ dias do período × 7.<br><br>A barra mostra quanto da semana você já usou em cada categoria.'],
-  'cf-sem-leitor': ['Banco sem leitura própria', 'O app usa um leitor automático. Se não entender o arquivo, pergunta uma vez qual coluna é a data, o valor e a descrição, e guarda a resposta.'],
-  'cf-falta': ['No banco e não no app', 'Gastos que aparecem no extrato do banco, mas <b>não foram lançados</b> no app.<br><br>Toque em <b>Lançar</b>: o app abre o registro já com o valor, a data e a loja. É só escolher a categoria e salvar.'],
-  'cf-dev': ['Devolução no banco e não no app', 'Dinheiro que <b>voltou</b> para o cartão (uma devolução ou estorno) e ainda não foi registrado no app.<br><br>Toque em <b>Lançar</b>: o app sugere a compra de onde veio a devolução.'],
-  'cf-valor': ['Valor diferente', 'O app achou o gasto, mas o <b>valor não é igual</b> ao do banco (ex.: gorjeta, troca de moeda ou erro de digitação).<br><br>Toque em <b>Corrigir</b> para usar o valor do banco.'],
-  'cf-soapp': ['No app e não no banco', 'Lançamentos do app que <b>não estão nos arquivos</b> que você escolheu.<br><br>Normalmente foram pagos com <b>outro cartão, conta ou dinheiro</b>, ou ainda não caíram no banco. Se você tem outro cartão, escolha o arquivo dele também.'],
-  'cf-devapp': ['Devolução no app e não no banco', 'Devoluções registradas no app que ainda <b>não apareceram</b> nos arquivos. Podem ter voltado em outro cartão ou ainda não caíram.'],
-  'cf-data': ['Mesmo valor, data diferente', 'O gasto está no app com o <b>mesmo valor</b>, mas em outra data (comum quando se lança dias depois).<br><br>Toque em <b>Corrigir data</b> para usar a data do banco. Confira antes: duas compras iguais no mesmo lugar podem se confundir.'],
-  'sem-acoes': ['O que fazer nesta semana', 'Sugestões automáticas tiradas dos números acima: limite do período, lugares onde mais vazou e quantas idas ao mercado.<br><br>São um ponto de partida. Gastos essenciais, como combustível e ração, você decide se dá para reduzir.']
+  'proj-padrao': [T('Padrão/dia'), T('Quanto você ainda pode gastar <b>por dia</b>, de hoje até o fim do período, para fechar dentro do limite.<br><br>Conta: (limite − o que já gastou) ÷ dias que faltam.<br><br>Se já passou do limite, fica em zero.')],
+  'proj-real': [T('Real/dia'), T('Quanto você gastou <b>em média por dia</b> até agora neste período.<br><br>Conta: o que já gastou ÷ dias já passados (contando hoje).')],
+  'proj-desvio': [T('Desvio'), T('A diferença entre o <b>Real/dia</b> e o <b>Padrão/dia</b>.<br><br><span style="color:#dc2626">Vermelho</span>: você está gastando mais por dia do que o limite permite.<br><span style="color:#16a34a">Verde</span>: está gastando menos, sobra folga.')],
+  'proj-barras': [T('Tempo × Gasto'), T('<b>Tempo</b>: quanto do período já passou.<br><b>Gasto</b>: quanto do limite você já gastou.<br><br>Se a barra do Gasto está <b>na frente</b> da do Tempo, você está gastando mais rápido do que o período anda. Exemplo: metade do mês passou (50%) e já gastou 70% do limite.')],
+  'proj-saldo': [T('Saldo real agora'), T('Quanto ainda sobra do limite <b>hoje</b>: limite − o que já foi gasto no período.<br><br>Negativo (vermelho) = já passou do limite.')],
+  'proj-final': [T('Saldo no fim do período'), T('Quanto deve sobrar (ou faltar) <b>no último dia</b> do período, se você mantiver o seu costume de compras.<br><br>Conta: limite − (o que já gastou + o que ainda deve entrar). "O que ainda deve entrar" vem da sua frequência: veja o ? de "O que ainda deve entrar".')],
+  'proj-grafico': [T('Gasto acumulado × orçamento'), T('Mostra o gasto <b>somando dia a dia</b> desde o início do período.<br><br><b>Orçamento previsto</b> (tracejado claro): o limite dividido igualmente pelos dias. É onde você "deveria" estar em cada dia.<br><b>Gasto real</b> (linha cheia): o que você gastou de verdade até hoje.<br><b>Projeção</b> (tracejado colorido): de hoje até onde o período deve fechar, pelo seu costume.<br><b>Limite livre</b> (amarelo): o limite total do período.<br><br>Linha cheia acima da tracejada clara = gastando mais rápido que o previsto.')],
+  'proj-vem': [T('O que ainda deve entrar'), T('Uma estimativa do que você ainda vai gastar até o fim do período, <b>lugar por lugar</b>.<br><br>Para cada lugar (mercado, posto…), o app olha os últimos períodos (até 6): quantas vezes você costuma ir e quanto gasta por ida.<br><br>Nos dias que faltam, conta só as idas que ainda cabem no seu costume. Se você já foi as vezes de sempre, não conta mais. Quando falta menos de uma ida, entra só a chance (ex.: 50% de chance × CA$ 80 = CA$ 40).')],
+  'proj-mais': [T('Foi mais vezes que de costume'), T('Lugares onde você foi <b>pelo menos uma vez a mais</b> do que costuma ir num período inteiro.<br><br>O valor em vermelho é quanto essas idas a mais custaram, comparado com o seu costume.')],
+  'proj-novos': [T('Gastos que não aparecem antes'), T('Compras em lugares onde você <b>não comprou</b> nos períodos anteriores.<br><br>Elas contam no total, mas o app <b>não repete</b> esses gastos na projeção, porque não há costume para medir.')],
+  'termometro': [T('Termômetro da Dívida'), T('Soma de <b>tudo o que ainda falta pagar</b> nos parcelamentos ativos.<br><br>Cada linha mostra quanto ainda vai faltar no começo de cada mês, até zerar. O ✓ marca o mês em que um parcelamento termina.')],
+  'parcelados': [T('Projeção de Parcelados'), T('Quanto das suas parcelas cai <b>em cada mês</b>, nos próximos 24 meses.<br><br>Ajuda a ver quando o compromisso mensal diminui (✓ = parcelamento que termina naquele mês).')],
+  'sem-alvo': [T('Alvo pelo limite'), T('Quanto o limite do período permite gastar <b>numa semana</b>.<br><br>Conta: limite ÷ dias do período × 7.<br><br>Com a semana em andamento, é proporcional aos dias que já passaram (ex.: na quinta, 4 de 7 dias).')],
+  'sem-media': [T('Sua média'), T('Quanto você costuma gastar numa semana, pela <b>média das semanas anteriores</b>.<br><br>Com a semana em andamento, a média é só até o mesmo dia da semana, para comparar igual com igual.')],
+  'sem-vazou': [T('Onde mais vazou'), T('Lugares onde você gastou <b>mais do que a sua média por semana</b> ali.<br><br><b>Esta semana</b>: quanto gastou ali nesta semana.<br><b>Média</b>: quanto costuma gastar ali por semana (soma das semanas anteriores ÷ número de semanas).<br><b>A mais</b>: a diferença.<br><br>Compras de vez em quando (roupas, presentes, eletrônicos, móveis) não entram. Um lugar onde você não costuma comprar pode aparecer com tudo "a mais"; nesse caso veja se não foi só troca de loja (ex.: mercado diferente).')],
+  'sem-cats': [T('Categorias × orçamento semanal'), T('O orçamento de cada categoria convertido para <b>uma semana</b>: orçamento do período ÷ dias do período × 7.<br><br>A barra mostra quanto da semana você já usou em cada categoria.')],
+  'cf-sem-leitor': [T('Banco sem leitura própria'), T('O app usa um leitor automático. Se não entender o arquivo, pergunta uma vez qual coluna é a data, o valor e a descrição, e guarda a resposta.')],
+  'cf-falta': [T('No banco e não no app'), T('Gastos que aparecem no extrato do banco, mas <b>não foram lançados</b> no app.<br><br>Toque em <b>Lançar</b>: o app abre o registro já com o valor, a data e a loja. É só escolher a categoria e salvar.')],
+  'cf-dev': [T('Devolução no banco e não no app'), T('Dinheiro que <b>voltou</b> para o cartão (uma devolução ou estorno) e ainda não foi registrado no app.<br><br>Toque em <b>Lançar</b>: o app sugere a compra de onde veio a devolução.')],
+  'cf-valor': [T('Valor diferente'), T('O app achou o gasto, mas o <b>valor não é igual</b> ao do banco (ex.: gorjeta, troca de moeda ou erro de digitação).<br><br>Toque em <b>Corrigir</b> para usar o valor do banco.')],
+  'cf-soapp': [T('No app e não no banco'), T('Lançamentos do app que <b>não estão nos arquivos</b> que você escolheu.<br><br>Normalmente foram pagos com <b>outro cartão, conta ou dinheiro</b>, ou ainda não caíram no banco. Se você tem outro cartão, escolha o arquivo dele também.')],
+  'cf-devapp': [T('Devolução no app e não no banco'), T('Devoluções registradas no app que ainda <b>não apareceram</b> nos arquivos. Podem ter voltado em outro cartão ou ainda não caíram.')],
+  'cf-data': [T('Mesmo valor, data diferente'), T('O gasto está no app com o <b>mesmo valor</b>, mas em outra data (comum quando se lança dias depois).<br><br>Toque em <b>Corrigir data</b> para usar a data do banco. Confira antes: duas compras iguais no mesmo lugar podem se confundir.')],
+  'sem-acoes': [T('O que fazer nesta semana'), T('Sugestões automáticas tiradas dos números acima: limite do período, lugares onde mais vazou e quantas idas ao mercado.<br><br>São um ponto de partida. Gastos essenciais, como combustível e ração, você decide se dá para reduzir.')]
 };
-function aj(k) { return '<button type="button" class="aj-q" data-ajuda="' + k + '" aria-label="O que é isto?">?</button>'; }
+function aj(k) { return '<button type="button" class="aj-q" data-ajuda="' + k + '" aria-label="' + esc(T('O que é isto?')) + '">?</button>'; }
 document.addEventListener('click', function (e) {
   var b = e.target && e.target.closest ? e.target.closest('[data-ajuda]') : null;
   if (!b) return;
   e.preventDefault(); e.stopPropagation();
   var a = AJUDA[b.getAttribute('data-ajuda')]; if (!a) return;
-  abrirSheet('<h3>❓ ' + a[0] + '</h3><div class="aj-texto">' + a[1] + '</div><button class="aj-btn pri aj-full" data-fechar>Entendi</button>');
+  abrirSheet('<h3>❓ ' + a[0] + '</h3><div class="aj-texto">' + a[1] + T('</div><button class="aj-btn pri aj-full" data-fechar>Entendi</button>'));
 }, true);
 function cmpVer(a, b) {
   var x = String(a).split('.'), y = String(b).split('.');
@@ -2894,6 +2992,7 @@ function cmpVer(a, b) {
   return 0;
 }
 // Mostra o que mudou desde a última versão que este aparelho viu. Primeira vez: só a mais recente.
+function dataNov(d) { var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(d); return m ? formatarData(m[3] + '-' + m[2] + '-' + m[1]) : d; }
 function mostrarNovidades(todas) {
   var vista = lsGet('mc_versao_vista');
   // Correção (20/11/2026): quem já usava o app antes do aviso existir (até a 2.29.7) via só a última novidade.
@@ -2908,13 +3007,13 @@ function mostrarNovidades(todas) {
     if (S.tela !== 'inicio' || $('sheet').classList.contains('on')) return; // tenta de novo na próxima abertura
     lsSet('mc_versao_vista', VERSAO);
   }
-  if (!lista.length) { if (todas) mostrarToast('ℹ️', 'Nenhuma novidade registrada'); return; }
-  abrirSheet('<h3>' + (todas ? '🔔 Novidades do app' : '🎉 O app foi atualizado') + '</h3>' +
-    (todas ? '' : '<div style="font-size:13px;color:#6b7280;margin-bottom:6px">Você está na versão <b>' + esc(VERSAO) + '</b>. O que mudou:</div>') +
+  if (!lista.length) { if (todas) mostrarToast('ℹ️', T('Nenhuma novidade registrada')); return; }
+  abrirSheet('<h3>' + (todas ? T('🔔 Novidades do app') : T('🎉 O app foi atualizado')) + '</h3>' +
+    (todas ? '' : T('<div style="font-size:13px;color:#6b7280;margin-bottom:6px">Você está na versão <b>') + esc(VERSAO) + T('</b>. O que mudou:</div>')) +
     lista.slice(0, todas ? 20 : 8).map(function (n) {
-      return '<div class="nov-bloco"><div class="nov-cab">Versão ' + esc(n.v) + ' · ' + esc(n.d) + '</div><ul class="nov-lista">' + n.itens.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
+      return T('<div class="nov-bloco"><div class="nov-cab">Versão ') + esc(n.v) + ' · ' + esc(dataNov(n.d)) + '</div><ul class="nov-lista">' + n.itens.map(function (t) { return '<li>' + T(t) + '</li>'; }).join('') + '</ul></div>';
     }).join('') +
-    '<button class="aj-btn pri aj-full" data-fechar>Ok</button>');
+    T('<button class="aj-btn pri aj-full" data-fechar>Ok</button>'));
 }
 
 // ═════════════════ IDIOMA (20/11/2026) ═════════════════
@@ -3040,9 +3139,9 @@ function aplicarPagamento() {
   // já existe um gasto igual hoje? (lançou à mão antes de o atalho abrir)
   var dup = p.valor > 0 && lancamentos().filter(function (l) { return !l.dev && l.data === hoje() && Math.abs(l.valor - p.valor) < 0.005; })[0];
   var av = $('pag-aviso');
-  av.innerHTML = '📲 <b>Pagamento ' + (p.cartao ? 'no ' + esc(p.cartao) : 'com Apple Pay') + '</b>: ' + (p.loja ? esc(p.loja) + ' · ' : '') + (p.valor > 0 ? formatar(p.valor) : 'valor não veio, digite abaixo') + '<br>' +
-    (sg ? (sg.peloNome ? 'Categoria sugerida pelo nome da subcategoria. ' : 'Categoria sugerida pelas suas compras anteriores nessa loja. ') : 'Escolha a categoria. Da próxima vez nessa loja o app já sugere. ') + 'Confira e toque em salvar.' +
-    (dup ? '<span class="pag-dup">⚠️ Já existe um lançamento de ' + formatar(dup.valor) + ' hoje (' + esc(descLanc(dup)) + '). Se for o mesmo, não salve: toque no ✕.</span>' : '');
+  av.innerHTML = '📲 <b>' + (p.cartao ? T('Pagamento no {c}', { c: esc(p.cartao) }) : T('Pagamento com Apple Pay')) + '</b>: ' + (p.loja ? esc(p.loja) + ' · ' : '') + (p.valor > 0 ? formatar(p.valor) : T('valor não veio, digite abaixo')) + '<br>' +
+    (sg ? (sg.peloNome ? T('Categoria sugerida pelo nome da subcategoria. ') : T('Categoria sugerida pelas suas compras anteriores nessa loja. ')) : T('Escolha a categoria. Da próxima vez nessa loja o app já sugere. ')) + T('Confira e toque em salvar.') +
+    (dup ? T('<span class="pag-dup">⚠️ Já existe um lançamento de ') + formatar(dup.valor) + T(' hoje (') + esc(descLanc(dup)) + T('). Se for o mesmo, não salve: toque no ✕.</span>') : '');
   av.style.display = '';
 }
 function linkPagamento() { return location.origin + location.pathname.replace(/index\.html$/, '') + '#lancar='; }
@@ -3061,9 +3160,9 @@ function eIPhone() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (nav
 function statusApplePay() {
   var ult = lancamentos().filter(function (l) { return l.ap; }).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) || b.data.localeCompare(a.data); })[0];
   var loc = null; try { loc = JSON.parse(lsGet('mc_pag_ok') || 'null'); } catch (e) {}
-  if (ult) return { ok: true, txt: 'Funcionando. Último lançamento vindo do Apple Pay: ' + formatarData(ult.data) + ' · ' + descLanc(ult) + ' · ' + formatar(ult.valor) + '.' };
-  if (loc && loc.t) return { ok: true, txt: 'Funcionando. Último pagamento recebido neste aparelho em ' + formatarData(isoDe(new Date(loc.t))) + (loc.loja ? ' · ' + loc.loja : '') + (loc.valor ? ' · ' + formatar(loc.valor) : '') + '.' };
-  return { ok: false, txt: 'Ainda não chegou nenhum pagamento. Depois de configurar, pague algo pequeno por aproximação para testar.' };
+  if (ult) return { ok: true, txt: T('Funcionando. Último lançamento vindo do Apple Pay: ') + formatarData(ult.data) + ' · ' + descLanc(ult) + ' · ' + formatar(ult.valor) + '.' };
+  if (loc && loc.t) return { ok: true, txt: T('Funcionando. Último pagamento recebido neste aparelho em ') + formatarData(isoDe(new Date(loc.t))) + (loc.loja ? ' · ' + loc.loja : '') + (loc.valor ? ' · ' + formatar(loc.valor) : '') + '.' };
+  return { ok: false, txt: T('Ainda não chegou nenhum pagamento. Depois de configurar, pague algo pequeno por aproximação para testar.') };
 }
 function renderStatusApplePay() {
   var el = $('aj-applepay-st'); if (!el) return;
@@ -3072,57 +3171,57 @@ function renderStatusApplePay() {
 }
 function abrirApplePay() {
   var url = linkPagamento(), lk = linkAtalho(), st = statusApplePay(), ios = eIPhone();
-  var fraseBtns = '<div class="ap-frase">' + esc(FRASE_IA.pt) + '</div><button class="aj-btn aj-full" data-apfrase="pt">Copiar frase em português</button>' +
-    '<div class="ap-frase">' + esc(FRASE_IA.en) + '</div><button class="aj-btn aj-full" data-apfrase="en">Copiar frase em inglês</button>';
-  abrirSheet('<h3>📲 Lançar ao pagar com Apple Pay</h3>' +
+  var fraseBtns = '<div class="ap-frase">' + esc(FRASE_IA.pt) + T('</div><button class="aj-btn aj-full" data-apfrase="pt">Copiar frase em português</button>') +
+    '<div class="ap-frase">' + esc(FRASE_IA.en) + T('</div><button class="aj-btn aj-full" data-apfrase="en">Copiar frase em inglês</button>');
+  abrirSheet(T('<h3>📲 Lançar ao pagar com Apple Pay</h3>') +
     '<div class="ap-st ' + (st.ok ? 'ok' : 'nao') + '">' + (st.ok ? '✅ ' : '⏳ ') + esc(st.txt) + '</div>' +
-    (ios ? '' : '<div class="ap-aviso">Este recurso é do <b>iPhone</b> (Apple Pay). No Android não existe um jeito de o celular avisar o app na hora do pagamento; use a <b>Conferência com o banco</b> para achar o que faltou lançar. Se você tem iPhone, abra o MinhaCasa nele para configurar.</div>') +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 3 passos, uns 2 minutos, com o app <b>Atalhos</b> (Shortcuts) da Apple. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>' +
-    (window.MINHACASA_AMBIENTE === 'teste' ? '<div class="ap-aviso">Ambiente de teste: estes links instalam a versão que abre o <b>app oficial</b> (minhacasaapp.com).</div>' : '') +
+    (ios ? '' : T('<div class="ap-aviso">Este recurso é do <b>iPhone</b> (Apple Pay). No Android não existe um jeito de o celular avisar o app na hora do pagamento; use a <b>Conferência com o banco</b> para achar o que faltou lançar. Se você tem iPhone, abra o MinhaCasa nele para configurar.</div>')) +
+    T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-top:8px">Cada pagamento por aproximação com o cartão que você escolher abre o MinhaCasa já com o valor e a loja. São 3 passos, uns 2 minutos, com o app <b>Atalhos</b> (Shortcuts) da Apple. Os nomes aparecem em português ou em inglês, conforme o idioma do iPhone.</div>') +
+    (window.MINHACASA_AMBIENTE === 'teste' ? T('<div class="ap-aviso">Ambiente de teste: estes links instalam a versão que abre o <b>app oficial</b> (minhacasaapp.com).</div>') : '') +
 
-    '<div class="ap-parte">1 · Instalar o atalho MinhaCasa</div>' +
-    (lk ? '<div class="ap-txt">Toque no botão. Na página que abrir, toque em <b>Obter Atalho</b> (Get Shortcut) e, no app Atalhos, em <b>Adicionar Atalho</b> (Add Shortcut). Se o iPhone pedir para baixar o app <b>Atalhos</b>, toque em <b>Mostrar na App Store</b> e baixe (é gratuito, da Apple); depois toque de novo no botão.</div><a class="aj-btn pri aj-full ap-link" href="' + esc(lk) + '" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>'
-        : '<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>') +
-    '<details class="ap-det"' + (lk ? '' : ' open') + '><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">' +
-    '<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>' +
-    '<li>Adicione <b>Codificar URL</b> (URL Encode) e, dentro dela, a variável <b>Entrada do Atalho</b> (Shortcut Input).</li>' +
-    '<li>Adicione outro <b>Texto</b> (Text) com o endereço abaixo e, colado nele, a variável <b>URL Codificado</b> (URL Encoded Text):<div class="ap-url">' + esc(url) + '</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>' +
-    '<li>Adicione <b>Abrir URLs</b> (Open URLs).</li>' +
-    '<li>Dê o nome <b>MinhaCasa</b> ao atalho (tocando no nome, em cima) e saia.</li></ol></details>' +
+    T('<div class="ap-parte">1 · Instalar o atalho MinhaCasa</div>') +
+    (lk ? T('<div class="ap-txt">Toque no botão. Na página que abrir, toque em <b>Obter Atalho</b> (Get Shortcut) e, no app Atalhos, em <b>Adicionar Atalho</b> (Add Shortcut). Se o iPhone pedir para baixar o app <b>Atalhos</b>, toque em <b>Mostrar na App Store</b> e baixe (é gratuito, da Apple); depois toque de novo no botão.</div><a class="aj-btn pri aj-full ap-link" href="') + esc(lk) + T('" target="_blank" rel="noopener">Instalar o atalho MinhaCasa</a>')
+        : T('<div class="ap-txt">O atalho pronto para instalar com um toque ainda está sendo preparado. Por enquanto, monte à mão (leva uns minutos a mais):</div>')) +
+    '<details class="ap-det"' + (lk ? '' : ' open') + T('><summary>Montar o atalho à mão</summary><ol class="cf-passos ap-passos">') +
+    T('<li>No app <b>Atalhos</b>, em <b>Atalhos</b> (Shortcuts), toque no <b>+</b>. Se aparecer a caixa "Descreva um atalho" (Describe a shortcut), toque em <b>Editar</b> (Edit).</li>') +
+    T('<li>Adicione <b>Codificar URL</b> (URL Encode) e, dentro dela, a variável <b>Entrada do Atalho</b> (Shortcut Input).</li>') +
+    T('<li>Adicione outro <b>Texto</b> (Text) com o endereço abaixo e, colado nele, a variável <b>URL Codificado</b> (URL Encoded Text):<div class="ap-url">') + esc(url) + T('</div><button class="aj-btn aj-full" id="ap-copiar">Copiar endereço</button></li>') +
+    T('<li>Adicione <b>Abrir URLs</b> (Open URLs).</li>') +
+    T('<li>Dê o nome <b>MinhaCasa</b> ao atalho (tocando no nome, em cima) e saia.</li></ol></details>') +
 
-    '<div class="ap-parte">2 · Instalar a ligação com o cartão</div>' +
-    '<div class="ap-txt">Toque no botão e, do mesmo jeito, em <b>Obter Atalho</b> e <b>Adicionar Atalho</b>. Ele se chama <b>Cartão MinhaCasa</b>.</div>' +
-    '<a class="aj-btn pri aj-full ap-link" href="' + esc(AUTOMACAO_ICLOUD) + '" target="_blank" rel="noopener">Instalar o Cartão MinhaCasa</a>' +
-    '<div class="ap-parte">3 · Escolher o seu cartão e ligar</div>' +
+    T('<div class="ap-parte">2 · Instalar a ligação com o cartão</div>') +
+    T('<div class="ap-txt">Toque no botão e, do mesmo jeito, em <b>Obter Atalho</b> e <b>Adicionar Atalho</b>. Ele se chama <b>Cartão MinhaCasa</b>.</div>') +
+    '<a class="aj-btn pri aj-full ap-link" href="' + esc(AUTOMACAO_ICLOUD) + T('" target="_blank" rel="noopener">Instalar o Cartão MinhaCasa</a>') +
+    T('<div class="ap-parte">3 · Escolher o seu cartão e ligar</div>') +
     '<ol class="cf-passos ap-passos">' +
-    '<li>No app <b>Atalhos</b>, abra <b>Automação</b> (Automation) e toque em <b>Quando eu tocar num passe ou cartão da Carteira</b> (When I tap a Wallet pass or payment card).</li>' +
-    '<li>Toque em <b>Editar</b> (Edit). No bloco <b>Quando… for tocado</b> (When… is tapped), toque no nome do cartão e marque <b>o seu cartão</b>, o que você controla no MinhaCasa. O nome tem que ficar <b>azul</b>.</li>' +
-    '<li>Confira se o bloco <b>Executar</b> (Run) mostra <b>MinhaCasa</b>. Se mostrar outro nome ou um aviso vermelho, toque nele e escolha <b>MinhaCasa</b>.</li>' +
-    '<li>Toque na setinha <b>›</b> ao lado de "for tocado" (is tapped) e ligue <b>Automação</b> (Automation): fica verde e some o aviso "Automação desligada" (Automation is turned off). Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li></ol>' +
-    '<details class="ap-det"><summary>Não deu certo? Criar a ligação de outro jeito</summary>' +
-    '<div class="ap-txt">No app Atalhos, abra <b>Automação</b> (Automation) e toque no <b>+</b>. O que aparece?</div>' +
-    '<div class="ap-esc"><button type="button" class="aj-btn" data-apcam="a"><span>Uma caixa</span><b>"Descreva um atalho"</b></button><button type="button" class="aj-btn" data-apcam="b"><span>Uma lista</span><b>Hora, Chegar, Carteira…</b></button></div>' +
-    '<div id="ap-cam-a" class="ap-cam" style="display:none"><div class="ap-cam-t">Com a IA do iPhone</div><ol class="cf-passos ap-passos">' +
-    '<li>Copie uma das frases abaixo (a do idioma do seu iPhone), cole na caixa e envie.' + fraseBtns + '</li>' +
-    '<li>Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li>' +
-    '<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>' +
-    '<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant) e <b>Valor</b> (Amount), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>' +
-    '<li>Toque na setinha do bloco do cartão e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>' +
-    '<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA (iPhones com iOS mais antigo)</div><ol class="cf-passos ap-passos">' +
-    '<li>Se você instalou o <b>Cartão MinhaCasa</b> e ele aparece com <b>Variável Desconhecida</b> (Unknown Variable) em vermelho, apague-o (segure em cima → Apagar). Mantenha só o atalho <b>MinhaCasa</b>.</li>' +
-    '<li>Em <b>Automação</b> (Automation), toque no <b>+</b> e escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>' +
-    '<li>Marque <b>só o seu cartão</b>. Se aparecer, escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>' +
-    '<li>Toque em <b>Criar Novo Atalho</b> (Create New Shortcut) ou <b>Nova Automação em Branco</b> (New Blank Automation). Não escolha o MinhaCasa direto da lista.</li>' +
-    '<li>Adicione <b>Texto</b> (Text). Dentro dele, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado, toque na bolinha e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code> (teclas 123 → #+=). Insira de novo a Entrada do Atalho e escolha <b>Valor</b> (Amount).</li>' +
-    '<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha <b>›</b>, ponha a entrada (Input) como <b>Texto</b> (Text). Toque em <b>OK</b> (Done).</li>' +
-    '<li>Volte em <b>Automação</b>, toque na automação nova e confira se está em <b>Executar Imediatamente</b> (Run Immediately).</li></ol></div>' +
+    T('<li>No app <b>Atalhos</b>, abra <b>Automação</b> (Automation) e toque em <b>Quando eu tocar num passe ou cartão da Carteira</b> (When I tap a Wallet pass or payment card).</li>') +
+    T('<li>Toque em <b>Editar</b> (Edit). No bloco <b>Quando… for tocado</b> (When… is tapped), toque no nome do cartão e marque <b>o seu cartão</b>, o que você controla no MinhaCasa. O nome tem que ficar <b>azul</b>.</li>') +
+    T('<li>Confira se o bloco <b>Executar</b> (Run) mostra <b>MinhaCasa</b>. Se mostrar outro nome ou um aviso vermelho, toque nele e escolha <b>MinhaCasa</b>.</li>') +
+    T('<li>Toque na setinha <b>›</b> ao lado de "for tocado" (is tapped) e ligue <b>Automação</b> (Automation): fica verde e some o aviso "Automação desligada" (Automation is turned off). Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li></ol>') +
+    T('<details class="ap-det"><summary>Não deu certo? Criar a ligação de outro jeito</summary>') +
+    T('<div class="ap-txt">No app Atalhos, abra <b>Automação</b> (Automation) e toque no <b>+</b>. O que aparece?</div>') +
+    T('<div class="ap-esc"><button type="button" class="aj-btn" data-apcam="a"><span>Uma caixa</span><b>"Descreva um atalho"</b></button><button type="button" class="aj-btn" data-apcam="b"><span>Uma lista</span><b>Hora, Chegar, Carteira…</b></button></div>') +
+    T('<div id="ap-cam-a" class="ap-cam" style="display:none"><div class="ap-cam-t">Com a IA do iPhone</div><ol class="cf-passos ap-passos">') +
+    T('<li>Copie uma das frases abaixo (a do idioma do seu iPhone), cole na caixa e envie.') + fraseBtns + '</li>' +
+    T('<li>Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li>') +
+    T('<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>') +
+    T('<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant) e <b>Valor</b> (Amount), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>') +
+    T('<li>Toque na setinha do bloco do cartão e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>') +
+    T('<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA (iPhones com iOS mais antigo)</div><ol class="cf-passos ap-passos">') +
+    T('<li>Se você instalou o <b>Cartão MinhaCasa</b> e ele aparece com <b>Variável Desconhecida</b> (Unknown Variable) em vermelho, apague-o (segure em cima → Apagar). Mantenha só o atalho <b>MinhaCasa</b>.</li>') +
+    T('<li>Em <b>Automação</b> (Automation), toque no <b>+</b> e escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>') +
+    T('<li>Marque <b>só o seu cartão</b>. Se aparecer, escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>') +
+    T('<li>Toque em <b>Criar Novo Atalho</b> (Create New Shortcut) ou <b>Nova Automação em Branco</b> (New Blank Automation). Não escolha o MinhaCasa direto da lista.</li>') +
+    T('<li>Adicione <b>Texto</b> (Text). Dentro dele, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado, toque na bolinha e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code> (teclas 123 → #+=). Insira de novo a Entrada do Atalho e escolha <b>Valor</b> (Amount).</li>') +
+    T('<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha <b>›</b>, ponha a entrada (Input) como <b>Texto</b> (Text). Toque em <b>OK</b> (Done).</li>') +
+    T('<li>Volte em <b>Automação</b>, toque na automação nova e confira se está em <b>Executar Imediatamente</b> (Run Immediately).</li></ol></div>') +
     '</details>' +
 
     '<div class="ap-parte">4 · Testar</div>' +
-    '<div class="ap-txt">Pague algo pequeno por aproximação com esse cartão. O MinhaCasa deve abrir com o valor e a loja; confira a categoria e salve. Esta tela passa a mostrar <b>✅ Funcionando</b>.</div>' +
-    '<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin:8px 0 10px"><b>Na primeira vez</b>, o link abre no Safari: se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua ligada.</div>' +
-    '<button class="aj-btn aj-full" id="ap-testar">Ver como fica (simula um pagamento)</button>' +
-    '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
+    T('<div class="ap-txt">Pague algo pequeno por aproximação com esse cartão. O MinhaCasa deve abrir com o valor e a loja; confira a categoria e salve. Esta tela passa a mostrar <b>✅ Funcionando</b>.</div>') +
+    T('<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin:8px 0 10px"><b>Na primeira vez</b>, o link abre no Safari: se pedir, entre na sua conta e marque <b>lembrar a senha da casa</b>. Só funciona com pagamento por <b>aproximação</b> (Apple Pay); cartão físico na maquininha não avisa o iPhone. Depois de atualizar o iOS, confira se a automação continua ligada.</div>') +
+    T('<button class="aj-btn aj-full" id="ap-testar">Ver como fica (simula um pagamento)</button>') +
+    T('<button class="aj-btn aj-full" data-fechar>Fechar</button>'));
   $('ap-copiar').onclick = function () { copiar(url); };
   qsa('#sheet-box [data-apfrase]').forEach(function (b) { b.onclick = function () { copiar(FRASE_IA[b.dataset.apfrase]); }; });
   qsa('#sheet-box [data-apcam]').forEach(function (b) { b.onclick = function () {
@@ -3132,9 +3231,9 @@ function abrirApplePay() {
   }; });
   $('ap-testar').onclick = function () {
     lsSet('mc_pag_ult', '');
-    S.pagPend = { valor: 12.34, loja: 'Teste do atalho', cartao: '', em: Date.now(), teste: true };
+    S.pagPend = { valor: 12.34, loja: T('Teste do atalho'), cartao: '', em: Date.now(), teste: true };
     aplicarPagamento();
-    mostrarToast('📲', 'Assim abre depois de um pagamento. Este é só um teste: toque no ✕ para não salvar.', 4500);
+    mostrarToast('📲', T('Assim abre depois de um pagamento. Este é só um teste: toque no ✕ para não salvar.'), 4500);
   };
 }
 
@@ -3147,11 +3246,11 @@ function renderLimparTeste() {
   box.style.display = '';
   var n = Object.keys(S.raw).length, b = $('aj-limpar-btn');
   b.disabled = !n;
-  b.textContent = !n ? 'Nenhum lançamento para apagar' : _limparConf ? 'Toque de novo para apagar ' + n + ' lançamento' + (n === 1 ? '' : 's') : 'Apagar todos os lançamentos (' + n + ')';
+  b.textContent = !n ? T('Nenhum lançamento para apagar') : _limparConf ? T('Toque de novo para apagar ') + n + T(' lançamento') + (n === 1 ? '' : 's') : T('Apagar todos os lançamentos (') + n + ')';
   b.onclick = function () {
     if (window.MINHACASA_AMBIENTE !== 'teste') return;
     if (!_limparConf) { _limparConf = true; renderLimparTeste(); setTimeout(function () { if (_limparConf) { _limparConf = false; renderLimparTeste(); } }, 5000); return; }
-    _limparConf = false; b.disabled = true; b.textContent = 'Apagando…';
+    _limparConf = false; b.disabled = true; b.textContent = T('Apagando…');
     db.ref('casas/' + S.casa + '/dados/lanc').remove().then(function () {
       S.raw = {}; mostrarToast('🗑️', n + T(' lançamento') + (n === 1 ? '' : 's') + ' apagado' + (n === 1 ? '' : 's')); renderLogo();
     }, function (e) { mostrarToast('⚠️', T('Erro ao apagar (') + ((e && e.code) || e) + ')'); renderLimparTeste(); });
