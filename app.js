@@ -26,9 +26,12 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.33.1';
+var VERSAO = '2.33.2';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.33.2', d: '20/11/2026', itens: [
+    '<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como "Juros / Parcelas". O "% utilizado" dos cartões também foi traduzido.'
+  ] },
   { v: '2.33.1', d: '20/11/2026', itens: [
     'O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.'
   ] },
@@ -250,7 +253,49 @@ var PAD_CAT = {
   'Hospedagem': ['Lodging', 'Hébergement'], 'Alimentação': ['Food', 'Repas'], 'Transporte': ['Transportation', 'Transport'], 'Passeios': ['Outings', 'Sorties'],
   'Categoria': ['Category', 'Catégorie'], 'Sub': ['Sub', 'Sous']
 };
-function chaveNome(s) { return String(s || '').trim().toLowerCase(); }
+// Nomes comuns que as famílias costumam criar (não são padrão do app, mas têm tradução óbvia)
+var COMUNS = {
+  'Carros': ['Cars', 'Voitures'], 'Veículo': ['Vehicle', 'Véhicule'], 'Veículos': ['Vehicles', 'Véhicules'], 'Moto': ['Motorcycle', 'Moto'],
+  'Academia': ['Gym', 'Gym'], 'Ginástica': ['Gym', 'Gym'], 'Esportes': ['Sports', 'Sports'], 'Esporte': ['Sports', 'Sports'],
+  'Juros': ['Interest', 'Intérêts'], 'Parcelamentos': ['Installments', 'Versements'], 'Parcelamento': ['Installments', 'Versements'], 'Parcelas': ['Installments', 'Versements'],
+  'Juros Parcelamentos': ['Interest & installments', 'Intérêts et versements'], 'Juros e Parcelamentos': ['Interest & installments', 'Intérêts et versements'],
+  'Empréstimo': ['Loan', 'Prêt'], 'Empréstimos': ['Loans', 'Prêts'], 'Dívidas': ['Debts', 'Dettes'], 'Cartão de crédito': ['Credit card', 'Carte de crédit'], 'Cartões': ['Cards', 'Cartes'],
+  'Taxas': ['Fees', 'Frais'], 'Tarifas': ['Fees', 'Frais'], 'Tarifas bancárias': ['Bank fees', 'Frais bancaires'], 'Impostos': ['Taxes', 'Impôts'], 'Multas': ['Fines', 'Amendes'],
+  'Investimentos': ['Investments', 'Placements'], 'Poupança': ['Savings', 'Épargne'], 'Reserva': ['Savings', 'Épargne'],
+  'Educação': ['Education', 'Éducation'], 'Escola': ['School', 'École'], 'Faculdade': ['College', 'Université'], 'Cursos': ['Courses', 'Cours'], 'Curso': ['Course', 'Cours'], 'Livros': ['Books', 'Livres'],
+  'Filhos': ['Kids', 'Enfants'], 'Crianças': ['Kids', 'Enfants'], 'Bebê': ['Baby', 'Bébé'], 'Babá': ['Babysitter', 'Gardienne'], 'Creche': ['Daycare', 'Garderie'], 'Mesada': ['Allowance', 'Argent de poche'],
+  'Presentes': ['Gifts', 'Cadeaux'], 'Doações': ['Donations', 'Dons'], 'Igreja': ['Church', 'Église'], 'Dízimo': ['Tithe', 'Dîme'], 'Ofertas': ['Offerings', 'Offrandes'],
+  'Beleza': ['Beauty', 'Beauté'], 'Cabeleireiro': ['Hair salon', 'Coiffeur'], 'Barbeiro': ['Barber', 'Barbier'], 'Cuidados pessoais': ['Personal care', 'Soins personnels'], 'Higiene': ['Hygiene', 'Hygiène'],
+  'Limpeza': ['Cleaning', 'Ménage'], 'Diarista': ['Housekeeper', 'Femme de ménage'], 'Lavanderia': ['Laundry', 'Buanderie'], 'Gás': ['Gas', 'Gaz'], 'Condomínio': ['Condo fees', 'Frais de copropriété'],
+  'Aluguel': ['Rent', 'Loyer'], 'Financiamento': ['Mortgage', 'Hypothèque'], 'IPTU': ['Property tax', 'Taxe foncière'], 'Reforma': ['Renovation', 'Rénovation'], 'Móveis': ['Furniture', 'Meubles'],
+  'Decoração': ['Decor', 'Décoration'], 'Jardim': ['Garden', 'Jardin'], 'Eletrônicos': ['Electronics', 'Électronique'], 'Telefone': ['Phone', 'Téléphone'], 'Celular': ['Cell phone', 'Cellulaire'], 'Internet': ['Internet', 'Internet'],
+  'Gasolina': ['Gas', 'Essence'], 'Pedágio': ['Tolls', 'Péages'], 'Lavagem': ['Car wash', 'Lave-auto'], 'Uber': ['Uber', 'Uber'], 'Táxi': ['Taxi', 'Taxi'], 'Ônibus': ['Bus', 'Autobus'],
+  'Transporte público': ['Public transit', 'Transport en commun'], 'Seguro do carro': ['Car insurance', 'Assurance auto'], 'Seguro de vida': ['Life insurance', 'Assurance vie'],
+  'Médico': ['Doctor', 'Médecin'], 'Consultas': ['Appointments', 'Rendez-vous'], 'Dentista': ['Dentist', 'Dentiste'], 'Exames': ['Medical tests', 'Examens'], 'Remédios': ['Medication', 'Médicaments'],
+  'Plano de saúde': ['Health insurance', 'Assurance santé'], 'Ótica': ['Eyewear', 'Optique'], 'Óculos': ['Glasses', 'Lunettes'], 'Vestuário': ['Clothing', 'Vêtements'], 'Calçados': ['Shoes', 'Chaussures'],
+  'Ração': ['Pet food', 'Nourriture pour animaux'], 'Veterinário': ['Vet', 'Vétérinaire'], 'Pet shop': ['Pet store', 'Animalerie'], 'Banho e tosa': ['Grooming', 'Toilettage'],
+  'Férias': ['Vacation', 'Vacances'], 'Passagens': ['Tickets', 'Billets'], 'Hotel': ['Hotel', 'Hôtel'], 'Viagem': ['Travel', 'Voyage'],
+  'Delivery': ['Delivery', 'Livraison'], 'Lanches': ['Snacks', 'Collations'], 'Café': ['Coffee', 'Café'], 'Bares': ['Bars', 'Bars'], 'Bebidas': ['Drinks', 'Boissons'], 'Cinema': ['Movies', 'Cinéma'],
+  'Hobbies': ['Hobbies', 'Loisirs'], 'Streaming': ['Streaming', 'Streaming'], 'Assinatura': ['Subscription', 'Abonnement'], 'Supermercados': ['Groceries', 'Épicerie'], 'Mercados': ['Groceries', 'Épicerie'],
+  'Restaurante': ['Restaurant', 'Restaurant'], 'Comida': ['Food', 'Nourriture'], 'Salário': ['Salary', 'Salaire'], 'Renda': ['Income', 'Revenu'], 'Correios': ['Postage', 'Poste'],
+  'Contas': ['Bills', 'Factures'], 'Contas da casa': ['Household bills', 'Factures de la maison'], 'Despesas fixas': ['Fixed expenses', 'Dépenses fixes'], 'Despesas': ['Expenses', 'Dépenses'],
+  'Pessoal': ['Personal', 'Personnel'], 'Trabalho': ['Work', 'Travail'], 'Família': ['Family', 'Famille'], 'Emergência': ['Emergency', 'Urgence'], 'Emergências': ['Emergencies', 'Urgences'], 'Extras': ['Extras', 'Extras']
+};
+Object.keys(COMUNS).forEach(function (k) { if (!PAD_CAT[k]) PAD_CAT[k] = COMUNS[k]; });
+function chaveNome(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+// Nome composto de palavras conhecidas ("Juros / Parcelas", "Seguro e Manutenção"): traduz palavra por palavra
+function trPalavras(nome, L) {
+  L = L || I18N.lang; if (L === 'pt') return null;
+  var partes = String(nome || '').trim().split(/(\s*\/\s*|\s*&\s*|\s*,\s*|\s+-\s+|\s+e\s+)/i), ok = 0, out = [];
+  if (partes.length < 3) return null;
+  for (var i = 0; i < partes.length; i++) {
+    var p = partes[i];
+    if (i % 2) { out.push(/^\s*e\s*$/i.test(p) ? (L === 'en' ? ' & ' : ' et ') : p); continue; }
+    var k = PAD_IDX[chaveNome(p)]; if (!k) return null;
+    out.push(PAD_CAT[k][L === 'en' ? 0 : 1]); ok++;
+  }
+  return ok ? out.join('') : null;
+}
 var PAD_IDX = (function () {
   var m = {};
   Object.keys(PAD_CAT).forEach(function (pt) { [pt, PAD_CAT[pt][0], PAD_CAT[pt][1]].forEach(function (v) { var k = chaveNome(v); if (!m[k]) m[k] = pt; }); });
@@ -262,7 +307,7 @@ function nomeVis(o) {
   var tr = o.tr, L = I18N.lang;
   if (tr && tr[L]) return tr[L];
   var p = PAD_IDX[chaveNome(o.nome)];
-  return p ? padT(p) : o.nome;
+  return p ? padT(p) : (trPalavras(o.nome) || o.nome);
 }
 // lista em ordem alfabética pelo nome que a pessoa vê
 function ordenarVis(arr) { return arr.slice().sort(function (a, b) { return String(nomeVis(a)).localeCompare(String(nomeVis(b)), I18N.locale, { sensitivity: 'base', numeric: true }); }); }
@@ -559,7 +604,7 @@ function renderizar() {
         T('<div class="cat-sub-orc">Orç: ') + formatar(orc) + '</div></div>' +
         T('<div style="text-align:right"><div class="cat-rotulo">Disponível</div><div class="cat-valor" style="color:') + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(restC) + '</div></div></div>' +
         '<div class="cat-barra-fundo" style="display:block"><div class="cat-barra-fill" style="width:' + pC + '%;background:' + corB + '"></div></div>' +
-        '<div class="cat-orc" style="color:' + (restC < 0 ? '#f44336' : '#bbb') + '">' + pC.toFixed(0) + '% utilizado</div>';
+        '<div class="cat-orc" style="color:' + (restC < 0 ? '#f44336' : '#bbb') + '">' + pC.toFixed(0) + T('% utilizado') + '</div>';
     } else {
       corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + T('</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>');
     }
@@ -1289,7 +1334,7 @@ function renderizarRelcat() {
   var hero = '<div class="card" style="margin-bottom:10px"><div class="relcat-hero"><div class="relcat-hero-val" style="color:' + cor + '">' + formatar(total) + '</div>' +
     '<div class="relcat-hero-sub">' + (c.id === PARC ? lista.length + T(' planos · compromisso mensal') : lista.length + T(' lançamentos · ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim)) + '</div></div>' +
     (orc > 0 ? '<div class="orc-barra-fundo" style="height:10px;margin-top:8px"><div class="orc-barra-fill" style="width:' + pctOrc.toFixed(1) + '%;background:' + corB + '"></div></div>' +
-      T('<div class="relcat-orc-row"><span style="color:#6b7280">Orçado: ') + formatar(orc) + '</span><span style="color:' + corB + ';font-weight:800">' + pctOrc.toFixed(1) + '% utilizado</span>' +
+      T('<div class="relcat-orc-row"><span style="color:#6b7280">Orçado: ') + formatar(orc) + '</span><span style="color:' + corB + ';font-weight:800">' + pctOrc.toFixed(1) + T('% utilizado') + '</span>' +
       '<span style="color:' + (total > orc ? '#f44336' : '#43a047') + ';font-weight:700">' + (total > orc ? T('Excedeu ') : T('Sobra ')) + formatar(Math.abs(orc - total)) + '</span></div>' : '') + '</div>';
   var stats = '<div class="relcat-stats">' +
     '<div class="relcat-stat"><div class="relcat-stat-val" style="color:' + cor + '">' + formatar(mediaDia) + T('</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>') +
@@ -2534,6 +2579,7 @@ function htmlTraducoes(c) {
     itens.map(function (it) {
       var o = it.o, v = (o.tr && o.tr[L]) || '', ph = o.nome || '', pad = PAD_IDX[chaveNome(o.nome)];
       if (pad && L !== 'pt') ph = PAD_CAT[pad][L === 'en' ? 0 : 1]; else if (pad) ph = pad;
+      else if (L !== 'pt') ph = trPalavras(o.nome, L) || ph;
       return '<div class="ed-tr-linha"><span class="ed-tr-orig">' + (it.k === 'cat' ? '🏷️ ' : '↳ ') + esc(o.nome || '—') + '</span>' +
         '<input class="aj-input" data-tr="' + it.k + '" maxlength="40" lang="' + L + '" value="' + esc(v) + '" placeholder="' + esc(ph) + '"></div>';
     }).join('') + '</details>';
