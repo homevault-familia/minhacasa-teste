@@ -6,9 +6,12 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.31.2';
+var VERSAO = '2.31.3';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.31.3', d: '20/11/2026', itens: [
+    'O aviso de atualização agora mostra tudo o que mudou desde a última vez que você abriu o app, e não só a última mudança. A lista completa fica em Ajustes → Novidades.'
+  ] },
   { v: '2.31.2', d: '20/11/2026', itens: [
     'Subcategorias aparecem sempre em ordem alfabética, de A a Z.',
     'No Relatório completo, um aviso explica quando escolher 3, 6 ou 12 ciclos ainda não muda nada (porque ainda não há ciclos fechados suficientes).'
@@ -2861,16 +2864,22 @@ function cmpVer(a, b) {
 // Mostra o que mudou desde a última versão que este aparelho viu. Primeira vez: só a mais recente.
 function mostrarNovidades(todas) {
   var vista = lsGet('mc_versao_vista');
+  // Correção (20/11/2026): quem já usava o app antes do aviso existir (até a 2.29.7) via só a última novidade.
+  // Uma única vez, mostra tudo o que mudou desde a 2.29.7 para quem já tem dados.
+  if (!todas && !lsGet('mc_nov_desde')) {
+    if (vista || Object.keys(S.raw || {}).length) vista = '2.29.7';
+    if (S.tela === 'inicio' && !$('sheet').classList.contains('on')) lsSet('mc_nov_desde', '1');
+  }
   var lista = todas ? NOVIDADES.slice() : vista ? NOVIDADES.filter(function (n) { return cmpVer(n.v, vista) > 0; }) : NOVIDADES.slice(0, 1);
   if (!todas) {
-    if (vista === VERSAO) return;
+    if (vista && cmpVer(vista, VERSAO) >= 0) return;
     if (S.tela !== 'inicio' || $('sheet').classList.contains('on')) return; // tenta de novo na próxima abertura
     lsSet('mc_versao_vista', VERSAO);
   }
   if (!lista.length) { if (todas) mostrarToast('ℹ️', 'Nenhuma novidade registrada'); return; }
   abrirSheet('<h3>' + (todas ? '🔔 Novidades do app' : '🎉 O app foi atualizado') + '</h3>' +
     (todas ? '' : '<div style="font-size:13px;color:#6b7280;margin-bottom:6px">Você está na versão <b>' + esc(VERSAO) + '</b>. O que mudou:</div>') +
-    lista.slice(0, todas ? 20 : 6).map(function (n) {
+    lista.slice(0, todas ? 20 : 8).map(function (n) {
       return '<div class="nov-bloco"><div class="nov-cab">Versão ' + esc(n.v) + ' · ' + esc(n.d) + '</div><ul class="nov-lista">' + n.itens.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
     }).join('') +
     '<button class="aj-btn pri aj-full" data-fechar>Ok</button>');
