@@ -6,9 +6,11 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.31.0';
+var VERSAO = '2.31.1';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.31.1', d: '20/11/2026', itens: [
+    '<b>🏦 Banco sem leitura própria</b> (ex.: Desjardins): a tela de conferência explica, passo a passo, como o app pergunta as colunas uma vez e guarda a resposta.'] },
   { v: '2.31.0', d: '20/11/2026', itens: [
     '<b>🏦 Vários cartões de uma vez</b>: em Conferir com o banco, escolha todos os arquivos juntos (um por cartão ou conta, de bancos diferentes). O app reconhece o banco de cada um e mostra de qual arquivo veio cada lançamento.',
     '<b>🏦 Tela da conferência em passos</b>, com ? em cada grupo do resultado explicando o que fazer.'] },
