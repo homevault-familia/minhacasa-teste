@@ -6,7 +6,21 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.29.6';
+var VERSAO = '2.30.0';
+// Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
+var NOVIDADES = [
+  { v: '2.30.0', d: '20/11/2026', itens: [
+    '<b>❓ Botões de ajuda</b>: na Projeção e nos relatórios, toque no <b>?</b> ao lado de um número ou título para ver o que ele quer dizer.',
+    '<b>🔔 Novidades</b>: quando o app for atualizado, esta janela mostra o que mudou. Para rever, vá em Ajustes → Novidades.'] },
+  { v: '2.29.5', d: '19/11/2026', itens: [
+    '<b>📲 Lançar ao pagar com Apple Pay</b>: pagou por aproximação com o iPhone ou o relógio, o app abre com a loja e o valor. Configure em Ajustes → Lançar ao pagar.'] },
+  { v: '2.28.3', d: '16/11/2026', itens: [
+    '<b>↩ Devoluções</b>: em Registrar, escolha Devolução e a compra de origem. A devolução aparece em verde e desconta da categoria.'] },
+  { v: '2.27.4', d: '16/11/2026', itens: [
+    '<b>🏦 Conferir com o banco</b>: agora dá para corrigir a data quando o valor bate e só a data é diferente.'] },
+  { v: '2.24.0', d: '16/11/2026', itens: [
+    '<b>🏦 Conferir com o banco</b>: carregue o extrato do banco (OFX ou CSV) e veja o que falta lançar, o que tem valor diferente e o que está certo. Em Ajustes.'] }
+];
 var PBKDF2_ITER = 310000;
 var VERIF_TEXTO = 'HOMEVAULT-OK';
 var PARC = 'parcelados';
@@ -1347,16 +1361,16 @@ function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
     var vem = PF.lugares.filter(function (s) { return s.esperV >= 5; }).slice(0, 5);
     if (PF.rest > 0 && vem.length) {
       var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
-      h += '<div class="proj-freq-tit">O que ainda deve entrar (pelo seu costume)</div>' + vem.map(function (s) {
+      h += '<div class="proj-freq-tit">O que ainda deve entrar (pelo seu costume)' + aj('proj-vem') + '</div>' + vem.map(function (s) {
         return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>costuma ir ' + vezesF(s.freq) + ' por período, ' + formatar(s.ticket) + ' cada · neste período: ' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + ' · nos ' + PF.rest + (PF.rest === 1 ? ' dia' : ' dias') + ' que faltam: ' + idasFaltamF(s.esperN) + '</small></span><span>' + formatar(s.esperV) + '</span></div>'; }).join('') +
         '<div style="font-size:10.5px;opacity:.55;margin-top:6px;line-height:1.4">Conta só as idas que ainda cabem no seu costume. ' + (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + formatar(ex.ticket) + ' ≈ ' + formatar(ex.esperV) + '. ' : '') + 'Se você não for, fecha abaixo disso.</div>';
     }
     var mais = PF.lugares.filter(function (s) { return s.n >= 2 && s.n >= s.freq + 1; }).map(function (s) { s.extraV = s.v - s.freq * s.ticket; return s; })
       .filter(function (s) { return s.extraV >= 10; }).sort(function (a, b) { return b.extraV - a.extraV; }).slice(0, 5);
-    if (mais.length) h += '<div class="proj-freq-tit">Neste período você foi mais vezes que de costume</div>' + mais.map(function (s) {
+    if (mais.length) h += '<div class="proj-freq-tit">Neste período você foi mais vezes que de costume' + aj('proj-mais') + '</div>' + mais.map(function (s) {
       return '<div class="proj-freq-row"><span>' + nomeL(s) + '<small>' + s.n + ' vezes, ' + formatar(s.v) + ' · você costuma ir ' + vezesF(s.freq) + ' por período</small></span><span style="color:#f87171">+ ' + formatar(s.extraV) + '</span></div>'; }).join('');
     var novos = PF.lugares.filter(function (s) { return !s.nH && s.v >= 50; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
-    if (novos.length) h += '<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)</div>' + novos.map(function (s) {
+    if (novos.length) h += '<div class="proj-freq-tit">Gastos que não aparecem antes (não projetados de novo)' + aj('proj-novos') + '</div>' + novos.map(function (s) {
       return '<div class="proj-freq-row"><span>' + nomeL(s) + '</span><span>' + formatar(s.v) + '</span></div>'; }).join('');
   }
   el.innerHTML = h;
@@ -1397,7 +1411,7 @@ function renderizarTermometroDivida() {
   var saldoHoje = planos.reduce(function (s, p) { return s + (p.total - p.pagas) * p.valorParc; }, 0);
   var totalOrig = planos.reduce(function (s, p) { return s + p.total * p.valorParc; }, 0), pctPago = totalOrig > 0 ? (totalOrig - saldoHoje) / totalOrig * 100 : 0;
   var base = new Date(); base.setDate(1);
-  var html = '<div class="card" style="margin-bottom:14px;border-left:4px solid #dc2626"><div class="card-titulo" style="color:#7f1d1d">💳 Termômetro da Dívida</div>' +
+  var html = '<div class="card" style="margin-bottom:14px;border-left:4px solid #dc2626"><div class="card-titulo" style="color:#7f1d1d">💳 Termômetro da Dívida' + aj('termometro') + '</div>' +
     '<div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Total ainda a pagar em todos os planos ativos</div>' +
     '<div class="termo-total-row"><div class="termo-total-val">' + formatar(saldoHoje) + '</div><div class="termo-total-pago"><span style="color:#16a34a;font-weight:800">' + pctPago.toFixed(0) + '%</span> já pago<br><span style="font-size:10px">Total original: ' + formatar(totalOrig) + '</span></div></div>' +
     '<div class="termo-prog-bg"><div class="termo-prog-fill" style="width:' + pctPago.toFixed(1) + '%"></div></div>';
@@ -1425,7 +1439,7 @@ function renderizarProjecaoParcelados() {
     maxBar = Math.max(maxBar, tot);
     linhas.push({ m: dt.getMonth(), a: dt.getFullYear(), tot: tot, quit: quit, hoje: i === 0 });
   }
-  el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-titulo" style="color:#5b21b6">📦 Projeção de Parcelados — 24 meses</div><div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Compromisso mensal com planos ativos</div>' +
+  el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-titulo" style="color:#5b21b6">📦 Projeção de Parcelados — 24 meses' + aj('parcelados') + '</div><div style="font-size:.72rem;color:#6b7280;margin-bottom:10px">Compromisso mensal com planos ativos</div>' +
     linhas.filter(function (l) { return l.tot > 0 || l.hoje; }).map(function (l) {
       var badge = (l.hoje ? '<span class="parc-proj-badge parc-proj-hoje">hoje</span>' : '') + l.quit.map(function (d) { return ' <span class="parc-proj-badge parc-proj-fim">✓ ' + esc(d) + '</span>'; }).join('');
       return '<div class="parc-proj-row"><div class="parc-proj-mes">' + MESES_C[l.m] + '/' + String(l.a).slice(2) + '</div><div class="parc-proj-barra-bg"><div class="parc-proj-barra-fill" style="width:' + (maxBar ? l.tot / maxBar * 100 : 0).toFixed(1) + '%"></div></div>' +
@@ -1650,12 +1664,12 @@ function renderizarSemana() {
   var dica = '';
   if (!r || !r.n) { el.innerHTML = dica + '<div class="vazio">📭 Nenhum gasto ' + (atual ? 'nesta semana até agora' : 'nesta semana') + '.<br><span style="font-size:12px">' + (atual ? 'Os lançamentos de segunda até hoje aparecem aqui.' : 'Esta tela mostra a semana fechada (segunda a domingo).') + '</span></div>'; return; }
   var st = statusSemana(r), cor = corStatus(st);
-  var ref = r.alvoSem > 0 ? (r.parcial ? 'Alvo até hoje pelo limite: <b>' : 'Alvo da semana pelo limite: <b>') + m0(r.alvoSem) + '</b>' : 'Sem limite definido (defina em Início → Orçamento)';
+  var ref = r.alvoSem > 0 ? (r.parcial ? 'Alvo até hoje pelo limite' : 'Alvo da semana pelo limite') + aj('sem-alvo') + ': <b>' + m0(r.alvoSem) + '</b>' : 'Sem limite definido (defina em Início → Orçamento)';
   var resumo = '<div class="card sem-st" style="border-left-color:' + cor + '">' +
     '<div class="card-titulo">' + (r.parcial ? 'Semana em andamento · até hoje (' + r.diasDec + ' de 7 dias)' : 'Resumo da semana') + '</div>' +
     '<div style="font-size:30px;font-weight:900;color:' + cor + ';letter-spacing:-1px">' + m0(r.tot) + '</div>' +
     '<div style="font-size:13px;color:#6b7280;margin-top:2px">' + r.n + ' lançamentos · ' + r.diasGasto + ' de ' + r.diasDec + ' dias com gasto</div>' +
-    '<div style="font-size:13px;color:#374151;margin-top:8px">' + ref + '<br>Sua média: <b>' + m0(r.normalTot) + '</b> ' + (r.parcial ? 'até este dia da semana' : 'por semana') + ' <span style="color:#6b7280">(média das ' + r.semBase + ' semana' + (r.semBase > 1 ? 's' : '') + ' anteriores)</span></div>' +
+    '<div style="font-size:13px;color:#374151;margin-top:8px">' + ref + '<br>Sua média' + aj('sem-media') + ': <b>' + m0(r.normalTot) + '</b> ' + (r.parcial ? 'até este dia da semana' : 'por semana') + ' <span style="color:#6b7280">(média das ' + r.semBase + ' semana' + (r.semBase > 1 ? 's' : '') + ' anteriores)</span></div>' +
     (r.parcial ? '<div style="font-size:11.5px;color:#6b7280;margin-top:8px">A semana ainda não terminou. Média e alvo são proporcionais aos ' + r.diasDec + ' dias já passados. O relatório completo sai na segunda-feira.</div>' : '') +
     (r.poucoHist ? '<div class="alerta atencao" style="margin:10px 0 0">Ainda há pouco histórico. A média fica mais precisa depois de algumas semanas de lançamentos.</div>' : '') + '</div>';
   var catsH = r.cats.filter(function (c) { return c.orcSem > 0; }).map(function (c) {
@@ -1664,18 +1678,18 @@ function renderizarSemana() {
       '<span><b style="color:' + (c.exc > 0 ? '#dc2626' : '#16a34a') + '">' + m0(c.sem) + '</b> <span style="color:#6b7280">/ ' + m0(c.orcSem) + '</span></span></div>' +
       '<div class="orc-barra-fundo" style="margin-top:4px"><div class="orc-barra-fill" style="width:' + pct.toFixed(1) + '%;background:' + corB + '"></div></div></div>';
   }).join('');
-  var catsCard = catsH ? '<div class="card"><div class="card-titulo">Categorias × orçamento semanal</div>' + catsH +
+  var catsCard = catsH ? '<div class="card"><div class="card-titulo">Categorias × orçamento semanal' + aj('sem-cats') + '</div>' + catsH +
     '<div style="font-size:11px;color:#6b7280;margin-top:6px">Orçamento semanal = orçamento do período ÷ dias do período × 7' + (r.parcial ? ', proporcional aos dias já passados' : '') + '</div></div>' : '';
   var thMed = r.parcial ? 'Média até este dia' : 'Média por semana';
   var linhas = r.vaz.length ? r.vaz.map(function (x) {
     return '<tr><td><b>' + esc(x.nome) + '</b><br><span style="font-size:11px;color:#6b7280">' + esc(NOME(x.cat)) + ' · nas ' + r.semBase + ' semanas antes: ' + semHist(x, r.semBase) + '</span></td><td>' + m0(x.sem) + '<br><span style="font-size:11px;color:#6b7280">' + x.n + (x.n === 1 ? ' compra' : ' compras') + '</span></td><td>' + m0(x.normal) + '</td><td style="color:#dc2626;font-weight:800">+' + m0(x.exc) + '</td></tr>';
   }).join('') : '<tr><td colspan="4" style="color:#16a34a">Nenhum lugar passou da sua média. 👏</td></tr>';
-  var vazCard = '<div class="card"><div class="card-titulo">Onde mais vazou</div>' +
+  var vazCard = '<div class="card"><div class="card-titulo">Onde mais vazou' + aj('sem-vazou') + '</div>' +
     '<div style="font-size:11.5px;color:#6b7280;margin:-4px 0 8px">"Vazou" = gastou mais do que a sua média por semana naquele lugar (' + r.semBase + ' semanas anteriores)</div>' +
     (r.esporSem.length ? '<div style="font-size:11.5px;color:#374151;margin:0 0 8px">Compras esporádicas na semana (não entram em "vazou"): ' + r.esporSem.map(function (x) { return '<b>' + esc(x.nome) + '</b> ' + m0(x.sem); }).join(' · ') + '</div>' : '') +
     '<div style="overflow-x:auto"><table class="sem-tab"><thead><tr><th>Onde</th><th>Esta semana</th><th>' + thMed + '</th><th>A mais</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
     '<div style="font-size:11px;color:#6b7280;margin-top:6px">Média por semana = o que você gastou ali nas ' + r.semBase + ' semanas anteriores ÷ ' + r.semBase + '.' + ' Roupas, calçados, presentes, eletrônicos e móveis não entram aqui. O que você não compra quase toda semana só aparece se a semana passou do que você costuma gastar numa semana em que compra ali.</div></div>';
-  var acoesCard = '<div class="card" style="border-left:5px solid #7c3aed"><div class="card-titulo">✅ O que fazer nesta semana</div><ol class="sem-acoes">' +
+  var acoesCard = '<div class="card" style="border-left:5px solid #7c3aed"><div class="card-titulo">✅ O que fazer nesta semana' + aj('sem-acoes') + '</div><ol class="sem-acoes">' +
     r.acoes.map(function (a) { return '<li>' + a + '</li>'; }).join('') + '</ol>' +
     '<div style="display:flex;gap:8px;margin-top:12px"><button id="sem-pdf" style="flex:1;padding:12px 8px;border:0;border-radius:12px;background:#1d4ed8;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDF</button>' +
     '<button class="btn-whatsapp" id="sem-wa" style="flex:1;margin:0">📱 WhatsApp</button></div></div>';
@@ -1721,7 +1735,7 @@ function exportarPDFSemana(r) {
 // ═════════════════════════ RELATÓRIO COMPLETO (vários ciclos) ═════════════════════════
 // Mesmo relatório do Gastos da Casa ("Onde o orçamento está quebrando"), com filtros de período e PDF (14/11/2026).
 // Abre numa janela própria com os dados já decifrados deste aparelho; nada é enviado para fora.
-var REL_CSS = ":root{\n  --bg:#f6f7f9; --s1:#fff; --line:#e3e6ea; --grid:#eceef1;\n  --tx:#14171c; --tx2:#4b5361; --tx3:#7a8392;\n    --bad:#c23a2b; --warn:#b26b00; --good:#1f7a3a; --acc:#1d4ed8;\n  --mono:ui-monospace,\"SF Mono\",Menlo,Consolas,monospace;\n}\n*{box-sizing:border-box}\nhtml,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,system-ui,\"Segoe UI\",Roboto,sans-serif;-webkit-text-size-adjust:100%}\n.wrap{max-width:1040px;margin:0 auto;padding:18px 16px 40px}\na{color:var(--acc)}\n.voltar{display:inline-block;margin-bottom:10px;font-size:13px;text-decoration:none;font-weight:600}\nheader.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--tx);padding-bottom:10px;margin-bottom:12px}\n.kick{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}\nh1{font-size:26px;margin:6px 0 0;letter-spacing:-.02em}\n.stamp{font:12px/1.5 var(--mono);color:var(--tx2);text-align:right}\n.barra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}\n.barra .fonte{font-size:12px;color:var(--tx3);flex:1;min-width:200px}\n.periodo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 14px}\n.periodo .plab{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-right:4px}\n.periodo .pb{font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--tx2);cursor:pointer;min-height:36px}\n.periodo .pb[aria-pressed=\"true\"]{background:var(--tx);border-color:var(--tx);color:#fff}\n.periodo .pcustom[hidden]{display:none}\n.periodo .pcustom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--tx2)}\n.periodo input[type=date]{font:13px var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--tx);min-height:36px}\n.periodo .btn{min-height:36px;padding:6px 14px}\n.btn{font:inherit;font-weight:700;font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid var(--tx);background:var(--tx);color:#fff;cursor:pointer;min-height:40px}\n.btn.sec{background:transparent;color:var(--tx)}\n.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:start}\n.card{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;grid-column:span 12}\n.c6{grid-column:span 6}\n@media(max-width:760px){.c6{grid-column:span 12}}\n.card h2{font-size:17px;margin:0;letter-spacing:-.01em}\n.ch{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}\n.note{font-size:12px;color:var(--tx3)}\n.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--s1);overflow:hidden}\n.kpi{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}\n.kpi .l{font-size:12px;color:var(--tx2)}\n.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:3px 0 2px;white-space:nowrap}\n.kpi .s{font:11px/1.35 var(--mono);color:var(--tx3)}\n@media(max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi .v{font-size:20px}}\n.bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}\n.alvo{border-left:4px solid var(--bad)}\n.alvo ol{margin:6px 0 0;padding-left:20px}\n.alvo li{margin:7px 0}\n.alvo li b.v{white-space:nowrap}\n.ok-msg{border-left:4px solid var(--good)}\ntable{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}\nth,td{padding:6px 7px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}\nth{font:600 10px/1.25 var(--mono);color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:normal;vertical-align:bottom}\ntd:first-child,th:first-child{text-align:left}\ntd.t{text-align:left;white-space:normal}\ntr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}\n.tw{overflow-x:auto}\n.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}\n.tag{font:600 10px/1 var(--mono);padding:2px 5px;border-radius:4px;border:1px solid var(--line);color:var(--tx3);margin-left:5px;vertical-align:1px}\n.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--tx2);margin:2px 0 6px}\n.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}\nsvg{display:block;width:100%;height:auto;overflow:visible}\nsvg text{font-family:var(--mono);font-size:10.5px;fill:var(--tx3)}\nsvg .lbl{fill:var(--tx);font-weight:600}\n.vazio{padding:30px 10px;text-align:center;color:var(--tx3)}\n.hit{cursor:default}\n.bul{display:grid;grid-template-columns:minmax(0,30%) minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--grid)}\n.bul:last-child{border-bottom:0}\n.bul .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.bul .trk{position:relative;height:16px;background:var(--grid);border-radius:4px}\n.bul .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}\n.bul .orc{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tx)}\n.bul .vv{font:12px var(--mono);text-align:right;white-space:nowrap}\n.foot{font-size:11.5px;color:var(--tx3);margin-top:16px;line-height:1.5}\n@media print{\n  @page{size:A4;margin:11mm}\n  html,body{background:#fff}\n  .wrap{max-width:none;padding:0}\n  .barra,.periodo{display:none!important}\n  .grid,.kpis{display:block!important}\n  .card,.card.c6,.card.longa{display:block;width:auto;margin:0 0 10px;border-color:#ccc;break-inside:auto;page-break-inside:auto}\n  .kpis{border:1px solid #ccc}\n  .kpi{display:inline-block;width:24.6%;vertical-align:top;border-bottom:0}\n  svg,tr,li,.bul{break-inside:avoid;page-break-inside:avoid}\n  .ch,h2{break-after:avoid;page-break-after:avoid}\n  .legend span{display:inline-block;margin-right:12px}\n  thead{display:table-header-group}\n  .tw{overflow:visible}\n  table{font-size:10.5px}\n  th,td{padding:4px 4px}\n  th{font-size:8.5px}\n}";
+var REL_CSS = ":root{\n  --bg:#f6f7f9; --s1:#fff; --line:#e3e6ea; --grid:#eceef1;\n  --tx:#14171c; --tx2:#4b5361; --tx3:#7a8392;\n    --bad:#c23a2b; --warn:#b26b00; --good:#1f7a3a; --acc:#1d4ed8;\n  --mono:ui-monospace,\"SF Mono\",Menlo,Consolas,monospace;\n}\n*{box-sizing:border-box}\nhtml,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,system-ui,\"Segoe UI\",Roboto,sans-serif;-webkit-text-size-adjust:100%}\n.wrap{max-width:1040px;margin:0 auto;padding:18px 16px 40px}\na{color:var(--acc)}\n.voltar{display:inline-block;margin-bottom:10px;font-size:13px;text-decoration:none;font-weight:600}\nheader.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--tx);padding-bottom:10px;margin-bottom:12px}\n.kick{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}\nh1{font-size:26px;margin:6px 0 0;letter-spacing:-.02em}\n.stamp{font:12px/1.5 var(--mono);color:var(--tx2);text-align:right}\n.barra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}\n.barra .fonte{font-size:12px;color:var(--tx3);flex:1;min-width:200px}\n.periodo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 14px}\n.periodo .plab{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-right:4px}\n.periodo .pb{font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--tx2);cursor:pointer;min-height:36px}\n.periodo .pb[aria-pressed=\"true\"]{background:var(--tx);border-color:var(--tx);color:#fff}\n.periodo .pcustom[hidden]{display:none}\n.periodo .pcustom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--tx2)}\n.periodo input[type=date]{font:13px var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--tx);min-height:36px}\n.periodo .btn{min-height:36px;padding:6px 14px}\n.btn{font:inherit;font-weight:700;font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid var(--tx);background:var(--tx);color:#fff;cursor:pointer;min-height:40px}\n.btn.sec{background:transparent;color:var(--tx)}\n.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:start}\n.card{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;grid-column:span 12}\n.c6{grid-column:span 6}\n@media(max-width:760px){.c6{grid-column:span 12}}\n.card h2{font-size:17px;margin:0;letter-spacing:-.01em}\n.ch{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}\n.note{font-size:12px;color:var(--tx3)}\n.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--s1);overflow:hidden}\n.kpi{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}\n.kpi .l{font-size:12px;color:var(--tx2)}\n.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:3px 0 2px;white-space:nowrap}\n.kpi .s{font:11px/1.35 var(--mono);color:var(--tx3)}\n@media(max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi .v{font-size:20px}}\n.bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}\n.alvo{border-left:4px solid var(--bad)}\n.alvo ol{margin:6px 0 0;padding-left:20px}\n.alvo li{margin:7px 0}\n.alvo li b.v{white-space:nowrap}\n.ok-msg{border-left:4px solid var(--good)}\ntable{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}\nth,td{padding:6px 7px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}\nth{font:600 10px/1.25 var(--mono);color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:normal;vertical-align:bottom}\ntd:first-child,th:first-child{text-align:left}\ntd.t{text-align:left;white-space:normal}\ntr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}\n.tw{overflow-x:auto}\n.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}\n.tag{font:600 10px/1 var(--mono);padding:2px 5px;border-radius:4px;border:1px solid var(--line);color:var(--tx3);margin-left:5px;vertical-align:1px}\n.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--tx2);margin:2px 0 6px}\n.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}\nsvg{display:block;width:100%;height:auto;overflow:visible}\nsvg text{font-family:var(--mono);font-size:10.5px;fill:var(--tx3)}\nsvg .lbl{fill:var(--tx);font-weight:600}\n.vazio{padding:30px 10px;text-align:center;color:var(--tx3)}\n.hit{cursor:default}\n.bul{display:grid;grid-template-columns:minmax(0,30%) minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--grid)}\n.bul:last-child{border-bottom:0}\n.bul .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.bul .trk{position:relative;height:16px;background:var(--grid);border-radius:4px}\n.bul .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}\n.bul .orc{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tx)}\n.bul .vv{font:12px var(--mono);text-align:right;white-space:nowrap}\n.q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:5px;border-radius:50%;border:1.5px solid var(--acc);background:#eff6ff;color:var(--acc);font:800 11px/1 -apple-system,system-ui,sans-serif;cursor:pointer;vertical-align:2px;padding:0;text-transform:none;letter-spacing:0}\n#ajp{position:fixed;left:12px;right:12px;bottom:12px;max-width:560px;margin:0 auto;background:#14171c;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:50;font-size:14px;line-height:1.5}\n#ajp b:first-child{display:block;font-size:15px;margin-bottom:4px}\n#ajp .btn{margin-top:10px;background:#fff;color:#14171c;border-color:#fff}\n.foot{font-size:11.5px;color:var(--tx3);margin-top:16px;line-height:1.5}\n@media print{\n  @page{size:A4;margin:11mm}\n  html,body{background:#fff}\n  .wrap{max-width:none;padding:0}\n  .barra,.periodo,.q,#ajp{display:none!important}\n  .grid,.kpis{display:block!important}\n  .card,.card.c6,.card.longa{display:block;width:auto;margin:0 0 10px;border-color:#ccc;break-inside:auto;page-break-inside:auto}\n  .kpis{border:1px solid #ccc}\n  .kpi{display:inline-block;width:24.6%;vertical-align:top;border-bottom:0}\n  svg,tr,li,.bul{break-inside:avoid;page-break-inside:avoid}\n  .ch,h2{break-after:avoid;page-break-after:avoid}\n  .legend span{display:inline-block;margin-right:12px}\n  thead{display:table-header-group}\n  .tw{overflow:visible}\n  table{font-size:10.5px}\n  th,td{padding:4px 4px}\n  th{font-size:8.5px}\n}";
 function motorRelatorio(D) {
   var NOMES = {}, COR = {}, ORC = {}, COMUNS = [];
   D.cats.forEach(function (c) { NOMES[c.id] = c.nome; COR[c.id] = c.cor || '#9ca3af'; ORC[c.id] = +c.orc || 0; COMUNS.push(c.id); });
@@ -1862,7 +1876,7 @@ function motorRelatorio(D) {
     if (R.rest > 0 && vem.length) {
       var ex = vem.filter(function (s) { return s.esperN < 0.95; })[0];
       x += '<p class="note" style="margin:0 0 4px"><b>O que ainda deve entrar até ' + fD(R.ciclo.fim) + '</b> · pelo seu costume nos últimos ' + R.nHist + (R.nHist === 1 ? ' ciclo' : ' ciclos') + '</p>' +
-        '<div class="tw"><table><thead><tr><th>Onde</th><th>Você costuma ir</th><th>Neste ciclo, até hoje</th><th>Nos ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + ' que faltam</th><th>Entra na projeção</th></tr></thead><tbody>' +
+        '<div class="tw"><table><thead><tr><th>Onde</th><th>Você costuma ir' + q('costuma') + '</th><th>Neste ciclo, até hoje' + q('nociclo') + '</th><th>Nos ' + R.rest + (R.rest === 1 ? ' dia' : ' dias') + ' que faltam' + q('faltam') + '</th><th>Entra na projeção' + q('entra') + '</th></tr></thead><tbody>' +
         vem.map(function (s) { return '<tr><td class="t">' + nomeL(s) + '</td><td class="t">' + vezes(s.freq) + ' por ciclo, ' + m0(s.ticket) + ' cada</td><td>' + (s.n ? s.n + (s.n === 1 ? ' vez' : ' vezes') : 'nenhuma') + '</td><td class="t">' + idasFaltam(s.esperN) + '</td><td><b>' + m0(s.esperV) + '</b></td></tr>'; }).join('') +
         '</tbody></table></div><p class="note" style="margin:4px 0 10px">Como ler: nos dias que faltam, conta só as idas que ainda cabem no seu costume. ' +
         (ex ? 'Quando é menos de uma ida, entra só a parte da chance: ' + esc(ex.nome) + ' tem ' + Math.round(ex.esperN * 100) + '% de chance × ' + m0(ex.ticket) + ' por ida ≈ ' + m0(ex.esperV) + '. ' : '') +
@@ -1879,6 +1893,37 @@ function motorRelatorio(D) {
   }
 
   var PRINT = false;
+
+  // Ajuda "?" (20/11/2026): toque abre uma explicação embaixo; some ao imprimir/salvar PDF.
+  var AJ = {
+    proj: ['Gasto projetado no ciclo', 'Quanto o ciclo atual deve fechar: o que você já gastou + o que ainda deve entrar pelo seu costume de compras nos últimos ciclos. Com outros períodos escolhidos, mostra a média por ciclo.'],
+    acima: ['Ciclos acima do limite', 'Em quantos dos ciclos analisados o gasto passou do limite. Ciclos cortados pelas datas escolhidas contam proporcionalmente.'],
+    atual: ['Ciclo atual até hoje', 'Quanto já foi gasto no ciclo atual, do primeiro dia até hoje, e em qual dia do ciclo você está. A projeção é onde ele deve fechar.'],
+    pordia: ['Pode gastar por dia', 'Quanto ainda sobra do limite, dividido pelos dias que faltam no ciclo. Se o limite já foi passado, fica em zero: o recado é gastar só o essencial.'],
+    atacar: ['Onde atacar primeiro', 'Categorias que estão (ou vão ficar, pela projeção) acima do orçamento, da maior diferença para a menor, com os lugares que mais pesam em cada uma.'],
+    porciclo: ['Gasto por ciclo', 'Cada barra é um ciclo (o seu período, mês a mês), dividida por categoria. A linha tracejada é o limite. O ciclo com * está em andamento.'],
+    catciclo: ['Categorias: ciclo a ciclo × orçamento', 'Quanto cada categoria gastou em cada ciclo.<br><br><b>Projeção do atual</b>: onde o ciclo em curso deve fechar.<br><b>Base / Média por ciclo</b>: o número usado para comparar com o orçamento.<br><b>× orç.</b>: Base ÷ orçamento. Acima de 100% (vermelho) = acima do orçamento.'],
+    ritmo: ['Ritmo do ciclo atual', 'Compara o que você já gastou com o que <b>deveria</b> ter gasto até hoje se dividisse o limite igualmente pelos dias.<br><br>"Adiantado" = gastou mais rápido que o limite permite. Mostra também quanto pode gastar por dia daqui para a frente e o que ainda deve entrar.'],
+    costuma: ['Você costuma ir', 'Quantas vezes você vai a esse lugar por ciclo e quanto gasta por ida, pela média dos últimos ciclos fechados (até 6).'],
+    nociclo: ['Neste ciclo, até hoje', 'Quantas vezes você já foi a esse lugar desde o começo do ciclo atual.'],
+    faltam: ['Nos dias que faltam', 'Quantas idas ainda devem acontecer até o fim do ciclo, pelo seu costume. Só conta as idas que ainda cabem: se você já foi as vezes de sempre, não conta mais. Menos de uma ida aparece como chance (ex.: "talvez 1, 40% de chance").'],
+    entra: ['Entra na projeção', 'Quanto esse lugar soma na projeção do ciclo: idas que faltam × gasto por ida. Com chance de ida, entra só a parte da chance (40% × CA$ 80 = CA$ 32). Se você não for, o ciclo fecha abaixo da projeção.'],
+    onde: ['Para onde o dinheiro vai', 'Os lugares (subcategoria ou descrição) onde mais foi dinheiro.<br><br><b>Por ciclo</b>: quanto vai ali, em média, em cada ciclo.<br><b>Média por compra</b>: total ÷ número de compras.<br><b>Último × anterior</b>: quanto subiu (▲) ou caiu (▼) do penúltimo para o último ciclo fechado.'],
+    indices: ['Índices de comportamento', 'Números que mostram <b>hábitos</b>: muitos gastos pequenos, idas ao mercado, dias com gasto, fim de semana e concentração em poucos lugares. A coluna da direita explica cada um.'],
+    diasem: ['Gasto por dia da semana', 'Quanto você gasta, em média, em cada dia da semana. Laranja = sábado e domingo.']
+  };
+  var KQ = { 'Gasto projetado no ciclo': 'proj', 'Gasto médio por ciclo': 'proj', 'Ciclos acima do limite': 'acima', 'Ciclo atual até hoje': 'atual', 'Pode gastar por dia': 'pordia' };
+  function q(k) { return PRINT ? '' : '<button type="button" class="q" data-q="' + k + '" aria-label="O que é isto?">?</button>'; }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-q]') : null, box = document.getElementById('ajp');
+    if (!b) { if (box && !e.target.closest('#ajp')) box.remove(); return; }
+    e.preventDefault();
+    var a = AJ[b.getAttribute('data-q')]; if (!a) return;
+    if (box) box.remove();
+    box = document.createElement('div'); box.id = 'ajp'; box.setAttribute('role', 'dialog');
+    box.innerHTML = '<b>' + a[0] + '</b><div>' + a[1] + '</div><button type="button" class="btn" onclick="this.parentNode.remove()">Entendi</button>';
+    document.body.appendChild(box);
+  });
   function niceMax(v) { if (v <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; var st = [1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10].find(function (x) { return f <= x * 1.0001; }); return st * p; }
   function largura(def) { if (PRINT) return 740; var c = $('conteudo'); var cw = (c && c.clientWidth) || def; return Math.round(Math.min(def, Math.max(320, cw - 34))); }
   function barrasCiclo(C, lim, cats) {
@@ -1946,7 +1991,7 @@ function motorRelatorio(D) {
     });
     return g + '</svg>';
   }
-  function kpi(l, v, s) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
+  function kpi(l, v, s) { return '<div class="kpi"><div class="l">' + l + (KQ[l] ? q(KQ[l]) : '') + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
   function linhaI(a, b, c) { return '<tr><td class="t"><b>' + a + '</b></td><td>' + b + '</td><td class="t note">' + c + '</td></tr>'; }
   function topSubs(C, nEq, RF) {
     var m = {}, comumT = 0, ult = C[C.length - 1], ant = C[C.length - 2];
@@ -2006,7 +2051,7 @@ function motorRelatorio(D) {
     var subsTop = topSubs(F, nEq, usaAtual ? R : null);
     html += '<div class="grid" style="margin-top:12px">';
     if (ruins.length) {
-      html += '<section class="card alvo"><div class="ch"><h2>Onde atacar primeiro</h2><span class="note">' + (usaAtual ? 'projeção' : 'média por ciclo') + ', ' + RP + ' × orçamento da categoria</span></div><ol>' +
+      html += '<section class="card alvo"><div class="ch"><h2>Onde atacar primeiro' + q('atacar') + '</h2><span class="note">' + (usaAtual ? 'projeção' : 'média por ciclo') + ', ' + RP + ' × orçamento da categoria</span></div><ol>' +
         ruins.map(function (a) {
           var sub = subsTop.filter(function (s) { return s.cat === a.k; }).slice(0, 2);
           if (usaAtual) {
@@ -2026,15 +2071,15 @@ function motorRelatorio(D) {
           (restam > 0 ? 'Faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '. ' + (atual.comum >= lim ? 'O limite de ' + m0(lim) + ' já foi passado em <b class="bad">' + m0(atual.comum - lim) + '</b>: o que dá para fazer agora é não somar mais, só o essencial até ' + fD(atual.fim) + '.' : 'Sobram <b>' + m0(lim - atual.comum) + '</b> do limite, mas pela sua frequência devem entrar ' + m0(R.tot) + '. Corte ou adie ' + m0(mediaComum - lim) + ' disso.') : 'O ciclo fecha hoje.') + ' Para o próximo ciclo, veja no Ritmo onde você foi mais vezes que de costume.'
           : 'Para voltar ao limite, o gasto precisa cair <b class="bad">' + m0(mediaComum - lim) + ' por ciclo</b> (cerca de ' + m0((mediaComum - lim) / (atual.dias / 7)) + ' por semana).') + '</p>' : '') + '</section>';
     } else {
-      html += '<section class="card ok-msg"><div class="ch"><h2>Onde atacar primeiro</h2></div><p style="margin:0">' + (alvos.some(function (a) { return a.orc > 0; }) ? 'Nenhuma categoria com orçamento está acima na média, ' + RP + '.' : 'Nenhuma categoria tem orçamento definido no app, então não há com o que comparar.') +
+      html += '<section class="card ok-msg"><div class="ch"><h2>Onde atacar primeiro' + q('atacar') + '</h2></div><p style="margin:0">' + (alvos.some(function (a) { return a.orc > 0; }) ? 'Nenhuma categoria com orçamento está acima na média, ' + RP + '.' : 'Nenhuma categoria tem orçamento definido no app, então não há com o que comparar.') +
         (lim > 0 && mediaComum > lim ? ' Mas o <b>total</b> está ' + m0(mediaComum - lim) + ' acima do limite por ciclo: o limite é menor que a soma dos orçamentos, ou há gasto em categoria sem orçamento.' : '') + '</p></section>';
     }
 
-    html += '<section class="card"><div class="ch"><h2>Gasto por ciclo</h2><span class="note">' + D.simb + ' por categoria · * ciclo em curso, até hoje</span></div>' +
+    html += '<section class="card"><div class="ch"><h2>Gasto por ciclo' + q('porciclo') + '</h2><span class="note">' + D.simb + ' por categoria · * ciclo em curso, até hoje</span></div>' +
       '<div class="legend">' + cats.filter(function (k) { return C.some(function (c) { return c.cat[k]; }); }).map(function (k) { return '<span><i style="background:' + corCat(k) + '"></i>' + esc(nomeCat(k)) + '</span>'; }).join('') + (lim > 0 ? '<span><i style="background:none;border-top:2px dashed var(--bad);border-radius:0;height:0;vertical-align:3px"></i>Limite ' + m0(lim) + '</span>' : '') + '<span><i style="background:none;border:1px dashed var(--tx3)"></i>Projeção do ciclo atual</span></div>' +
       barrasCiclo(C, lim, cats) + '</section>';
 
-    html += '<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção pela sua frequência</span></div><div class="tw"><table><thead><tr><th>Categoria</th>' +
+    html += '<section class="card"><div class="ch"><h2>Categorias: ciclo a ciclo × orçamento' + q('catciclo') + '</h2><span class="note">o ciclo atual mostra o gasto até hoje e a projeção pela sua frequência</span></div><div class="tw"><table><thead><tr><th>Categoria</th>' +
       C.map(function (c) { return '<th>' + esc(c.rot) + (c.emCurso ? ' *' : c.parcial ? ' (parcial)' : '') + '</th>'; }).join('') + (temAtual ? '<th>Projeção do atual</th>' : '') + '<th>' + (usaAtual ? 'Base (projeção)' : 'Média por ciclo') + '</th><th>Orçamento</th><th>' + (usaAtual ? 'Base' : 'Média') + ' × orç.</th></tr></thead><tbody>' +
       cats.map(function (k) {
         var orc = ORC[k] || 0, vals = C.map(function (c) { return c.cat[k] || 0; });
@@ -2050,7 +2095,7 @@ function motorRelatorio(D) {
       '</tbody></table></div><p class="note" style="margin:6px 0 0">' + (temAtual ? '* ciclo em curso, até ' + fD(h) + '. ' : '') + notaBase + notaCurtos + (F.some(function (c) { return c.parcial && !c.emCurso; }) ? 'Ciclos cortados nas datas escolhidas contam proporcionalmente na média. ' : '') + 'Vermelho = acima do orçamento.' + (semOrc.length ? ' Sem orçamento no app: ' + semOrc.map(function (a) { return esc(nomeCat(a.k)); }).join(', ') + '.' : '') + '</p></section>';
 
     var livre = lim - atual.comum, idealHoje = lim * atual.decorridos / atual.dias;
-    html += '<section class="card"><div class="ch"><h2>Ritmo do ciclo atual</h2><span class="note">' + esc(atual.rot) + ' · dia ' + atual.decorridos + ' de ' + atual.dias + '</span></div>' +
+    html += '<section class="card"><div class="ch"><h2>Ritmo do ciclo atual' + q('ritmo') + '</h2><span class="note">' + esc(atual.rot) + ' · dia ' + atual.decorridos + ' de ' + atual.dias + '</span></div>' +
       (lim > 0 && livre <= 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>. Você já passou do limite de ' + m0(lim) + ' em <b class="bad">' + m0(-livre) + '</b>.' +
         (restam > 0 ? ' Até ' + fD(atual.fim) + ' (faltam ' + restam + (restam === 1 ? ' dia' : ' dias') + '), só o essencial.' : '') + '</p>' :
       lim > 0 ? '<p style="margin:0 0 8px">Até hoje você gastou <b>' + m0(atual.comum) + '</b>; no ritmo do limite seriam <b>' + m0(idealHoje) + '</b> ' +
@@ -2059,7 +2104,7 @@ function motorRelatorio(D) {
       blocoFrequencia(atual, lim) +
       acumulado(fech.filter(function (c) { return !c.parcial; }).slice(-3).concat([atual]), lim) + '</section>';
 
-    html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
+    html += '<section class="card longa"><div class="ch"><h2>Para onde o dinheiro vai' + q('onde') + '</h2><span class="note">subcategoria ou descrição · ' + RP + '</span></div><div class="tw"><table><thead><tr><th>Onde</th><th>Categoria</th><th>Compras</th><th>Total</th><th>Por ciclo</th><th>Média por compra</th><th>% do total</th><th>Último × anterior</th></tr></thead><tbody>' +
       subsTop.slice(0, 15).map(function (s) {
         var vr = s.ant > 0 ? (s.ult - s.ant) / s.ant : NaN;
         return '<tr><td class="t"><b>' + esc(s.nome) + '</b></td><td><span class="sw" style="background:' + corCat(s.cat) + '"></span>' + esc(nomeCat(s.cat)) + '</td><td>' + s.n + '</td><td>' + m0(s.tot) + '</td><td>' + m0(s.porCiclo) + '</td><td>' + money(s.tot / s.n) + '</td><td>' + pct(s.share) + '</td><td class="' + (vr > .1 ? 'bad' : vr < -.1 ? 'good' : '') + '">' + (isFinite(vr) ? (vr > 0 ? '▲ ' : '▼ ') + pct(Math.abs(vr)) : '—') + '</td></tr>';
@@ -2073,7 +2118,7 @@ function motorRelatorio(D) {
     var diasCom = {}; comuns.forEach(function (l) { if (val(l) > 0) diasCom[l.data] = 1; });
     var diasTot = F.reduce(function (s, c) { return s + c.decorridos; }, 0) || 1, nDias = Object.keys(diasCom).length;
     var fds = comuns.filter(function (l) { var w = dt(l.data).getDay(); return w === 0 || w === 6; }).reduce(function (s, l) { return s + val(l); }, 0);
-    html += '<section class="card"><div class="ch"><h2>Índices de comportamento</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>' +
+    html += '<section class="card"><div class="ch"><h2>Índices de comportamento' + q('indices') + '</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Índice</th><th>Valor</th><th>O que quer dizer</th></tr></thead><tbody>' +
       linhaI('Gastos pequenos (abaixo de ' + D.simb + ' ' + PEQUENO + ')', peq.length + ' compras · ' + m0(peqT) + ' (' + pct(peqT / totC) + ')', 'O "vazamento": cada um parece nada, somados ' + (usaAtual ? 'já são ' + m0(peqT) + ' neste ciclo.' : 'viram ' + m0(peqT / nEq) + ' por ciclo.')) +
       (catMerc ? linhaI('Idas ao ' + esc(catMerc.nome.toLowerCase()), (usaAtual ? merc.length + ' neste ciclo até hoje' + (R && R.nHist ? ' (costuma ser ' + vezes(R.lugares.filter(function (s) { return s.cat === catMerc.id; }).reduce(function (t, s) { return t + s.freq; }, 0)).replace('×', '') + ' por ciclo)' : '') : (merc.length / nEq).toFixed(1).replace('.', ',') + ' por ciclo') + ' · média por compra ' + money(merc.length ? mercT / merc.length : 0), 'Menos idas, com lista, costuma baixar o total: cada ida tem compra por impulso.') : '') +
       linhaI('Dias com gasto', nDias + ' de ' + diasTot + ' dias (' + pct(nDias / diasTot) + ')', 'Dias "sem gasto" são o jeito mais simples de cortar sem sentir.') +
@@ -2085,7 +2130,7 @@ function motorRelatorio(D) {
     var porDS = [0, 0, 0, 0, 0, 0, 0], ocDS = [0, 0, 0, 0, 0, 0, 0];
     F.forEach(function (c) { for (var i = 0; i < c.decorridos; i++) ocDS[dt(addDias(c.inicio, i)).getDay()]++; });
     comuns.forEach(function (l) { porDS[dt(l.data).getDay()] += val(l); });
-    html += '<section class="card c6"><div class="ch"><h2>Gasto por dia da semana</h2><span class="note">média por dia, ' + D.simb + '</span></div>' +
+    html += '<section class="card c6"><div class="ch"><h2>Gasto por dia da semana' + q('diasem') + '</h2><span class="note">média por dia, ' + D.simb + '</span></div>' +
       colunas([1, 2, 3, 4, 5, 6, 0].map(function (w) { var v = ocDS[w] ? porDS[w] / ocDS[w] : 0; return { lab: DIASEM[w], v: v, c: (w === 0 || w === 6) ? '#eb6834' : 'var(--acc)' }; }), { aria: 'Gasto médio por dia da semana', w: 470, h: 210 }) + '</section>';
     html += '<section class="card c6"><div class="ch"><h2>10 maiores gastos</h2><span class="note">' + RP + '</span></div><div class="tw"><table><thead><tr><th>Data</th><th>Onde</th><th>Valor</th></tr></thead><tbody>' +
       comuns.slice().sort(function (a, b) { return val(b) - val(a); }).slice(0, 10).map(function (l) { return '<tr><td>' + fD(l.data) + '</td><td class="t"><span class="sw" style="background:' + corCat(l.cat) + '"></span>' + esc(l.desc || subDe(l)) + '</td><td>' + money(val(l)) + '</td></tr>'; }).join('') +
@@ -2198,6 +2243,7 @@ function renderAjustes() {
   $('aj-applepay').onclick = abrirApplePay; renderStatusApplePay();
   $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
+  if ($('aj-novidades')) $('aj-novidades').onclick = function () { mostrarNovidades(true); };
 }
 function salvarCasaAj() {
   var nome = $('aj-nome').value.trim();
@@ -2670,6 +2716,57 @@ function mostrarConferencia() {
   }; });
 }
 
+// ═════════════════ AJUDA (?) E NOVIDADES (20/11/2026) ═════════════════
+var AJUDA = {
+  'proj-padrao': ['Padrão/dia', 'Quanto você ainda pode gastar <b>por dia</b>, de hoje até o fim do período, para fechar dentro do limite.<br><br>Conta: (limite − o que já gastou) ÷ dias que faltam.<br><br>Se já passou do limite, fica em zero.'],
+  'proj-real': ['Real/dia', 'Quanto você gastou <b>em média por dia</b> até agora neste período.<br><br>Conta: o que já gastou ÷ dias já passados (contando hoje).'],
+  'proj-desvio': ['Desvio', 'A diferença entre o <b>Real/dia</b> e o <b>Padrão/dia</b>.<br><br><span style="color:#dc2626">Vermelho</span>: você está gastando mais por dia do que o limite permite.<br><span style="color:#16a34a">Verde</span>: está gastando menos, sobra folga.'],
+  'proj-barras': ['Tempo × Gasto', '<b>Tempo</b>: quanto do período já passou.<br><b>Gasto</b>: quanto do limite você já gastou.<br><br>Se a barra do Gasto está <b>na frente</b> da do Tempo, você está gastando mais rápido do que o período anda. Exemplo: metade do mês passou (50%) e já gastou 70% do limite.'],
+  'proj-saldo': ['Saldo real agora', 'Quanto ainda sobra do limite <b>hoje</b>: limite − o que já foi gasto no período.<br><br>Negativo (vermelho) = já passou do limite.'],
+  'proj-final': ['Saldo no fim do período', 'Quanto deve sobrar (ou faltar) <b>no último dia</b> do período, se você mantiver o seu costume de compras.<br><br>Conta: limite − (o que já gastou + o que ainda deve entrar). "O que ainda deve entrar" vem da sua frequência: veja o ? de "O que ainda deve entrar".'],
+  'proj-grafico': ['Gasto acumulado × orçamento', 'Mostra o gasto <b>somando dia a dia</b> desde o início do período.<br><br><b>Orçamento previsto</b> (tracejado claro): o limite dividido igualmente pelos dias. É onde você "deveria" estar em cada dia.<br><b>Gasto real</b> (linha cheia): o que você gastou de verdade até hoje.<br><b>Projeção</b> (tracejado colorido): de hoje até onde o período deve fechar, pelo seu costume.<br><b>Limite livre</b> (amarelo): o limite total do período.<br><br>Linha cheia acima da tracejada clara = gastando mais rápido que o previsto.'],
+  'proj-vem': ['O que ainda deve entrar', 'Uma estimativa do que você ainda vai gastar até o fim do período, <b>lugar por lugar</b>.<br><br>Para cada lugar (mercado, posto…), o app olha os últimos períodos (até 6): quantas vezes você costuma ir e quanto gasta por ida.<br><br>Nos dias que faltam, conta só as idas que ainda cabem no seu costume. Se você já foi as vezes de sempre, não conta mais. Quando falta menos de uma ida, entra só a chance (ex.: 50% de chance × CA$ 80 = CA$ 40).'],
+  'proj-mais': ['Foi mais vezes que de costume', 'Lugares onde você foi <b>pelo menos uma vez a mais</b> do que costuma ir num período inteiro.<br><br>O valor em vermelho é quanto essas idas a mais custaram, comparado com o seu costume.'],
+  'proj-novos': ['Gastos que não aparecem antes', 'Compras em lugares onde você <b>não comprou</b> nos períodos anteriores.<br><br>Elas contam no total, mas o app <b>não repete</b> esses gastos na projeção, porque não há costume para medir.'],
+  'termometro': ['Termômetro da Dívida', 'Soma de <b>tudo o que ainda falta pagar</b> nos parcelamentos ativos.<br><br>Cada linha mostra quanto ainda vai faltar no começo de cada mês, até zerar. O ✓ marca o mês em que um parcelamento termina.'],
+  'parcelados': ['Projeção de Parcelados', 'Quanto das suas parcelas cai <b>em cada mês</b>, nos próximos 24 meses.<br><br>Ajuda a ver quando o compromisso mensal diminui (✓ = parcelamento que termina naquele mês).'],
+  'sem-alvo': ['Alvo pelo limite', 'Quanto o limite do período permite gastar <b>numa semana</b>.<br><br>Conta: limite ÷ dias do período × 7.<br><br>Com a semana em andamento, é proporcional aos dias que já passaram (ex.: na quinta, 4 de 7 dias).'],
+  'sem-media': ['Sua média', 'Quanto você costuma gastar numa semana, pela <b>média das semanas anteriores</b>.<br><br>Com a semana em andamento, a média é só até o mesmo dia da semana, para comparar igual com igual.'],
+  'sem-vazou': ['Onde mais vazou', 'Lugares onde você gastou <b>mais do que a sua média por semana</b> ali.<br><br><b>Esta semana</b>: quanto gastou ali nesta semana.<br><b>Média</b>: quanto costuma gastar ali por semana (soma das semanas anteriores ÷ número de semanas).<br><b>A mais</b>: a diferença.<br><br>Compras de vez em quando (roupas, presentes, eletrônicos, móveis) não entram. Um lugar onde você não costuma comprar pode aparecer com tudo "a mais"; nesse caso veja se não foi só troca de loja (ex.: mercado diferente).'],
+  'sem-cats': ['Categorias × orçamento semanal', 'O orçamento de cada categoria convertido para <b>uma semana</b>: orçamento do período ÷ dias do período × 7.<br><br>A barra mostra quanto da semana você já usou em cada categoria.'],
+  'sem-acoes': ['O que fazer nesta semana', 'Sugestões automáticas tiradas dos números acima: limite do período, lugares onde mais vazou e quantas idas ao mercado.<br><br>São um ponto de partida. Gastos essenciais, como combustível e ração, você decide se dá para reduzir.']
+};
+function aj(k) { return '<button type="button" class="aj-q" data-ajuda="' + k + '" aria-label="O que é isto?">?</button>'; }
+document.addEventListener('click', function (e) {
+  var b = e.target && e.target.closest ? e.target.closest('[data-ajuda]') : null;
+  if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  var a = AJUDA[b.getAttribute('data-ajuda')]; if (!a) return;
+  abrirSheet('<h3>❓ ' + a[0] + '</h3><div class="aj-texto">' + a[1] + '</div><button class="aj-btn pri aj-full" data-fechar>Entendi</button>');
+}, true);
+function cmpVer(a, b) {
+  var x = String(a).split('.'), y = String(b).split('.');
+  for (var i = 0; i < 3; i++) { var d = (+x[i] || 0) - (+y[i] || 0); if (d) return d; }
+  return 0;
+}
+// Mostra o que mudou desde a última versão que este aparelho viu. Primeira vez: só a mais recente.
+function mostrarNovidades(todas) {
+  var vista = lsGet('mc_versao_vista');
+  var lista = todas ? NOVIDADES.slice() : vista ? NOVIDADES.filter(function (n) { return cmpVer(n.v, vista) > 0; }) : NOVIDADES.slice(0, 1);
+  if (!todas) {
+    if (vista === VERSAO) return;
+    if (S.tela !== 'inicio' || $('sheet').classList.contains('on')) return; // tenta de novo na próxima abertura
+    lsSet('mc_versao_vista', VERSAO);
+  }
+  if (!lista.length) { if (todas) mostrarToast('ℹ️', 'Nenhuma novidade registrada'); return; }
+  abrirSheet('<h3>' + (todas ? '🔔 Novidades do app' : '🎉 O app foi atualizado') + '</h3>' +
+    (todas ? '' : '<div style="font-size:13px;color:#6b7280;margin-bottom:6px">Você está na versão <b>' + esc(VERSAO) + '</b>. O que mudou:</div>') +
+    lista.slice(0, todas ? 20 : 6).map(function (n) {
+      return '<div class="nov-bloco"><div class="nov-cab">Versão ' + esc(n.v) + ' · ' + esc(n.d) + '</div><ul class="nov-lista">' + n.itens.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
+    }).join('') +
+    '<button class="aj-btn pri aj-full" data-fechar>Ok</button>');
+}
+
 // ═════════════════ LANÇAR AO PAGAR (Apple Pay, 16/11/2026) ═════════════════
 // O atalho do iPhone (automação "Carteira"/"Transação") abre  …/#lancar=<valor>|<loja>|<cartão>
 // (a parte depois do "=" vem codificada). O app abre o Registrar já preenchido e sugere a categoria pela loja.
@@ -3016,7 +3113,7 @@ function escutar() {
       var n = normalizarCfg(c || { cats: catsPadrao(), nome: 'Minha casa', moeda: 'CAD' });
       S.cfg = n.cfg;
       if (n.mudou || !c) salvarCfg();
-      if (primeiro) { primeiro = false; irPara('inicio'); setTimeout(aplicarPagamento, 1200); } // espera os lançamentos para sugerir a categoria
+      if (primeiro) { primeiro = false; irPara('inicio'); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
       else renderLogo();
     });
   }, negado);
@@ -3278,6 +3375,6 @@ function ligarEventos() {
   $('aj-bloquear').onclick = bloquear;
 }
 
-if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto };
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto, mostrarNovidades: mostrarNovidades };
 iniciar();
 })();
