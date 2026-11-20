@@ -9,9 +9,24 @@
 // Idiomas (20/11/2026): T('texto em português') devolve o texto no idioma escolhido (i18n.js).
 var I18N = window.MCI18N || { lang: 'pt', locale: 'pt-BR', T: function (s) { return s; }, traduzirPagina: function () {}, definir: function () { return false; } };
 var T = I18N.T;
+// Diagnóstico (20/11/2026): se algo der erro enquanto a tela de carregamento está aberta, mostra o erro nela
+// (em vez de ficar parado em "Abrindo a casa…"), para o usuário poder mandar um print.
+(function () {
+  function mostrar(msg) {
+    try {
+      var l = document.getElementById('app-loading'), t = document.getElementById('ld-txt');
+      if (!l || l.style.display === 'none' || !t) return;
+      var d = document.getElementById('ld-erro');
+      if (!d) { d = document.createElement('div'); d.id = 'ld-erro'; d.style.cssText = 'margin-top:14px;max-width:520px;padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left'; l.appendChild(d); }
+      d.textContent = (d.textContent ? d.textContent + '\n' : '') + String(msg).slice(0, 400);
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) { mostrar((e.message || 'erro') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason; mostrar('Promise: ' + (r && (r.stack || r.message || r.code) || r)); });
+})();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.32.0';
+var VERSAO = '2.32.1';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.32.0', d: '20/11/2026', itens: [
