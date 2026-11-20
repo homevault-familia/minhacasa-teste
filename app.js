@@ -26,9 +26,12 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.33.0';
+var VERSAO = '2.33.1';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.33.1', d: '20/11/2026', itens: [
+    'O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.'
+  ] },
   { v: '2.33.0', d: '20/11/2026', itens: [
     '<b>🌐 Idiomas, etapa 2</b>: relatórios (semanal, por categoria e completo), projeção, gráficos, ajudas do ?, conferir com o banco, Apple Pay e novidades agora aparecem no idioma escolhido.',
     '<b>🏷️ Categorias no seu idioma</b>: as categorias padrão do app (Carro, Supermercado…) aparecem traduzidas sozinhas. Para as suas, edite a categoria em Ajustes e preencha <b>Nomes em outros idiomas</b>: cada pessoa da casa vê no idioma dela.'
@@ -2993,19 +2996,20 @@ function cmpVer(a, b) {
 }
 // Mostra o que mudou desde a última versão que este aparelho viu. Primeira vez: só a mais recente.
 function dataNov(d) { var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(d); return m ? formatarData(m[3] + '-' + m[2] + '-' + m[1]) : d; }
-function mostrarNovidades(todas) {
-  var vista = lsGet('mc_versao_vista');
-  // Correção (20/11/2026): quem já usava o app antes do aviso existir (até a 2.29.7) via só a última novidade.
-  // Uma única vez, mostra tudo o que mudou desde a 2.29.7 para quem já tem dados.
-  if (!todas && !lsGet('mc_nov_desde')) {
-    if (vista || Object.keys(S.raw || {}).length) vista = '2.29.7';
-    if (S.tela === 'inicio' && !$('sheet').classList.contains('on')) lsSet('mc_nov_desde', '1');
-  }
+function mostrarNovidades(todas, tentativa) {
+  // Só o que mudou desde a última vez que ESTA PESSOA viu o aviso (20/11/2026).
+  // A última versão vista fica no aparelho e no perfil dela (vale para todos os aparelhos).
+  // Pessoa sem registro nenhum (conta nova ou aparelho novo sem perfil): mostra só a última novidade.
+  var me = S.user && S.perfis ? S.perfis[S.user.uid] : null;
+  if (!todas && S.user && !me && (tentativa || 0) < 5) { setTimeout(function () { mostrarNovidades(false, (tentativa || 0) + 1); }, 1500); return; } // espera o perfil chegar
+  var local = lsGet('mc_versao_vista'), doPerfil = me && me.nov, vista = local;
+  if (doPerfil && (!vista || cmpVer(doPerfil, vista) > 0)) vista = doPerfil;
   var lista = todas ? NOVIDADES.slice() : vista ? NOVIDADES.filter(function (n) { return cmpVer(n.v, vista) > 0; }) : NOVIDADES.slice(0, 1);
   if (!todas) {
-    if (vista && cmpVer(vista, VERSAO) >= 0) return;
+    if (vista && cmpVer(vista, VERSAO) >= 0) { if (local !== VERSAO) lsSet('mc_versao_vista', VERSAO); return; }
     if (S.tela !== 'inicio' || $('sheet').classList.contains('on')) return; // tenta de novo na próxima abertura
     lsSet('mc_versao_vista', VERSAO);
+    atualizarPerfil({ nov: VERSAO }).catch(function () {});
   }
   if (!lista.length) { if (todas) mostrarToast('ℹ️', T('Nenhuma novidade registrada')); return; }
   abrirSheet('<h3>' + (todas ? T('🔔 Novidades do app') : T('🎉 O app foi atualizado')) + '</h3>' +
@@ -3024,15 +3028,18 @@ function marcarIdiomaBotoes() {
   qsa('[data-idioma]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-idioma') === I18N.lang ? 'true' : 'false'); });
   var g = $('aj-idiomas'); if (g) g.setAttribute('aria-label', T('Idioma'));
 }
-function salvarIdiomaNoPerfil(l) {
+// grava campos no perfil (criptografado) desta pessoa, mantendo os outros
+function atualizarPerfil(campos) {
   if (!S.user || !S.casa || !S.chave || !db) return Promise.resolve();
   var p = {}, at = S.perfis[S.user.uid] || {};
   for (var k in at) if (Object.prototype.hasOwnProperty.call(at, k)) p[k] = at[k];
   if (!p.nome) p.nome = nomeUsuario();
   if (p.email == null) p.email = S.user.email || '';
-  p.idioma = l;
-  return cifrar(S.chave, p).then(function (c) { return db.ref('casas/' + S.casa + '/dados/perfis/' + S.user.uid).set(c); });
+  for (var c in campos) if (Object.prototype.hasOwnProperty.call(campos, c)) p[c] = campos[c];
+  S.perfis[S.user.uid] = p;
+  return cifrar(S.chave, p).then(function (x) { return db.ref('casas/' + S.casa + '/dados/perfis/' + S.user.uid).set(x); });
 }
+function salvarIdiomaNoPerfil(l) { return atualizarPerfil({ idioma: l }); }
 function escolherIdioma(l) {
   if (I18N.idiomas && I18N.idiomas.indexOf(l) < 0) return;
   if (l === I18N.lang) return;
