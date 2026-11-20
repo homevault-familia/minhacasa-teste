@@ -6,9 +6,17 @@
 (function () {
 'use strict';
 
-var VERSAO = '2.31.6';
+// Idiomas (20/11/2026): T('texto em português') devolve o texto no idioma escolhido (i18n.js).
+var I18N = window.MCI18N || { lang: 'pt', locale: 'pt-BR', T: function (s) { return s; }, traduzirPagina: function () {}, definir: function () { return false; } };
+var T = I18N.T;
+I18N.traduzirPagina(document.body);
+
+var VERSAO = '2.32.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.32.0', d: '20/11/2026', itens: [
+    '<b>🌐 Idiomas</b>: o app agora fala português, inglês e francês. Escolha na tela de entrada (PT · EN · FR) ou em Ajustes → Idioma. Cada pessoa da casa escolhe o seu. (Primeira etapa: telas principais. As demais telas chegam nas próximas versões.)'
+  ] },
   { v: '2.31.6', d: '20/11/2026', itens: [
     'O nome MinhaCasa™ agora aparece com o símbolo de marca (™).',
     'Logo novo: uma casa com barras que sobem, mostrando o orçamento da família sob controle. Para ver o ícone novo na tela do iPhone, apague o atalho antigo e adicione o app de novo à Tela de Início.'
@@ -46,8 +54,8 @@ var PALETA = ['#e53935', '#fb8c00', '#43a047', '#0284c7', '#00897b', '#d81b60', 
 var ICO_P = {"edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"M19 6l-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "file": "<path d=\"M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z\"/><path d=\"M14 3v6h6\"/>", "sliders": "<path d=\"M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6\"/>", "lock": "<rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/><path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/>", "download": "<path d=\"M12 3v12M7 10l5 5 5-5M4 21h16\"/>", "upload": "<path d=\"M12 15V3M7 8l5-5 5 5M4 21h16\"/>", "table": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M9 4v16\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "logout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"M16 17l5-5-5-5M21 12H9\"/>", "calendar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "pie": "<path d=\"M21 12A9 9 0 1 1 12 3v9z\"/><path d=\"M21 12a9 9 0 0 0-9-9\"/>", "trend": "<path d=\"M3 17l6-6 4 4 8-8\"/><path d=\"M15 7h6v6\"/>", "key": "<circle cx=\"7.5\" cy=\"15.5\" r=\"4.5\"/><path d=\"m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2.5 2.5\"/>", "compass": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m15.5 8.5-2 5-5 2 2-5z\"/>"};
 function ICO(n) { return '<svg class="ic" aria-hidden="true" viewBox="0 0 24 24">' + ICO_P[n] + '</svg>'; }
 var EMOJIS = ['🚗', '⛽', '🛒', '🛍️', '🏠', '💡', '✈️', '🍽️', '☕', '🩺', '💊', '🐾', '👕', '📚', '🎓', '🎉', '🎮', '💳', '🏦', '📱', '🔧', '👶', '🏋️', '💇', '🎁', '🍺', '🧾', '📦', '⚽', '🏖️'];
-var MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-var MESES_C = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+var MESES = I18N.meses || ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+var MESES_C = I18N.mesesCurtos || ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 // ═════════════════════════ utilitários ═════════════════════════
 function $(id) { return document.getElementById(id); }
@@ -78,7 +86,13 @@ function addMeses(dataStr, meses) {
   dia = Math.min(dia, new Date(na, nm + 1, 0).getDate());
   return na + '-' + String(nm + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
 }
-function formatarData(s) { return s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : ''; }
+function formatarData(s) {
+  if (!s) return '';
+  if (I18N.lang === 'en') return MESES_C[+s.slice(5, 7) - 1] + ' ' + (+s.slice(8, 10)) + ', ' + s.slice(0, 4); // Nov 20, 2026
+  return s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4);
+}
+// "20 nov" (pt, fr) ou "Nov 20" (en)
+function diaMes(s) { var d = +s.slice(8, 10), m = MESES_C[+s.slice(5, 7) - 1]; return I18N.lang === 'en' ? m + ' ' + d : d + ' ' + m.toLowerCase(); }
 function nomeMes(k) { return MESES[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4); }
 var SIMB = { CAD: 'CA$', USD: 'US$', BRL: 'R$', EUR: '€' };
 function moeda() { return (S.cfg && S.cfg.moeda) || 'CAD'; }
@@ -190,11 +204,11 @@ var db, auth;
 function catsPadrao() {
   function c(emoji, nome, cor, subs) { return { id: rid(8), emoji: emoji, nome: nome, cor: cor, orc: 0, subs: subs.map(function (n) { return { id: rid(8), nome: n }; }) }; }
   return [
-    c('🚗', 'Carro', '#e53935', ['Combustível', 'Manutenção', 'Seguro', 'Estacionamento', 'Outros']),
-    c('🛒', 'Supermercado', '#43a047', ['Supermercado', 'Feira', 'Padaria', 'Farmácia']),
-    c('🛍️', 'Diversos', '#fb8c00', ['Roupas', 'Restaurantes', 'Lazer', 'Assinaturas', 'Saúde', 'Pets', 'Outros']),
-    c('🏠', 'Casa', '#00897b', ['Aluguel / Financiamento', 'Luz', 'Água', 'Internet / Telefone', 'Manutenção']),
-    c('✈️', 'Viagens', '#0284c7', ['Hospedagem', 'Alimentação', 'Transporte', 'Passeios'])
+    c('🚗', T('Carro'), '#e53935', [T('Combustível'), T('Manutenção'), T('Seguro'), T('Estacionamento'), T('Outros')]),
+    c('🛒', T('Supermercado'), '#43a047', [T('Supermercado'), T('Feira'), T('Padaria'), T('Farmácia')]),
+    c('🛍️', T('Diversos'), '#fb8c00', [T('Roupas'), T('Restaurantes'), T('Lazer'), T('Assinaturas'), T('Saúde'), T('Pets'), T('Outros')]),
+    c('🏠', T('Casa'), '#00897b', [T('Aluguel / Financiamento'), T('Luz'), T('Água'), T('Internet / Telefone'), T('Manutenção')]),
+    c('✈️', T('Viagens'), '#0284c7', [T('Hospedagem'), T('Alimentação'), T('Transporte'), T('Passeios')])
   ];
 }
 function periodoMesAtual() { var m = mesAtual(); return { inicio: m + '-01', fim: ultimoDiaMes(m) }; }
@@ -220,17 +234,17 @@ function normalizarCfg(c) {
 var ID_OK = /^[A-Za-z0-9_-]{1,64}$/, COR_OK = /^#[0-9a-fA-F]{6}$/, DATA_OK = /^\d{4}-\d{2}-\d{2}$/;
 function txtCurto(v, max) { return String(v == null ? '' : v).slice(0, max); }
 // Subcategorias sempre em ordem alfabética, de A a Z, ignorando acentos e maiúsculas (17/11/2026)
-function ordenarSubs(arr) { return arr.slice().sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR', { sensitivity: 'base', numeric: true }); }); }
+function ordenarSubs(arr) { return arr.slice().sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), I18N.locale, { sensitivity: 'base', numeric: true }); }); }
 function limparCfg(c) {
-  c.nome = txtCurto(c.nome || 'Minha casa', 60);
+  c.nome = txtCurto(c.nome || T('Minha casa'), 60);
   if (!SIMB[c.moeda]) c.moeda = 'CAD';
   c.limite = isFinite(+c.limite) && +c.limite > 0 ? +c.limite : 0;
   c.alertaPct = isFinite(+c.alertaPct) && +c.alertaPct > 0 ? Math.min(100, +c.alertaPct) : 80;
   if (!c.periodo || !DATA_OK.test(c.periodo.inicio) || !DATA_OK.test(c.periodo.fim)) c.periodo = periodoMesAtual();
   c.cats = (Array.isArray(c.cats) ? c.cats : []).filter(function (x) { return x && ID_OK.test(x.id); }).map(function (x, i) {
-    return { id: x.id, emoji: txtCurto(x.emoji || '📦', 8), nome: txtCurto(x.nome || 'Categoria', 40),
+    return { id: x.id, emoji: txtCurto(x.emoji || '📦', 8), nome: txtCurto(x.nome || T('Categoria'), 40),
       cor: COR_OK.test(x.cor) ? x.cor : PALETA[i % PALETA.length], orc: isFinite(+x.orc) && +x.orc > 0 ? +x.orc : 0,
-      subs: ordenarSubs((Array.isArray(x.subs) ? x.subs : []).filter(function (u) { return u && ID_OK.test(u.id); }).map(function (u) { return { id: u.id, nome: txtCurto(u.nome || 'Sub', 40) }; })) };
+      subs: ordenarSubs((Array.isArray(x.subs) ? x.subs : []).filter(function (u) { return u && ID_OK.test(u.id); }).map(function (u) { return { id: u.id, nome: txtCurto(u.nome || T('Sub'), 40) }; })) };
   });
   return c;
 }
@@ -250,7 +264,7 @@ function limparReg(id, r) {
   return o;
 }
 function catsComuns() { return (S.cfg && S.cfg.cats) || []; }
-function catParc() { return { id: PARC, emoji: '📦', nome: 'Parcelados', cor: '#7c3aed', orc: (S.cfg && +S.cfg.orcParc) || 0, subs: [] }; }
+function catParc() { return { id: PARC, emoji: '📦', nome: T('Parcelados'), cor: '#7c3aed', orc: (S.cfg && +S.cfg.orcParc) || 0, subs: [] }; }
 function todasCats() { return COM_PARCELADOS ? catsComuns().concat([catParc()]) : catsComuns(); }
 function catPorId(id) {
   if (id === PARC) return catParc();
@@ -258,7 +272,7 @@ function catPorId(id) {
   for (var i = 0; i < cs.length; i++) if (cs[i].id === id) return cs[i];
   return null;
 }
-function NOME(id) { var c = catPorId(id); return c ? c.nome : 'Sem categoria'; }
+function NOME(id) { var c = catPorId(id); return c ? c.nome : T('Sem categoria'); }
 function COR(id) { var c = catPorId(id); return c ? c.cor : '#9ca3af'; }
 function EMO(id) { var c = catPorId(id); return c ? c.emoji : '❔'; }
 function nomeSub(catId, subId) {
@@ -325,7 +339,7 @@ function planosAtivos(lista) {
   Object.keys(grupos).forEach(function (gid) {
     var g = grupos[gid], pagas = 0;
     Object.keys(g.lancs).forEach(function (n) { if (g.lancs[n].data <= hj && +n > pagas) pagas = +n; });
-    planos.push({ gid: gid, desc: g.desc || 'Parcelado', valorParc: g.valorParc, total: g.total, pagas: pagas, quitado: pagas >= g.total, valorTotal: g.valorTotal, lancs: g.lancs });
+    planos.push({ gid: gid, desc: g.desc || T('Parcelado'), valorParc: g.valorParc, total: g.total, pagas: pagas, quitado: pagas >= g.total, valorTotal: g.valorTotal, lancs: g.lancs });
   });
   return planos;
 }
@@ -382,7 +396,7 @@ function prepararConvite(card) {
   var c = convitePendente(); if (!c) return;
   if (card === 'card-auth' && !S.avisouConvite) {
     S.avisouConvite = true; setModoCriar(true);
-    $('au-erro').innerHTML = '<span style="color:#1d4ed8">📩 Você recebeu um convite! Crie sua conta abaixo. Se já tem conta, toque em <b>Entrar</b>.</span>';
+    $('au-erro').innerHTML = T('<span style="color:#1d4ed8">📩 Você recebeu um convite! Crie sua conta abaixo. Se já tem conta, toque em <b>Entrar</b>.</span>');
   }
   if (card === 'card-casa') {
     setAbaCasa(true);
@@ -390,10 +404,10 @@ function prepararConvite(card) {
     var campo = $('cv-codigo').parentNode; if (campo) campo.style.display = 'none';
     var nota = $('cv-nota');
     if (!nota) { nota = document.createElement('div'); nota.id = 'cv-nota'; $('box-convite').insertBefore(nota, $('box-convite').firstChild); }
-    nota.innerHTML = '<div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:12px">✅ <b>Convite recebido.</b> Agora é só digitar a <b>senha da casa</b> que te passaram.</div>';
+    nota.innerHTML = T('<div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:12px">✅ <b>Convite recebido.</b> Agora é só digitar a <b>senha da casa</b> que te passaram.</div>');
   }
 }
-function carregando(txt) { $('ld-txt').textContent = txt || 'Carregando…'; $('app-loading').style.display = ''; }
+function carregando(txt) { $('ld-txt').textContent = txt || T('Carregando…'); $('app-loading').style.display = ''; }
 
 function irPara(tela) {
   if (!S.chave) return;
@@ -430,70 +444,69 @@ function renderLogo() { clearTimeout(_rt); _rt = setTimeout(renderTela, 60); }
 
 // ═════════════════════════ INÍCIO ═════════════════════════
 function renderizar() {
-  var c = S.cfg, p = c.periodo, T = totaisPeriodo(p);
+  var c = S.cfg, p = c.periodo, TT = totaisPeriodo(p);
   renderAvisoPeriodo();
   var hj = hoje();
-  var totalHoje = T.todos.filter(function (l) { return l.data === hj; }).reduce(function (s, l) { return s + l.valor; }, 0);
+  var totalHoje = TT.todos.filter(function (l) { return l.data === hj; }).reduce(function (s, l) { return s + l.valor; }, 0);
   $('txt-casa').textContent = c.nome || 'MinhaCasa™';
-  $('txt-total').textContent = formatar(T.comum);
-  var parc = T.tots[PARC] || 0;
+  $('txt-total').textContent = formatar(TT.comum);
+  var parc = TT.tots[PARC] || 0;
   $('hero-parc-wrap').style.display = parc > 0 ? '' : 'none';
   $('txt-total-parc').textContent = formatar(parc);
-  var i = p.inicio.split('-'), f = p.fim.split('-'), MC = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-  $('hero-periodo').textContent = (+i[2]) + ' ' + MC[+i[1] - 1] + ' – ' + (+f[2]) + ' ' + MC[+f[1] - 1];
+  $('hero-periodo').textContent = (diaMes(p.inicio) + ' – ' + diaMes(p.fim)).toUpperCase();
 
-  var base = baseDisponivel(), rest = base - T.comum;
+  var base = baseDisponivel(), rest = base - TT.comum;
   $('txt-disponivel').textContent = base > 0 ? formatar(rest) : formatar(0);
   $('txt-disponivel').style.color = (base > 0 && rest < 0) ? '#ff6b6b' : 'white';
-  $('txt-restante').textContent = (+c.limite > 0) ? 'Limite: ' + formatar(c.limite) : (base > 0 ? 'Soma dos orçamentos: ' + formatar(base) : 'Toque em Orçamento para definir');
-  $('txt-hoje').textContent = 'Hoje: ' + formatar(totalHoje);
-  var pct = base > 0 ? Math.min(T.comum / base * 100, 100) : 0;
-  var excedeu = base > 0 && T.comum > base;
+  $('txt-restante').textContent = (+c.limite > 0) ? T('Limite: ') + formatar(c.limite) : (base > 0 ? T('Soma dos orçamentos: ') + formatar(base) : T('Toque em Orçamento para definir'));
+  $('txt-hoje').textContent = T('Hoje: ') + formatar(totalHoje);
+  var pct = base > 0 ? Math.min(TT.comum / base * 100, 100) : 0;
+  var excedeu = base > 0 && TT.comum > base;
   $('barra').style.width = pct + '%';
   $('barra').style.background = excedeu ? '#f44336' : pct >= c.alertaPct ? '#ff9800' : '#4caf50';
-  $('txt-pct').textContent = base > 0 ? pct.toFixed(1) + '% utilizado' : 'Sem orçamento definido';
+  $('txt-pct').textContent = base > 0 ? pct.toFixed(1) + T('% utilizado') : T('Sem orçamento definido');
   // Sem orçamento (14/11/2026): o cartão "Disponível" vira um botão para definir o limite
   var pill = document.querySelector('#tela-inicio .hero-pill');
   if (pill) {
     pill.classList.toggle('sem-orc', !(base > 0));
     if (!(base > 0)) {
-      $('txt-disponivel').textContent = 'Definir orçamento';
-      $('txt-restante').textContent = 'Toque para informar quanto pode gastar no período';
+      $('txt-disponivel').textContent = T('Definir orçamento');
+      $('txt-restante').textContent = T('Toque para informar quanto pode gastar no período');
     }
     pill.onclick = base > 0 ? null : function () { abrirOrcamentoInicial(); };
   }
   $('barra').parentNode.style.display = base > 0 ? '' : 'none';
   if (S.pedirOrc && !(base > 0)) { S.pedirOrc = false; setTimeout(abrirOrcamentoInicial, 600); }
   var al = $('alerta');
-  if (excedeu) { al.className = 'alerta excedido'; al.textContent = '🚨 LIMITE EXCEDIDO! Você gastou ' + formatar(T.comum - base) + ' além do disponível.'; }
-  else if (base > 0 && pct >= c.alertaPct) { al.className = 'alerta atencao'; al.textContent = '⚠️ Atenção: ' + pct.toFixed(0) + '% do disponível utilizado. Restam ' + formatar(rest) + '.'; }
+  if (excedeu) { al.className = 'alerta excedido'; al.textContent = T('🚨 LIMITE EXCEDIDO! Você gastou ') + formatar(TT.comum - base) + T(' além do disponível.'); }
+  else if (base > 0 && pct >= c.alertaPct) { al.className = 'alerta atencao'; al.textContent = T('⚠️ Atenção: ') + pct.toFixed(0) + T('% do disponível utilizado. Restam ') + formatar(rest) + '.'; }
   else { al.className = 'alerta'; al.textContent = ''; }
 
   // Cards de categoria
-  var nDev = {}; T.lista.forEach(function (l) { if (l.valor < 0) nDev[l.cat] = (nDev[l.cat] || 0) + 1; });
+  var nDev = {}; TT.lista.forEach(function (l) { if (l.valor < 0) nDev[l.cat] = (nDev[l.cat] || 0) + 1; });
   $('grid-cat').innerHTML = todasCats().map(function (cat) {
-    var gasto = T.tots[cat.id] || 0, orc = +cat.orc || 0, qtd = T.qtds[cat.id] || 0;
-    var qtdTxt = qtd + ' lanç.' + (nDev[cat.id] ? ' · ' + nDev[cat.id] + ' devol.' : ''), rotG = gasto < 0 ? 'Devolvido' : 'Gasto';
+    var gasto = TT.tots[cat.id] || 0, orc = +cat.orc || 0, qtd = TT.qtds[cat.id] || 0;
+    var qtdTxt = qtd + T(' lanç.') + (nDev[cat.id] ? ' · ' + nDev[cat.id] + T(' devol.') : ''), rotG = gasto < 0 ? T('Devolvido') : T('Gasto');
     var corpo;
     if (orc > 0) {
       var pC = Math.max(0, Math.min(gasto / orc * 100, 100)), restC = orc - gasto;
       var corB = gasto > orc ? '#f44336' : pC >= 80 ? '#ff9800' : cat.cor;
       corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + '</div>' +
-        '<div class="cat-sub-orc">Orç: ' + formatar(orc) + '</div></div>' +
-        '<div style="text-align:right"><div class="cat-rotulo">Disponível</div><div class="cat-valor" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(restC) + '</div></div></div>' +
+        T('<div class="cat-sub-orc">Orç: ') + formatar(orc) + '</div></div>' +
+        T('<div style="text-align:right"><div class="cat-rotulo">Disponível</div><div class="cat-valor" style="color:') + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(restC) + '</div></div></div>' +
         '<div class="cat-barra-fundo" style="display:block"><div class="cat-barra-fill" style="width:' + pC + '%;background:' + corB + '"></div></div>' +
         '<div class="cat-orc" style="color:' + (restC < 0 ? '#f44336' : '#bbb') + '">' + pC.toFixed(0) + '% utilizado</div>';
     } else {
-      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + '</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>';
+      corpo = '<div class="cat-linha-vals"><div><div class="cat-rotulo">' + rotG + '</div><div class="cat-valor" style="color:' + (gasto < 0 ? '#16a34a' : cat.cor) + '">' + formatar(gasto) + T('</div><div class="cat-sub-orc" style="color:#6b7280">Sem orçamento</div></div></div>');
     }
     return '<div class="card-cat" data-cat="' + cat.id + '">' +
       '<div class="cat-header"><span class="cat-icon" style="background:' + alfa(cat.cor, '22') + '">' + esc(cat.emoji) + '</span><span class="cat-nome">' + esc(cat.nome) + '</span><span class="cat-qtd">' + qtdTxt + '</span></div>' +
       corpo + '</div>';
   }).join('');
 
-  renderizarPizza(T.tots, T.comum);
-  renderizarBarras(T.lista, p);
-  renderizarRecentes(T.todos);
+  renderizarPizza(TT.tots, TT.comum);
+  renderizarBarras(TT.lista, p);
+  renderizarRecentes(TT.todos);
   pintarCartaoSemana();
   if (!$('topo-config').classList.contains('editando')) preencherConfig();
 }
@@ -504,7 +517,7 @@ function renderizarPizza(tots, total) {
     var pct = orc > 0 ? (v / orc * 100).toFixed(0) : (total > 0 ? (v / total * 100).toFixed(0) : 0);
     var cor = v > orc && orc > 0 ? '#f44336' : v < 0 ? '#16a34a' : c.cor;
     return '<div class="pizza-item"><div class="pizza-cor" style="background:' + cor + '"></div>' +
-      '<div class="pizza-txt">' + esc(c.nome) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? 'devolução' : pct + '% ' + (orc > 0 ? 'do orç.' : 'do total')) + ')</span></div>' +
+      '<div class="pizza-txt">' + esc(c.nome) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? T('devolução') : pct + '% ' + (orc > 0 ? T('do orç.') : T('do total'))) + ')</span></div>' +
       '<div class="pizza-val" style="color:' + cor + '">' + formatar(v) + '</div></div>';
   }).join('') + '</div>';
 }
@@ -518,7 +531,7 @@ function renderizarBarras(lista, p) {
   });
   var dias = [];
   for (var d = p.inicio; d <= p.fim && d <= hj; d = proxDia(d)) { dias.push(d); if (dias.length > 400) break; }
-  if (!dias.length) { el.innerHTML = '<div class="vazio">Nenhum dado no período</div>'; return; }
+  if (!dias.length) { el.innerHTML = T('<div class="vazio">Nenhum dado no período</div>'); return; }
   var maxVal = 0;
   dias.forEach(function (d) { if ((porDia[d] || {}).total > maxVal) maxVal = porDia[d].total; });
   if (maxVal === 0) maxVal = 1;
@@ -529,9 +542,9 @@ function renderizarBarras(lista, p) {
   var melhorDia = '', melhorVal = 0;
   dias.forEach(function (d) { if ((porDia[d] || {}).total > melhorVal) { melhorVal = porDia[d].total; melhorDia = d; } });
   var stats = '<div class="chart-stats">' +
-    '<div class="chart-stat"><div class="chart-stat-val">' + fmtY(media) + '</div><div class="chart-stat-label">Média por dia c/ gasto</div></div>' +
-    '<div class="chart-stat"><div class="chart-stat-val">' + diasCom.length + '</div><div class="chart-stat-label">Dias c/ gasto</div></div>' +
-    '<div class="chart-stat"><div class="chart-stat-val">' + (melhorDia ? (+melhorDia.slice(8, 10)) + '/' + (+melhorDia.slice(5, 7)) : '—') + '</div><div class="chart-stat-label">Maior gasto</div></div></div>';
+    '<div class="chart-stat"><div class="chart-stat-val">' + fmtY(media) + T('</div><div class="chart-stat-label">Média por dia c/ gasto</div></div>') +
+    '<div class="chart-stat"><div class="chart-stat-val">' + diasCom.length + T('</div><div class="chart-stat-label">Dias c/ gasto</div></div>') +
+    '<div class="chart-stat"><div class="chart-stat-val">' + (melhorDia ? (+melhorDia.slice(8, 10)) + '/' + (+melhorDia.slice(5, 7)) : '—') + T('</div><div class="chart-stat-label">Maior gasto</div></div></div>');
   var CHART_H = 160, barW = Math.max(12, Math.floor((300 - 38 - 3 * dias.length) / dias.length));
   var cats = todasCats();
   var bars = dias.map(function (d) {
@@ -559,10 +572,10 @@ function renderizarBarras(lista, p) {
     '<div class="chart-wrap"><div class="chart-inner">' +
     '<div class="chart-yaxis"><div class="chart-ylabel">' + fmtY(maxVal) + '</div><div class="chart-ylabel">' + fmtY(maxVal / 2) + '</div><div class="chart-ylabel">' + fmtY(0) + '</div></div>' +
     '<div class="chart-body"><div class="chart-grid"><div class="chart-gridline"></div><div class="chart-gridline"></div><div class="chart-gridline"></div></div>' +
-    (media > 0 ? '<div class="chart-media-line" style="bottom:' + (26 + mediaPos) + 'px"><span class="chart-media-label">méd ' + fmtY(media) + '</span></div>' : '') +
+    (media > 0 ? '<div class="chart-media-line" style="bottom:' + (26 + mediaPos) + T('px"><span class="chart-media-label">méd ') + fmtY(media) + '</span></div>' : '') +
     '<div class="chart-bars" style="height:' + (CHART_H + 26) + 'px">' + bars + '</div></div></div></div>' +
     '<div class="chart-legenda">' + cats.map(function (c) { return '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:' + c.cor + '"></div>' + esc(c.nome) + '</div>'; }).join('') +
-    '<div class="chart-leg-item"><div style="width:14px;border-top:2px dashed rgba(29,78,216,.6)"></div>Média</div></div>';
+    T('<div class="chart-leg-item"><div style="width:14px;border-top:2px dashed rgba(29,78,216,.6)"></div>Média</div></div>');
 }
 
 // Selo de devolução / crédito na loja ao lado da descrição (16/11/2026)
@@ -570,8 +583,8 @@ function seloDev(l, devMap) {
   if (l.dev) return ''; // a seta ↩ já vai na etiqueta do valor, que nunca é cortada (16/11/2026)
   var h = '';
   var dv = (devMap || devolvidoPorCompra())[l.id];
-  if (dv) h += '<span class="lanc-dev">' + (dv >= l.valor - 0.005 ? 'devolvido' : 'devolvido ' + formatar(dv)) + '</span>';
-  if (l.cl && l.clv > 0) h += '<span class="lanc-dev">🎟️ ' + (l.clv >= l.valor - 0.005 ? 'pago com crédito' : formatar(l.clv) + ' de crédito') + '</span>';
+  if (dv) h += '<span class="lanc-dev">' + (dv >= l.valor - 0.005 ? T('devolvido') : T('devolvido {v}', { v: formatar(dv) })) + '</span>';
+  if (l.cl && l.clv > 0) h += '<span class="lanc-dev">🎟️ ' + (l.clv >= l.valor - 0.005 ? T('pago com crédito') : formatar(l.clv) + T(' de crédito')) + '</span>';
   return h;
 }
 function linhaLanc(l, pagasMap, comData, classe, devMap) {
@@ -588,7 +601,7 @@ function renderizarRecentes(todos) {
   var rec = todos.filter(function (l) { return l.data <= hj; }).sort(function (a, b) {
     return a.data < b.data ? 1 : a.data > b.data ? -1 : b.ts - a.ts;
   }).slice(0, 8);
-  if (!rec.length) { $('lista-recentes').innerHTML = '<div class="vazio">📭 Nenhum lançamento ainda.<br>Toque em <b>Registrar</b> para começar.</div>'; return; }
+  if (!rec.length) { $('lista-recentes').innerHTML = T('<div class="vazio">📭 Nenhum lançamento ainda.<br>Toque em <b>Registrar</b> para começar.</div>'); return; }
   var pm = buildPagasMap(todos);
   var dm = devolvidoPorCompra();
   $('lista-recentes').innerHTML = rec.map(function (l) { return linhaLanc(l, pm, true, null, dm); }).join('');
@@ -627,17 +640,17 @@ function atualizarSaldoOrc() {
     if (inp.dataset.orc === PARC) return;
     var max = Math.max(0, c2(lim - somaOrcInputs(inp)));
     inp.classList.toggle('orc-excede', lim > 0 && valOrcInp(inp) > max + 0.004);
-    inp.placeholder = lim > 0 ? 'até ' + numTxt(max || 0) : '0';
+    inp.placeholder = lim > 0 ? T('até ') + numTxt(max || 0) : '0';
     if (lim > 0 && !max) inp.placeholder = '0';
   });
   if (!(lim > 0)) {
-    el.className = 'orc-saldo'; el.innerHTML = 'Soma das categorias: <b>' + formatar(soma) + '</b>. Defina o valor para gastar para controlar a distribuição.';
+    el.className = 'orc-saldo'; el.innerHTML = T('Soma das categorias: <b>') + formatar(soma) + T('</b>. Defina o valor para gastar para controlar a distribuição.');
   } else if (resto > 0.004) {
-    el.className = 'orc-saldo livre'; el.innerHTML = 'Distribuído <b>' + formatar(soma) + '</b> de ' + formatar(lim) + ' · ainda pode distribuir <b>' + formatar(resto) + '</b>';
+    el.className = 'orc-saldo livre'; el.innerHTML = T('Distribuído <b>') + formatar(soma) + '</b> de ' + formatar(lim) + T(' · ainda pode distribuir <b>') + formatar(resto) + '</b>';
   } else if (resto > -0.005) {
-    el.className = 'orc-saldo cheio'; el.innerHTML = '✅ Todo o valor para gastar (' + formatar(lim) + ') está distribuído';
+    el.className = 'orc-saldo cheio'; el.innerHTML = T('✅ Todo o valor para gastar (') + formatar(lim) + T(') está distribuído');
   } else {
-    el.className = 'orc-saldo passou'; el.innerHTML = '⚠️ As categorias somam <b>' + formatar(soma) + '</b>, <b>' + formatar(-resto) + '</b> acima do valor para gastar. Reduza alguma categoria.';
+    el.className = 'orc-saldo passou'; el.innerHTML = T('⚠️ As categorias somam <b>') + formatar(soma) + '</b>, <b>' + formatar(-resto) + T('</b> acima do valor para gastar. Reduza alguma categoria.');
   }
 }
 // Corta o orçamento digitado para o que ainda sobra. Devolve true se cortou.
@@ -648,8 +661,8 @@ function travarOrcInp(inp) {
   var novo = Math.max(max, antes);
   inp.value = numTxt(novo);
   var cat = catPorId(inp.dataset.orc);
-  mostrarToast('⚠️', (novo > 0 ? 'Máximo para ' + (cat ? cat.nome : 'esta categoria') + ': ' + formatar(novo) : 'Não sobrou nada do valor para gastar') +
-    '. As categorias não podem passar de ' + formatar(lim) + '.', 4500);
+  mostrarToast('⚠️', (novo > 0 ? T('Máximo para ') + (cat ? cat.nome : T('esta categoria')) + ': ' + formatar(novo) : T('Não sobrou nada do valor para gastar')) +
+    T('. As categorias não podem passar de ') + formatar(lim) + '.', 4500);
   return true;
 }
 function salvarConfigTopo(alvo) {
@@ -661,7 +674,7 @@ function salvarConfigTopo(alvo) {
   c.alertaPct = pct > 0 && pct <= 100 ? pct : 80;
   var ini = $('inp-inicio').value, fim = $('inp-fim').value;
   if (ini && fim) {
-    if (ini > fim) mostrarToast('⚠️', 'Início deve ser antes do fim');
+    if (ini > fim) mostrarToast('⚠️', T('Início deve ser antes do fim'));
     else c.periodo = { inicio: ini, fim: fim };
   }
   qsa('[data-orc]').forEach(function (inp) {
@@ -672,7 +685,7 @@ function salvarConfigTopo(alvo) {
   });
   atualizarSaldoOrc();
   if (alvo && alvo.id === 'inp-limite' && c.limite > 0 && c.limite !== limAntes && orcComum() > c.limite + 0.004)
-    mostrarToast('⚠️', 'As categorias somam ' + formatar(orcComum()) + ', acima do novo valor para gastar. Reduza alguma categoria.', 5000);
+    mostrarToast('⚠️', T('As categorias somam ') + formatar(orcComum()) + T(', acima do novo valor para gastar. Reduza alguma categoria.'), 5000);
   salvarCfg();
   renderizar();
 }
@@ -695,15 +708,15 @@ function renderAvisoPeriodo() {
   var p = S.cfg.periodo;
   if (hoje() <= p.fim) { el.innerHTML = ''; return; }
   el.innerHTML = '<div class="card" style="border-left:5px solid #f59e0b;background:#fffbeb">' +
-    '<div style="font-size:15px;font-weight:800;color:#92400e">📅 O período terminou</div>' +
-    '<div style="font-size:13.5px;color:#78350f;margin-top:4px;line-height:1.45">O período <b>' + formatarData(p.inicio) + ' → ' + formatarData(p.fim) + '</b> acabou. ' +
-    'Os gastos lançados depois de ' + formatarData(p.fim) + ' só entram nos totais quando você definir o novo período.</div>' +
-    '<button type="button" id="btn-novo-periodo" style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:12px;background:#d97706;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">Definir novo período</button></div>';
+    T('<div style="font-size:15px;font-weight:800;color:#92400e">📅 O período terminou</div>') +
+    T('<div style="font-size:13.5px;color:#78350f;margin-top:4px;line-height:1.45">O período <b>') + formatarData(p.inicio) + ' → ' + formatarData(p.fim) + '</b> acabou. ' +
+    T('Os gastos lançados depois de ') + formatarData(p.fim) + T(' só entram nos totais quando você definir o novo período.</div>') +
+    T('<button type="button" id="btn-novo-periodo" style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:12px;background:#d97706;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">Definir novo período</button></div>');
   $('btn-novo-periodo').onclick = function () {
     if ($('topo-config').style.display !== 'block') toggleConfig();
     var sug = sugestaoProxPeriodo();
     $('inp-inicio').value = sug.inicio; $('inp-fim').value = sug.fim;
-    mostrarToast('📅', 'Confira as datas sugeridas e toque em Salvar');
+    mostrarToast('📅', T('Confira as datas sugeridas e toque em Salvar'));
     var alvo = $('inp-inicio'); if (alvo && alvo.scrollIntoView) alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 }
@@ -712,7 +725,7 @@ function renderAvisoPeriodo() {
 function irParaCategoria(cat, soRender) {
   S.catAberta = cat;
   var p = S.cfg.periodo, todos = lancamentos(), lista, total;
-  var c = catPorId(cat) || { nome: 'Sem categoria', emoji: '❔', cor: '#9ca3af' };
+  var c = catPorId(cat) || { nome: T('Sem categoria'), emoji: '❔', cor: '#9ca3af' };
   if (cat === PARC) {
     var ultimos = {};
     todos.forEach(function (l) { if (l.parcela) { var g = l.parcela.grupoId; if (!ultimos[g] || l.data > ultimos[g].data) ultimos[g] = l; } });
@@ -726,9 +739,9 @@ function irParaCategoria(cat, soRender) {
   $('topo-categoria').style.background = 'linear-gradient(160deg,' + c.cor + 'cc,' + c.cor + ')';
   $('titulo-categoria').textContent = c.emoji + ' ' + c.nome;
   $('resumo-categoria').innerHTML = '<div style="text-align:center;padding:8px 0 12px"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;margin-bottom:4px">' +
-    (cat === PARC ? 'Total Mensal Ativo' : 'Total do Período') + '</div><div style="font-size:32px;font-weight:900;color:' + c.cor + '">' + formatar(total) + '</div></div>';
+    (cat === PARC ? T('Total Mensal Ativo') : T('Total do Período')) + '</div><div style="font-size:32px;font-weight:900;color:' + c.cor + '">' + formatar(total) + '</div></div>';
   var pm = buildPagasMap(todos);
-  $('lista-categoria').innerHTML = lista.length ? (function (dm) { return lista.map(function (l) { return linhaLanc(l, pm, true, null, dm); }).join(''); })(devolvidoPorCompra()) : '<div class="vazio">📭 Sem lançamentos neste período</div>';
+  $('lista-categoria').innerHTML = lista.length ? (function (dm) { return lista.map(function (l) { return linhaLanc(l, pm, true, null, dm); }).join(''); })(devolvidoPorCompra()) : T('<div class="vazio">📭 Sem lançamentos neste período</div>');
   if (!soRender) irPara('categoria');
 }
 
@@ -759,18 +772,18 @@ function pintarTipoAdd() {
   var a = S.add, dev = a.tipo === 'dev', ed = !!a.editId;
   qsa('#add-tipo [data-addtipo]').forEach(function (b) { b.classList.toggle('on', b.dataset.addtipo === a.tipo); });
   $('add-tipo').style.display = a.parc ? 'none' : '';
-  $('add-hdr-title').textContent = a.parc ? 'Editar parcela' : dev ? (ed ? 'Editar Devolução' : 'Registrar Devolução') : (ed ? 'Editar Lançamento' : 'Registrar Gasto');
-  $('btn-salvar-pro').innerHTML = ICO('check') + (ed ? 'Salvar alterações' : dev ? 'Salvar devolução' : 'Salvar lançamento');
-  $('lbl-valor').textContent = dev ? 'Valor devolvido' : 'Valor Gasto';
-  $('lbl-data').textContent = dev ? 'Data da devolução' : 'Data do Gasto';
+  $('add-hdr-title').textContent = a.parc ? T('Editar parcela') : dev ? (ed ? T('Editar Devolução') : T('Registrar Devolução')) : (ed ? T('Editar Lançamento') : T('Registrar Gasto'));
+  $('btn-salvar-pro').innerHTML = ICO('check') + (ed ? T('Salvar alterações') : dev ? T('Salvar devolução') : T('Salvar lançamento'));
+  $('lbl-valor').textContent = dev ? T('Valor devolvido') : T('Valor Gasto');
+  $('lbl-data').textContent = dev ? T('Data da devolução') : T('Data do Gasto');
   $('inp-valor').placeholder = numTxt('0.00');
-  $('inp-desc').placeholder = dev ? 'Ex: Devolvi a calça, troca do presente…' : 'Ex: Gasolina no posto, compras da semana…';
+  $('inp-desc').placeholder = dev ? T('Ex: Devolvi a calça, troca do presente…') : T('Ex: Gasolina no posto, compras da semana…');
   $('card-orig').style.display = dev ? '' : 'none';
   $('card-forma').style.display = 'none'; // opção "crédito na loja" retirada a pedido (16/11/2026); devoluções antigas com crédito continuam valendo
   $('card-parc').style.display = !dev && !ed && COM_PARCELADOS ? '' : 'none'; // parcelamento retirado do app (13/11/2026)
   qsa('#card-forma [data-addlj]').forEach(function (b) { b.classList.toggle('on', (b.dataset.addlj === '1') === !!a.lj); });
-  $('forma-dica').textContent = a.lj ? 'O dinheiro não volta para o banco: a loja guarda o valor para você usar lá. O app anota esse crédito, e na próxima compra nessa loja é só escolher "Pagou com crédito da loja".'
-    : 'O valor volta no cartão ou na conta. Na conferência com o banco, essa devolução aparece junto do crédito do extrato.';
+  $('forma-dica').textContent = a.lj ? T('O dinheiro não volta para o banco: a loja guarda o valor para você usar lá. O app anota esse crédito, e na próxima compra nessa loja é só escolher "Pagou com crédito da loja".')
+    : T('O valor volta no cartão ou na conta. Na conferência com o banco, essa devolução aparece junto do crédito do extrato.');
   renderOrig(); renderCreditoAdd(); atualizarAvisoValor();
 }
 function compraPorId(id) { return id ? lancamentos().filter(function (x) { return x.id === id && !x.dev; })[0] : null; }
@@ -781,15 +794,15 @@ function renderOrig() {
   var item = function (l, on) {
     var dv = dm[l.id] || 0;
     return '<button type="button" class="orig-item' + (on ? ' on' : '') + '" data-origem="' + l.id + '"><span class="lanc-ponto" style="background:' + COR(l.cat) + '"></span>' +
-      '<span class="oi-tx">' + esc(descLanc(l)) + '<small>' + formatarData(l.data) + ' · ' + esc(NOME(l.cat)) + (dv ? ' · já devolvido ' + formatar(dv) : '') + '</small></span>' +
-      '<span class="oi-v">' + formatar(l.valor) + '</span>' + (on ? '<span class="oi-x" data-origtrocar>Trocar</span>' : '') + '</button>';
+      '<span class="oi-tx">' + esc(descLanc(l)) + '<small>' + formatarData(l.data) + ' · ' + esc(NOME(l.cat)) + (dv ? T(' · já devolvido ') + formatar(dv) : '') + '</small></span>' +
+      '<span class="oi-v">' + formatar(l.valor) + '</span>' + (on ? T('<span class="oi-x" data-origtrocar>Trocar</span>') : '') + '</button>';
   };
   $('orig-escolhida').innerHTML = o ? item(o, true) : '';
   $('orig-busca-box').style.display = o ? 'none' : '';
   if (o) return;
   // Lista fechada: só abre quando digita a loja, a descrição, o valor ou o dia (16/11/2026)
   var bruto = $('orig-busca').value.trim(), dt = $('inp-data').value || hoje();
-  if (!bruto) { $('orig-lista').innerHTML = '<div class="add-dica">Digite a loja, a descrição, o valor (ex.: 78,20) ou o dia (ex.: 15/11) para achar a compra. Se não quiser ligar a uma compra, escolha só a categoria abaixo.</div>'; return; }
+  if (!bruto) { $('orig-lista').innerHTML = T('<div class="add-dica">Digite a loja, a descrição, o valor (ex.: 78,20) ou o dia (ex.: 15/11) para achar a compra. Se não quiser ligar a uma compra, escolha só a categoria abaixo.</div>'); return; }
   var termos = bruto.split(/\s+/);
   var bate = function (l) {
     var hay = normNome(descLanc(l) + ' ' + nomeSub(l.cat, l.sub) + ' ' + NOME(l.cat) + ' ' + l.valor.toFixed(2));
@@ -806,7 +819,7 @@ function renderOrig() {
     .filter(bate)
     .sort(function (x, y) { return y.data.localeCompare(x.data) || y.ts - x.ts; }).slice(0, 25);
   $('orig-lista').innerHTML = lista.length ? lista.map(function (l) { return item(l, false); }).join('')
-    : '<div class="add-dica">Nenhuma compra encontrada com "' + esc(bruto) + '". Tente outro nome, valor ou dia, ou registre sem compra escolhendo a categoria abaixo.</div>';
+    : T('<div class="add-dica">Nenhuma compra encontrada com "') + esc(bruto) + T('". Tente outro nome, valor ou dia, ou registre sem compra escolhendo a categoria abaixo.</div>');
 }
 // Subcategoria da compra; se a compra não tinha, procura a que tem o mesmo nome da descrição (ex.: "Costco")
 function subDaCompra(o) {
@@ -833,7 +846,7 @@ function renderCreditoAdd() {
   var cs = creditosLoja(a.editId).filter(function (c) { return c.saldo > 0.005 || c.id === a.cl; });
   if (!cs.length) { card.style.display = 'none'; a.cl = null; return; }
   card.style.display = '';
-  $('sel-credito').innerHTML = '<option value="">Não, paguei normalmente</option>' + cs.map(function (c) {
+  $('sel-credito').innerHTML = T('<option value="">Não, paguei normalmente</option>') + cs.map(function (c) {
     return '<option value="' + c.id + '"' + (c.id === a.cl ? ' selected' : '') + '>' + esc(c.nome) + ' · saldo ' + formatar(c.saldo) + '</option>';
   }).join('');
   atualizarAvisoValor();
@@ -848,12 +861,12 @@ function atualizarAvisoValor() {
   var a = S.add, av = '', v = lerValor($('inp-valor').value);
   if (a.tipo === 'dev' && a.orig) {
     var o = compraPorId(a.orig), resta = restaDevolver(o);
-    if (o && v > resta + 0.005) av = 'A compra foi de ' + formatar(o.valor) + (resta < o.valor - 0.005 ? ' e já teve ' + formatar(o.valor - resta) + ' devolvido' : '') + '. Dá para devolver até ' + formatar(resta) + '.';
+    if (o && v > resta + 0.005) av = T('A compra foi de ') + formatar(o.valor) + (resta < o.valor - 0.005 ? T(' e já teve ') + formatar(o.valor - resta) + ' devolvido' : '') + T('. Dá para devolver até ') + formatar(resta) + '.';
   }
   $('valor-aviso').textContent = av;
   var u = usoCredito(), d = $('credito-dica');
-  if (d) d.textContent = !u ? '' : !u.v ? 'Informe o valor da compra.' :
-    formatar(u.usa) + ' sai do crédito da loja' + (u.v > u.usa + 0.005 ? '; o resto (' + formatar(u.v - u.usa) + ') no cartão ou em dinheiro' : '') + '. Sobra ' + formatar(Math.max(0, u.c.saldo - u.usa)) + ' de crédito.';
+  if (d) d.textContent = !u ? '' : !u.v ? T('Informe o valor da compra.') :
+    formatar(u.usa) + T(' sai do crédito da loja') + (u.v > u.usa + 0.005 ? T('; o resto (') + formatar(u.v - u.usa) + T(') no cartão ou em dinheiro') : '') + '. Sobra ' + formatar(Math.max(0, u.c.saldo - u.usa)) + T(' de crédito.');
 }
 function renderAdd() {
   var a = S.add, editParc = a.editId && a.cat === PARC;
@@ -862,24 +875,24 @@ function renderAdd() {
     var on = c.id === a.cat;
     return '<div class="cat-tile" data-addcat="' + c.id + '"' + (on ? ' style="border-color:' + c.cor + ';background:' + alfa(c.cor, '12') + ';box-shadow:0 0 0 3px ' + alfa(c.cor, '26') + '"' : '') + '>' +
       '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm"' + (on ? ' style="color:' + c.cor + '"' : '') + '>' + esc(c.nome) + '</div></div>';
-  }).join('') : '<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>';
+  }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
   var hdr = $('add-header');
   if (cat) {
     hdr.style.background = 'linear-gradient(150deg,' + cat.cor + 'aa,' + cat.cor + ')';
     $('add-hdr-icon').textContent = cat.emoji;
-    $('add-hdr-sub').textContent = cat.nome + (cat.subs.length ? ' · subcategoria e valor' : ' · valor e data');
+    $('add-hdr-sub').textContent = cat.nome + (cat.subs.length ? T(' · subcategoria e valor') : T(' · valor e data'));
     $('btn-salvar-pro').style.background = 'linear-gradient(135deg,' + cat.cor + 'dd,' + cat.cor + ')';
     $('btn-salvar-pro').style.boxShadow = '0 4px 14px ' + alfa(cat.cor, '55');
   } else {
-    hdr.style.background = ''; $('add-hdr-icon').innerHTML = ICO('plus'); $('add-hdr-sub').textContent = 'Selecione a categoria';
+    hdr.style.background = ''; $('add-hdr-icon').innerHTML = ICO('plus'); $('add-hdr-sub').textContent = T('Selecione a categoria');
     $('btn-salvar-pro').style.background = ''; $('btn-salvar-pro').style.boxShadow = '';
   }
   if (cat && cat.subs.length && cat.id !== PARC) {
     $('grupo-sub').style.display = '';
-    $('sub-titulo').textContent = 'Subcategoria — ' + cat.nome;
+    $('sub-titulo').textContent = T('Subcategoria — ') + cat.nome;
     $('sub-step').style.background = cat.cor;
-    $('sel-sub').innerHTML = '<option value="">— Selecione —</option>' + cat.subs.map(function (s) {
+    $('sel-sub').innerHTML = T('<option value="">— Selecione —</option>') + cat.subs.map(function (s) {
       return '<option value="' + s.id + '"' + (s.id === a.sub ? ' selected' : '') + '>' + esc(s.nome) + '</option>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
@@ -887,7 +900,7 @@ function renderAdd() {
 function atualizarParcUI() {
   var a = S.add, on = a.nParc > 1;
   var btn = $('btn-parcela-toggle');
-  btn.textContent = on ? '📦 Parcelado em ' + a.nParc + 'x' : '💳 À vista';
+  btn.textContent = on ? T('📦 Parcelado em ') + a.nParc + 'x' : T('💳 À vista');
   btn.classList.toggle('ativo', on);
   $('sel-parcelas').style.display = on ? '' : 'none';
   $('grupo-parc-ini').style.display = on ? '' : 'none';
@@ -895,7 +908,7 @@ function atualizarParcUI() {
     var opts = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 18, 24, 36, 48];
     $('sel-parcelas').innerHTML = opts.map(function (n) { return '<option value="' + n + '"' + (n === a.nParc ? ' selected' : '') + '>' + n + 'x</option>'; }).join('');
     var ini = '';
-    for (var i = 1; i <= a.nParc; i++) ini += '<option value="' + i + '"' + (i === a.parcIni ? ' selected' : '') + '>' + i + 'ª parcela' + (i === 1 ? ' (nova compra)' : '') + '</option>';
+    for (var i = 1; i <= a.nParc; i++) ini += '<option value="' + i + '"' + (i === a.parcIni ? ' selected' : '') + '>' + i + 'ª parcela' + (i === 1 ? T(' (nova compra)') : '') + '</option>';
     $('sel-parcela-ini').innerHTML = ini;
   }
   atualizarPreviewParcela();
@@ -904,20 +917,20 @@ function atualizarPreviewParcela() {
   var a = S.add, v = lerValor($('inp-valor').value), pv = $('parcela-preview');
   if (a.nParc > 1 && v > 0) {
     var restantes = a.nParc - a.parcIni + 1;
-    pv.textContent = a.nParc + 'x de ' + formatar(Math.round(v / a.nParc * 100) / 100) + ' · ' + restantes + ' parcela(s) serão lançadas, uma por mês, na categoria Parcelados';
-  } else pv.textContent = a.nParc > 1 ? 'Informe o valor TOTAL da compra' : '';
+    pv.textContent = a.nParc + 'x de ' + formatar(Math.round(v / a.nParc * 100) / 100) + ' · ' + restantes + T(' parcela(s) serão lançadas, uma por mês, na categoria Parcelados');
+  } else pv.textContent = a.nParc > 1 ? T('Informe o valor TOTAL da compra') : '';
 }
 function salvarLancamento() {
   var a = S.add, valor = lerValor($('inp-valor').value), data = $('inp-data').value, desc = $('inp-desc').value.trim();
   var dev = a.tipo === 'dev';
-  if (!$('inp-valor').value.trim()) { mostrarToast('⚠️', dev ? 'Informe o valor devolvido' : 'Informe o valor gasto'); return; }
-  if (!(valor > 0)) { mostrarToast('⚠️', 'Valor inválido. Use, por exemplo, 12,50 ou 1.234,56 (até 10 milhões)'); return; }
-  if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
-  if (!a.cat || !catPorId(a.cat)) { mostrarToast('⚠️', 'Escolha uma categoria'); return; }
+  if (!$('inp-valor').value.trim()) { mostrarToast('⚠️', dev ? T('Informe o valor devolvido') : T('Informe o valor gasto')); return; }
+  if (!(valor > 0)) { mostrarToast('⚠️', T('Valor inválido. Use, por exemplo, 12,50 ou 1.234,56 (até 10 milhões)')); return; }
+  if (!data) { mostrarToast('⚠️', T('Selecione a data')); return; }
+  if (!a.cat || !catPorId(a.cat)) { mostrarToast('⚠️', T('Escolha uma categoria')); return; }
   var cat = catPorId(a.cat);
-  if (cat.subs.length && cat.id !== PARC && !a.sub) { mostrarToast('⚠️', 'Escolha a subcategoria'); return; }
+  if (cat.subs.length && cat.id !== PARC && !a.sub) { mostrarToast('⚠️', T('Escolha a subcategoria')); return; }
   var o = dev ? compraPorId(a.orig) : null;
-  if (o && valor > restaDevolver(o) + 0.005) { mostrarToast('⚠️', 'A devolução passa do valor da compra. Dá para devolver até ' + formatar(restaDevolver(o)) + '.', 4500); return; }
+  if (o && valor > restaDevolver(o) + 0.005) { mostrarToast('⚠️', T('A devolução passa do valor da compra. Dá para devolver até ') + formatar(restaDevolver(o)) + '.', 4500); return; }
   var u = usoCredito();
   // campos de devolução / crédito na loja, em cima do registro
   var tipar = function (r) {
@@ -933,10 +946,10 @@ function salvarLancamento() {
     r.v = Math.round(valor * 100); r.dt = data; r.d = desc;
     if (!r.p) { r.c = a.cat; r.s = a.sub || null; tipar(r); }
     ps.push(gravarLanc(a.editId, r));
-    mostrarToast('✅', dev ? 'Devolução atualizada' : 'Lançamento atualizado');
+    mostrarToast('✅', dev ? T('Devolução atualizada') : T('Lançamento atualizado'));
   } else if (dev) {
     ps.push(gravarLanc(Date.now().toString(36) + rid(6), tipar({ v: Math.round(valor * 100), dt: data, c: a.cat, s: a.sub || null, d: desc, por: S.user.uid, ts: Date.now() })));
-    mostrarToast('↩️', 'Devolução de ' + formatar(valor) + ' em ' + cat.nome + (a.lj ? ' (crédito na loja)' : ''), 3500);
+    mostrarToast('↩️', T('Devolução de {v} em {c}', { v: formatar(valor), c: cat.nome }) + (a.lj ? T(' (crédito na loja)') : ''), 3500);
   } else if (COM_PARCELADOS && a.nParc > 1) {
     var gid = Date.now().toString(36) + rid(4), parcV = Math.round(valor / a.nParc * 100);
     for (var i = a.parcIni - 1, off = 0; i < a.nParc; i++, off++) {
@@ -945,12 +958,12 @@ function salvarLancamento() {
         p: { n: i + 1, total: a.nParc, g: gid, vt: Math.round(valor * 100), origem: a.cat }
       }));
     }
-    mostrarToast('📦', 'Parcelamento salvo: ' + a.nParc + 'x de ' + formatar(parcV / 100));
+    mostrarToast('📦', T('Parcelamento salvo: ') + a.nParc + 'x de ' + formatar(parcV / 100));
   } else {
     ps.push(gravarLanc(Date.now().toString(36) + rid(6), tipar({ v: Math.round(valor * 100), dt: data, c: a.cat, s: a.sub || null, d: desc, por: S.user.uid, ts: Date.now() })));
-    mostrarToast('✅', 'Salvo: ' + formatar(valor) + ' em ' + cat.nome + (u && u.usa > 0 ? ' (' + formatar(u.usa) + ' do crédito da loja)' : ''));
+    mostrarToast('✅', T('Salvo: {v} em {c}', { v: formatar(valor), c: cat.nome }) + (u && u.usa > 0 ? ' (' + formatar(u.usa) + T(' do crédito da loja)') : ''));
   }
-  Promise.all(ps).catch(function () { mostrarToast('⚠️', 'Erro ao salvar. Verifique a conexão.'); });
+  Promise.all(ps).catch(function () { mostrarToast('⚠️', T('Erro ao salvar. Verifique a conexão.')); });
   var voltar = a.editId ? (S.voltarPara || 'inicio') : (a.voltarConf ? 'ajustes' : 'inicio');
   var reabrirConf = !!a.voltarConf;
   S.add.editId = null; S.add.voltarConf = false; S.add.tipo = 'compra'; S.add.orig = null; S.add.lj = false; S.add.cl = null; S.add.parc = false; S.add.viaPag = false;
@@ -965,23 +978,23 @@ function excluir(id) {
   if (l.parcela) {
     var g = l.parcela.grupoId;
     var irmas = lancamentos().filter(function (x) { return x.parcela && x.parcela.grupoId === g; });
-    abrirSheet('<h3>🗑️ Excluir parcela</h3><p style="color:#6b7280;font-size:14px">"' + esc(descLanc(l)) + '" faz parte de um parcelamento (' + irmas.length + ' parcela(s) lançadas).</p>' +
-      '<button class="aj-btn aj-full" id="ex-uma">Excluir só esta parcela (' + l.parcela.n + '/' + l.parcela.total + ')</button>' +
-      '<button class="aj-btn perigo aj-full" id="ex-todas">Excluir o plano inteiro</button>' +
-      '<button class="aj-btn aj-full" data-fechar>Cancelar</button>');
+    abrirSheet(T('<h3>🗑️ Excluir parcela</h3><p style="color:#6b7280;font-size:14px">"') + esc(descLanc(l)) + T('" faz parte de um parcelamento (') + irmas.length + T(' parcela(s) lançadas).</p>') +
+      T('<button class="aj-btn aj-full" id="ex-uma">Excluir só esta parcela (') + l.parcela.n + '/' + l.parcela.total + ')</button>' +
+      T('<button class="aj-btn perigo aj-full" id="ex-todas">Excluir o plano inteiro</button>') +
+      T('<button class="aj-btn aj-full" data-fechar>Cancelar</button>'));
     $('ex-uma').onclick = function () { fecharSheet(); apagar([id]); };
     $('ex-todas').onclick = function () { fecharSheet(); apagar(irmas.map(function (x) { return x.id; })); };
     return;
   }
-  if (!confirm('Excluir "' + descLanc(l) + '" (' + formatar(l.valor) + ')?')) return;
+  if (!confirm(T('Excluir "') + descLanc(l) + '" (' + formatar(l.valor) + ')?')) return;
   apagar([id]);
 }
 function apagar(ids) {
   ids.forEach(function (id) { delete S.raw[id]; });
   renderLogo();
   Promise.all(ids.map(function (id) { return db.ref('casas/' + S.casa + '/dados/lanc/' + id).remove(); }))
-    .then(function () { mostrarToast('🗑️', ids.length > 1 ? ids.length + ' lançamentos excluídos' : 'Lançamento excluído'); },
-      function () { mostrarToast('⚠️', 'Erro ao excluir'); });
+    .then(function () { mostrarToast('🗑️', ids.length > 1 ? ids.length + T(' lançamentos excluídos') : T('Lançamento excluído')); },
+      function () { mostrarToast('⚠️', T('Erro ao excluir')); });
   if (S.tela === 'add') { S.add.editId = null; irPara(S.voltarPara || 'inicio'); }
 }
 
@@ -1010,13 +1023,13 @@ function listaHistorico(per) {
 function renderizarHistorico() {
   $('label-hist').textContent = nomeMes(S.mesHist);
   var per = getPer('hist'), el = $('corpo-historico');
-  if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
+  if (!per) { el.innerHTML = T('<div class="vazio">Selecione as datas do período</div>'); return; }
   var lista = listaHistorico(per);
-  if (!lista.length) { el.innerHTML = '<div class="vazio">📭 Sem lançamentos neste período</div>'; return; }
+  if (!lista.length) { el.innerHTML = T('<div class="vazio">📭 Sem lançamentos neste período</div>'); return; }
   var pm = buildPagasMap(lancamentos()), porDia = {}, dm = devolvidoPorCompra();
   lista.forEach(function (l) { (porDia[l.data] = porDia[l.data] || []).push(l); });
   var total = lista.reduce(function (s, l) { return s + l.valor; }, 0);
-  el.innerHTML = '<div class="hist-dia-header" style="background:#eef2ff"><span class="hist-dia-data">Total · ' + lista.length + ' lançamentos</span><span class="hist-dia-total">' + formatar(total) + '</span></div>' +
+  el.innerHTML = T('<div class="hist-dia-header" style="background:#eef2ff"><span class="hist-dia-data">Total · ') + lista.length + T(' lançamentos</span><span class="hist-dia-total">') + formatar(total) + '</span></div>' +
     Object.keys(porDia).sort(function (a, b) { return b.localeCompare(a); }).map(function (data) {
       var tot = porDia[data].reduce(function (s, l) { return s + l.valor; }, 0);
       return '<div class="hist-dia-header"><span class="hist-dia-data">' + formatarData(data) + '</span><span class="hist-dia-total">' + formatar(tot) + '</span></div>' +
@@ -1029,52 +1042,52 @@ function compartilharTexto(msg) {
 }
 function compartilharHistorico() {
   var per = getPer('hist'), lista = per ? listaHistorico(per) : [];
-  if (!lista.length) { mostrarToast('⚠️', 'Sem lançamentos neste período'); return; }
+  if (!lista.length) { mostrarToast('⚠️', T('Sem lançamentos neste período')); return; }
   var total = lista.reduce(function (s, l) { return s + l.valor; }, 0), porDia = {};
-  var msg = '📋 *HISTÓRICO — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
+  var msg = T('📋 *HISTÓRICO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
   lista.forEach(function (l) { (porDia[l.data] = porDia[l.data] || []).push(l); });
   Object.keys(porDia).sort(function (a, b) { return b.localeCompare(a); }).forEach(function (d) {
     msg += '\n📅 *' + formatarData(d) + '* — ' + formatar(porDia[d].reduce(function (s, l) { return s + l.valor; }, 0)) + '\n';
-    porDia[d].forEach(function (l) { var sb = nomeSub(l.cat, l.sub); msg += '  • ' + (l.dev ? '↩ Devolução · ' : '') + NOME(l.cat) + (sb ? ' (' + sb + ')' : '') + ': ' + formatar(l.valor) + (l.desc ? ' — ' + l.desc : '') + '\n'; });
+    porDia[d].forEach(function (l) { var sb = nomeSub(l.cat, l.sub); msg += '  • ' + (l.dev ? T('↩ Devolução · ') : '') + NOME(l.cat) + (sb ? ' (' + sb + ')' : '') + ': ' + formatar(l.valor) + (l.desc ? ' — ' + l.desc : '') + '\n'; });
   });
-  msg += '\n━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + '*\n\n_Enviado via MinhaCasa™_';
+  msg += '\n━━━━━━━━━━━━━━━━\n💰 *Total: ' + formatar(total) + T('*\n\n_Enviado via MinhaCasa™_');
   compartilharTexto(msg);
 }
 function abrirImpressao(titulo, corpo) {
   var w = window.open('', '_blank');
-  if (!w) { mostrarToast('⚠️', 'Permita pop-ups para gerar o PDF'); return; }
+  if (!w) { mostrarToast('⚠️', T('Permita pop-ups para gerar o PDF')); return; }
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(titulo) + '</title><style>' +
     'body{margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#111827}h1{font-size:20px;margin:0 0 4px}.sub{color:#6b7280;font-size:13px;margin-bottom:16px}' +
     'table{width:100%;border-collapse:collapse}td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px}.dia td{background:#f8fafc;font-weight:800;color:#475569;font-size:12px;text-transform:uppercase}' +
     '.v{text-align:right;font-weight:700;white-space:nowrap}.tot{margin-top:14px;font-size:16px;font-weight:800;text-align:right}.pill{display:inline-block;margin:0 8px 8px 0;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:700;border:1.5px solid}' +
     '@media print{.np{display:none}}</style></head><body>' + corpo +
-    '<p class="np" style="margin-top:24px"><button onclick="window.print()" style="padding:10px 18px;font-size:15px;border-radius:10px;border:0;background:#1d4ed8;color:#fff">🖨️ Imprimir / Salvar PDF</button></p>' +
+    T('<p class="np" style="margin-top:24px"><button onclick="window.print()" style="padding:10px 18px;font-size:15px;border-radius:10px;border:0;background:#1d4ed8;color:#fff">🖨️ Imprimir / Salvar PDF</button></p>') +
     '<script>setTimeout(function(){window.print()},400)<\/script></body></html>');
   w.document.close();
 }
 function exportarPDFHistorico() {
   var per = getPer('hist'), lista = per ? listaHistorico(per) : [];
-  if (!lista.length) { mostrarToast('⚠️', 'Sem lançamentos neste período'); return; }
+  if (!lista.length) { mostrarToast('⚠️', T('Sem lançamentos neste período')); return; }
   var porDia = {}, totCat = {}, total = 0;
   lista.forEach(function (l) { (porDia[l.data] = porDia[l.data] || []).push(l); totCat[l.cat] = (totCat[l.cat] || 0) + l.valor; total += l.valor; });
   var pills = Object.keys(totCat).map(function (c) { return '<span class="pill" style="color:' + COR(c) + ';border-color:' + COR(c) + ';background:' + alfa(COR(c), '12') + '">' + esc(EMO(c) + ' ' + NOME(c)) + ': ' + formatar(totCat[c]) + '</span>'; }).join('');
   var linhas = Object.keys(porDia).sort(function (a, b) { return b.localeCompare(a); }).map(function (d) {
     return '<tr class="dia"><td colspan="2">' + formatarData(d) + '</td><td class="v">' + formatar(porDia[d].reduce(function (s, l) { return s + l.valor; }, 0)) + '</td></tr>' +
-      porDia[d].map(function (l) { return '<tr><td>' + (l.dev ? '↩ ' : '') + esc(descLanc(l)) + (l.dev ? ' <small style="color:#16a34a">(devolução' + (l.lj ? ', crédito na loja' : '') + ')</small>' : '') + '</td><td style="color:#6b7280">' + esc(NOME(l.cat) + (nomeSub(l.cat, l.sub) ? ' · ' + nomeSub(l.cat, l.sub) : '')) + '</td><td class="v" style="' + (l.dev ? 'color:#15803d;background:#dcfce7' : 'color:' + COR(l.cat)) + '">' + formatar(l.valor) + '</td></tr>'; }).join('');
+      porDia[d].map(function (l) { return '<tr><td>' + (l.dev ? '↩ ' : '') + esc(descLanc(l)) + (l.dev ? T(' <small style="color:#16a34a">(devolução') + (l.lj ? T(', crédito na loja') : '') + ')</small>' : '') + '</td><td style="color:#6b7280">' + esc(NOME(l.cat) + (nomeSub(l.cat, l.sub) ? ' · ' + nomeSub(l.cat, l.sub) : '')) + '</td><td class="v" style="' + (l.dev ? 'color:#15803d;background:#dcfce7' : 'color:' + COR(l.cat)) + '">' + formatar(l.valor) + '</td></tr>'; }).join('');
   }).join('');
-  abrirImpressao('MinhaCasa — Histórico', '<h1>📋 ' + esc(S.cfg.nome || 'MinhaCasa') + ' — Histórico</h1><div class="sub">' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + ' · ' + lista.length + ' lançamentos</div>' +
-    pills + '<table>' + linhas + '</table><div class="tot">Total: ' + formatar(total) + '</div>');
+  abrirImpressao(T('MinhaCasa — Histórico'), '<h1>📋 ' + esc(S.cfg.nome || 'MinhaCasa') + T(' — Histórico</h1><div class="sub">') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + ' · ' + lista.length + T(' lançamentos</div>') +
+    pills + '<table>' + linhas + T('</table><div class="tot">Total: ') + formatar(total) + '</div>');
 }
 
 // ═════════════════════════ RELATÓRIO ═════════════════════════
 function renderizarRelatorio() {
   var per = getPer('rel'), el = $('corpo-relatorio');
   if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
-  var T = totaisPeriodo(per), grand = T.comum, lim = baseDisponivel();
+  var TT = totaisPeriodo(per), grand = TT.comum, lim = baseDisponivel();
   var disp = lim - grand, pctLim = lim > 0 ? grand / lim * 100 : 0;
-  var dias = Object.keys(T.porDia).filter(function (d) { return T.porDia[d] > 0; }), diasCom = dias.length, mediaDia = diasCom ? grand / diasCom : 0;
+  var dias = Object.keys(TT.porDia).filter(function (d) { return TT.porDia[d] > 0; }), diasCom = dias.length, mediaDia = diasCom ? grand / diasCom : 0;
   var maiorDia = '', maiorVal = 0;
-  dias.forEach(function (d) { if (T.porDia[d] > maiorVal) { maiorVal = T.porDia[d]; maiorDia = d; } });
+  dias.forEach(function (d) { if (TT.porDia[d] > maiorVal) { maiorVal = TT.porDia[d]; maiorDia = d; } });
   var diasPeriodo = diasEntre(per.inicio, per.fim) + 1;
   // mesma conta da tela Projeção: já gasto + o que ainda deve entrar pela frequência (16/11/2026)
   var hjR = hoje(), passadosR = hjR < per.inicio ? 0 : Math.min(diasPeriodo, diasEntre(per.inicio, hjR) + 1);
@@ -1086,21 +1099,21 @@ function renderizarRelatorio() {
   var met = '<div class="rel-metricas">' +
     '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">' + formatar(grand) + '</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">' + diasCom + ' dias c/ gasto</div></div>' +
     (lim > 0 ? '<div class="rel-met-card"><div class="rel-met-val" style="color:' + (disp < 0 ? '#f44336' : '#43a047') + '">' + formatar(disp) + '</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite: ' + formatar(lim) + '</div></div>' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:' + corLim + '">' + pctLim.toFixed(1) + '%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">' + T.nComuns + ' lançamentos</div></div>'
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:' + corLim + '">' + pctLim.toFixed(1) + '%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">' + TT.nComuns + ' lançamentos</div></div>'
     : '') +
     '<div class="rel-met-card" style="background:' + (excede ? '#fef2f2' : dentro ? '#f0fdf4' : 'white') + ';border:' + (excede ? '2px solid #ef4444' : dentro ? '2px solid #22c55e' : 'none') + '">' +
     '<div class="rel-met-val" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#555') + '">' + formatar(mediaDia) + '</div><div class="rel-met-lbl">Média por dia</div>' +
     '<div class="rel-met-sub" style="color:' + (excede ? '#ef4444' : dentro ? '#16a34a' : '#9ca3af') + ';font-weight:700">Projeção: ' + formatar(projecao) + '</div></div>' +
     (maiorDia ? '<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">' + formatar(maiorVal) + '</div><div class="rel-met-lbl">Maior gasto — ' + formatarData(maiorDia) + '</div></div>' : '') +
     '</div>';
-  if (!(lim > 0)) met += '<div class="card" style="cursor:pointer;border:1px solid #fcd34d;background:#fffbeb" id="rel-sem-orc"><div style="color:#b45309;font-size:16px;font-weight:800">Sem orçamento definido</div><div style="font-size:13px;color:#4b5563;margin-top:4px">Toque para informar o limite do período e ver quanto ainda pode gastar. ' + T.nComuns + ' lançamentos no período.</div></div>';
+  if (!(lim > 0)) met += '<div class="card" style="cursor:pointer;border:1px solid #fcd34d;background:#fffbeb" id="rel-sem-orc"><div style="color:#b45309;font-size:16px;font-weight:800">Sem orçamento definido</div><div style="font-size:13px;color:#4b5563;margin-top:4px">Toque para informar o limite do período e ver quanto ainda pode gastar. ' + TT.nComuns + ' lançamentos no período.</div></div>';
 
   // Subtotais por subcategoria
   var subTot = {};
-  T.lista.forEach(function (l) { if (l.cat === PARC || !l.sub) return; var k = l.cat + '|' + l.sub; subTot[k] = (subTot[k] || 0) + l.valor; });
+  TT.lista.forEach(function (l) { if (l.cat === PARC || !l.sub) return; var k = l.cat + '|' + l.sub; subTot[k] = (subTot[k] || 0) + l.valor; });
   var cats = '<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>' +
-    todasCats().filter(function (c) { return (T.tots[c.id] || 0) !== 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
-      var g = T.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.max(0, Math.min(g / o * 100, 100)) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
+    todasCats().filter(function (c) { return (TT.tots[c.id] || 0) !== 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
+      var g = TT.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.max(0, Math.min(g / o * 100, 100)) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
       var corB = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : c.cor, restC = o - g;
       var barra = o > 0 ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:' + pC.toFixed(1) + '%;background:' + corB + '"></div></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px"><span style="color:#6b7280">' + pC.toFixed(0) + '% do orçado ' + formatar(o) + '</span>' +
@@ -1116,7 +1129,7 @@ function renderizarRelatorio() {
         '</div>' + barra + subs + '</div>';
     }).join('');
 
-  var top5 = T.lista.filter(function (l) { return l.cat !== PARC; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, 5);
+  var top5 = TT.lista.filter(function (l) { return l.cat !== PARC; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, 5);
   var top = top5.length ? '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' + top5.map(function (l, i) {
     return '<div class="rel-top-item"><div class="rel-top-num">' + (i + 1) + '</div><div class="lanc-ponto" style="background:' + COR(l.cat) + ';flex-shrink:0;width:8px;height:8px;border-radius:50%"></div>' +
       '<div class="rel-top-info"><div class="rel-top-desc">' + esc(descLanc(l)) + '</div><div class="rel-top-meta">' + formatarData(l.data) + ' · ' + esc(NOME(l.cat)) + '</div></div>' +
@@ -1126,9 +1139,9 @@ function renderizarRelatorio() {
   // "Dias até o limite por categoria" removido a pedido (14/11/2026).
 
   // Mapa de calor
-  var maxDia = 0; dias.forEach(function (d) { if (T.porDia[d] > maxDia) maxDia = T.porDia[d]; });
+  var maxDia = 0; dias.forEach(function (d) { if (TT.porDia[d] > maxDia) maxDia = TT.porDia[d]; });
   var heatDays = [];
-  for (var d = per.inicio; d <= per.fim; d = proxDia(d)) { heatDays.push({ date: d, dow: dataObj(d).getDay(), day: +d.slice(8, 10), val: T.porDia[d] || 0 }); if (heatDays.length > 400) break; }
+  for (var d = per.inicio; d <= per.fim; d = proxDia(d)) { heatDays.push({ date: d, dow: dataObj(d).getDay(), day: +d.slice(8, 10), val: TT.porDia[d] || 0 }); if (heatDays.length > 400) break; }
   var cells = '';
   for (var i = 0; i < (heatDays[0] ? heatDays[0].dow : 0); i++) cells += '<div class="heatmap-cell heatmap-empty"></div>';
   heatDays.forEach(function (h) { cells += '<div class="heatmap-cell ' + (!h.val ? 'heatmap-zero' : h.val <= maxDia * .33 ? 'heatmap-low' : h.val <= maxDia * .67 ? 'heatmap-mid' : 'heatmap-high') + '">' + h.day + '</div>'; });
@@ -1155,7 +1168,7 @@ function renderizarRelatorio() {
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
   $('rel-wa').onclick = function () {
     var msg = '📊 *RELATÓRIO — ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
-    todasCats().forEach(function (c) { var g = T.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + c.nome + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
+    todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + c.nome + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
     msg += '━━━━━━━━━━━━━━━━\n💰 *Total gasto: ' + formatar(grand) + '*\n✅ Disponível: ' + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + '\n\n_Enviado via MinhaCasa™_';
     compartilharTexto(msg);
   };
@@ -1333,7 +1346,7 @@ function atualizarProjecao() {
   $('proj-sem-limite').style.display = lim > 0 ? 'none' : '';
   $('proj-conteudo').style.display = lim > 0 && p ? '' : 'none';
   if (!p || lim <= 0) { $('proj-subtitle').textContent = '—'; $('proj-badge').textContent = ''; $('proj-badge').className = 'proj-badge'; return; }
-  var T = totaisPeriodo(p), hj = hoje(), gasto = T.comum;
+  var TT = totaisPeriodo(p), hj = hoje(), gasto = TT.comum;
   var totalDias = Math.max(1, diasEntre(p.inicio, p.fim) + 1);
   var passados = Math.min(totalDias, Math.max(1, diasEntre(p.inicio, hj) + 1)), restantes = Math.max(0, totalDias - passados);
   var PF = projecaoFreq(p);
@@ -1364,7 +1377,7 @@ function atualizarProjecao() {
   $('proj-final').textContent = (sf >= 0 ? '+ ' : '− ') + formatar(Math.abs(sf)); $('proj-final').style.color = sf >= 0 ? '#4ade80' : '#f87171';
   $('proj-final-sub').textContent = hj > p.fim ? (sf >= 0 ? 'sobrou' : 'excedeu') : (sf >= 0 ? 'sobrando' : 'excedendo') + (PF.linear ? ' se mantiver o ritmo por dia' : ' pela sua frequência de compras');
   renderizarFreqProjecao(PF, gasto, projFinal, lim, hj > p.fim);
-  renderizarGraficoProjecao(T, p, lim, hj, projFinal);
+  renderizarGraficoProjecao(TT, p, lim, hj, projFinal);
 }
 // o que ainda deve entrar e onde você foi mais vezes que o normal (16/11/2026)
 function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
@@ -1393,11 +1406,11 @@ function renderizarFreqProjecao(PF, gasto, projFinal, lim, acabou) {
   }
   el.innerHTML = h;
 }
-function renderizarGraficoProjecao(T, p, lim, hj, projFinal) {
+function renderizarGraficoProjecao(TT, p, lim, hj, projFinal) {
   var dias = [];
   for (var d = p.inicio; d <= p.fim; d = proxDia(d)) { dias.push(d); if (dias.length > 400) break; }
   var N = dias.length, acum = 0;
-  var cumReal = dias.map(function (dt) { if (dt <= hj) { acum += T.porDia[dt] || 0; return acum; } return null; });
+  var cumReal = dias.map(function (dt) { if (dt <= hj) { acum += TT.porDia[dt] || 0; return acum; } return null; });
   var cumOrc = dias.map(function (dt, i) { return lim * (i + 1) / N; });
   var maxY = Math.max(lim * 1.08, acum * 1.08, (projFinal || 0) * 1.08, 1), todayIdx = dias.indexOf(hj);
   var W = 320, H = 190, pL = 46, pR = 14, pT = 14, pB = 28, cW = W - pL - pR, cH = H - pT - pB;
@@ -1469,7 +1482,7 @@ function renderizarProjecaoParcelados() {
 // Mesma lógica do "Resumo da semana" do Gastos da Casa: compara a última semana fechada
 // (segunda a domingo) com o SEU normal (média das 12 semanas anteriores) em cada
 // subcategoria, aponta onde mais vazou e sugere até 4 ações para a semana que começa.
-var SEM_BASE = 12, SEM_PEQ = 25, MESC = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+var SEM_BASE = 12, SEM_PEQ = 25, MESC = MESES_C.map(function (m) { return m.toLowerCase(); });
 function semAdd(s, n) { var d = dataObj(s); d.setDate(d.getDate() + n); return isoDe(d); }
 function semND(a, b) { return diasEntre(a, b) + 1; }
 function semFD(s) { var d = dataObj(s); return d.getDate() + ' ' + MESC[d.getMonth()]; }
@@ -1758,7 +1771,7 @@ function motorRelatorio(D) {
   var NOMES = {}, COR = {}, ORC = {}, COMUNS = [];
   D.cats.forEach(function (c) { NOMES[c.id] = c.nome; COR[c.id] = c.cor || '#9ca3af'; ORC[c.id] = +c.orc || 0; COMUNS.push(c.id); });
   var DIASEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-  var MESC = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  var MESC = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']; // roda numa janela própria (toString): sem acesso a MESES_C
   var PEQUENO = 25;
   var catMerc = D.cats.filter(function (c) { return /mercado/i.test(c.nome); })[0];
   function addMeses(s, m) {
@@ -2251,35 +2264,35 @@ function renderAjustes() {
   if (document.activeElement !== $('aj-nome')) { $('aj-nome').value = S.cfg.nome || ''; $('aj-moeda').value = moeda(); }
   $('aj-cats').innerHTML = todasCats().map(function (c) {
     return '<div class="aj-linha"><div class="aj-ic" style="background:' + alfa(c.cor, '22') + '">' + esc(c.emoji) + '</div>' +
-      '<div class="aj-nm">' + esc(c.nome) + '<small>' + (c.id === PARC ? 'Fixa · recebe as compras parceladas' : c.subs.length + ' subcategoria' + (c.subs.length === 1 ? '' : 's')) +
-      ' · orçamento ' + (+c.orc ? formatar(c.orc) : '—') + '</small></div>' +
-      (c.id === PARC ? '<button class="aj-btn" data-editcat="' + PARC + '">Orçamento</button>' :
-        '<button class="aj-btn" data-subircat="' + c.id + '" aria-label="Subir">↑</button><button class="aj-btn" data-editcat="' + c.id + '">Editar</button>') + '</div>';
+      '<div class="aj-nm">' + esc(c.nome) + '<small>' + (c.id === PARC ? T('Fixa · recebe as compras parceladas') : (c.subs.length === 1 ? T('1 subcategoria') : T('{n} subcategorias', { n: c.subs.length }))) +
+      T(' · orçamento ') + (+c.orc ? formatar(c.orc) : '—') + '</small></div>' +
+      (c.id === PARC ? '<button class="aj-btn" data-editcat="' + PARC + T('">Orçamento</button>') :
+        '<button class="aj-btn" data-subircat="' + c.id + '" aria-label="Subir">↑</button><button class="aj-btn" data-editcat="' + c.id + T('">Editar</button>')) + '</div>';
   }).join('');
   $('aj-codigo').textContent = linkConvite();
-  $('aj-copiar').textContent = 'Copiar link';
-  var dsc = $('aj-codigo').previousElementSibling; if (dsc) dsc.innerHTML = 'Toque em <b>Compartilhar</b> e mande o link pelo WhatsApp. A pessoa toca no link, cria a conta e digita a <b>senha da casa</b>, que você passa <b>à parte</b> (pessoalmente ou por ligação).';
+  $('aj-copiar').textContent = T('Copiar link');
+  var dsc = $('aj-codigo').previousElementSibling; if (dsc) dsc.innerHTML = T('Toque em <b>Compartilhar</b> e mande o link pelo WhatsApp. A pessoa toca no link, cria a conta e digita a <b>senha da casa</b>, que você passa <b>à parte</b> (pessoalmente ou por ligação).');
   $('aj-novocod').style.display = souDono() ? '' : 'none';
   if ($('aj-trocarsenha')) $('aj-trocarsenha').style.display = souDono() ? '' : 'none';
   $('aj-membros').innerHTML = Object.keys(S.membros).map(function (uid) {
     var p = S.perfis[uid] || {}, eu = uid === S.user.uid, dono = S.meta && S.meta.dono === uid;
-    return '<div class="aj-linha"><div class="aj-ic" style="background:#eef2ff">👤</div><div class="aj-nm">' + esc(p.nome || 'Membro') + (eu ? ' (você)' : '') +
-      '<small>' + esc(p.email || '') + (dono ? ' · criou a casa' : '') + '</small></div>' +
-      (souDono() && !eu ? '<button class="aj-btn perigo" data-remover="' + uid + '">Remover</button>' : '') + '</div>';
+    return '<div class="aj-linha"><div class="aj-ic" style="background:#eef2ff">👤</div><div class="aj-nm">' + esc(p.nome || T('Membro')) + (eu ? T(' (você)') : '') +
+      '<small>' + esc(p.email || '') + (dono ? T(' · criou a casa') : '') + '</small></div>' +
+      (souDono() && !eu ? '<button class="aj-btn perigo" data-remover="' + uid + T('">Remover</button>') : '') + '</div>';
   }).join('');
   renderAdmin();
   renderLimparTeste();
   $('aj-conferir').onclick = abrirConferencia;
   $('aj-applepay').onclick = abrirApplePay; renderStatusApplePay();
-  $('aj-conta').textContent = 'Conectado como ' + (S.user.email || '') + '.';
+  $('aj-conta').textContent = T('Conectado como ') + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
   if ($('aj-novidades')) $('aj-novidades').onclick = function () { mostrarNovidades(true); };
 }
 function salvarCasaAj() {
   var nome = $('aj-nome').value.trim();
-  if (!nome) { mostrarToast('⚠️', 'Informe o nome da casa'); return; }
+  if (!nome) { mostrarToast('⚠️', T('Informe o nome da casa')); return; }
   S.cfg.nome = nome; S.cfg.moeda = $('aj-moeda').value;
-  salvarCfg().then(function () { mostrarToast('✅', 'Salvo'); });
+  salvarCfg().then(function () { mostrarToast('✅', T('Salvo')); });
   renderTela();
 }
 function subirCat(id) {
@@ -2302,22 +2315,22 @@ function fecharSheet() { $('sheet').classList.remove('on'); _ed = null; }
 // e também quando a pessoa toca em "Definir orçamento". Pode pular e definir depois.
 function abrirOrcamentoInicial() {
   var p = S.cfg.periodo;
-  abrirSheet('<div style="font-size:17px;font-weight:800;margin-bottom:6px">💰 Quanto vocês podem gastar?</div>' +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Com um limite, o app mostra quanto ainda está disponível, avisa quando estiver perto de estourar e calcula quanto dá para gastar por dia.</div>' +
-    '<label class="aj-label" for="oi-limite">Limite de gastos no período (' + (SIMB[moeda()] || '$') + ')</label><input class="aj-input" id="oi-limite" inputmode="decimal" placeholder="Ex.: 3.000,00">' +
-    '<div style="display:flex;gap:8px"><div style="flex:1"><label class="aj-label" for="oi-ini">Início do período</label><input class="aj-input" id="oi-ini" type="date" value="' + esc(p.inicio) + '"></div>' +
-    '<div style="flex:1"><label class="aj-label" for="oi-fim">Fim</label><input class="aj-input" id="oi-fim" type="date" value="' + esc(p.fim) + '"></div></div>' +
-    '<div style="font-size:12px;color:#6b7280;margin-top:6px">Dá para mudar depois em Início → Configurações. Os orçamentos de cada categoria ficam em Ajustes.</div>' +
+  abrirSheet(T('<div style="font-size:17px;font-weight:800;margin-bottom:6px">💰 Quanto vocês podem gastar?</div>') +
+    T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Com um limite, o app mostra quanto ainda está disponível, avisa quando estiver perto de estourar e calcula quanto dá para gastar por dia.</div>') +
+    T('<label class="aj-label" for="oi-limite">Limite de gastos no período (') + (SIMB[moeda()] || '$') + ')</label><input class="aj-input" id="oi-limite" inputmode="decimal" placeholder="Ex.: 3.000,00">' +
+    T('<div style="display:flex;gap:8px"><div style="flex:1"><label class="aj-label" for="oi-ini">Início do período</label><input class="aj-input" id="oi-ini" type="date" value="') + esc(p.inicio) + '"></div>' +
+    T('<div style="flex:1"><label class="aj-label" for="oi-fim">Fim</label><input class="aj-input" id="oi-fim" type="date" value="') + esc(p.fim) + '"></div></div>' +
+    T('<div style="font-size:12px;color:#6b7280;margin-top:6px">Dá para mudar depois em Início → Configurações. Os orçamentos de cada categoria ficam em Ajustes.</div>') +
     '<div id="oi-erro" style="color:#dc2626;font-size:13px;margin-top:8px;min-height:18px"></div>' +
     '<div style="display:flex;gap:8px;margin-top:4px"><button class="aj-btn" style="flex:1" id="oi-depois">Depois</button><button class="aj-btn pri" style="flex:1" id="oi-ok">Salvar</button></div>');
   $('oi-depois').onclick = fecharSheet;
   $('oi-ok').onclick = function () {
     var v = lerValor($('oi-limite').value), a = $('oi-ini').value, b = $('oi-fim').value;
-    if (!(v > 0)) { $('oi-erro').textContent = 'Informe um valor válido, por exemplo 3.000,00.'; return; }
-    if (!a || !b || a > b) { $('oi-erro').textContent = 'Confira as datas: o início precisa vir antes do fim.'; return; }
+    if (!(v > 0)) { $('oi-erro').textContent = T('Informe um valor válido, por exemplo 3.000,00.'); return; }
+    if (!a || !b || a > b) { $('oi-erro').textContent = T('Confira as datas: o início precisa vir antes do fim.'); return; }
     S.cfg.limite = v; S.cfg.periodo = { inicio: a, fim: b };
     var somaC = orcComum();
-    salvarCfg().then(function () { fecharSheet(); mostrarToast(somaC > v + 0.004 ? '⚠️' : '✅', somaC > v + 0.004 ? 'Salvo. Mas as categorias somam ' + formatar(somaC) + ', acima do limite: reduza em Início → Configurações.' : 'Orçamento salvo', somaC > v + 0.004 ? 5500 : undefined); renderTela(); }, function () { $('oi-erro').textContent = 'Não foi possível salvar agora. Tente de novo.'; });
+    salvarCfg().then(function () { fecharSheet(); mostrarToast(somaC > v + 0.004 ? '⚠️' : '✅', somaC > v + 0.004 ? T('Salvo. Mas as categorias somam ') + formatar(somaC) + T(', acima do limite: reduza em Início → Configurações.') : T('Orçamento salvo'), somaC > v + 0.004 ? 5500 : undefined); renderTela(); }, function () { $('oi-erro').textContent = T('Não foi possível salvar agora. Tente de novo.'); });
   };
 }
 
@@ -2326,29 +2339,29 @@ function abrirOrcamentoInicial() {
 // numa única gravação (tudo ou nada). Os outros membros passam a precisar da senha nova.
 function abrirTrocarSenha() {
   if (!souDono()) return;
-  abrirSheet('<div class="sheet-tit" style="font-size:17px;font-weight:800;margin-bottom:6px">🔑 Trocar senha da casa</div>' +
-    '<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Use quando alguém sair da casa ou se a senha vazou. Os outros membros vão precisar digitar a senha nova, e o link de convite antigo para de valer.</div>' +
-    '<label class="aj-label" for="ts-atual">Senha atual da casa</label><input class="aj-input" id="ts-atual" type="password" autocomplete="off">' +
-    '<label class="aj-label" for="ts-nova">Senha nova (mínimo 10 caracteres)</label><input class="aj-input" id="ts-nova" type="password" autocomplete="new-password">' +
-    '<label class="aj-label" for="ts-nova2">Repita a senha nova</label><input class="aj-input" id="ts-nova2" type="password" autocomplete="new-password">' +
-    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#374151;margin-top:10px"><input type="checkbox" id="ts-ciente" style="margin-top:3px"> Anotei a senha nova. Sem ela, ninguém consegue abrir os dados (nem eu).</label>' +
+  abrirSheet(T('<div class="sheet-tit" style="font-size:17px;font-weight:800;margin-bottom:6px">🔑 Trocar senha da casa</div>') +
+    T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Use quando alguém sair da casa ou se a senha vazou. Os outros membros vão precisar digitar a senha nova, e o link de convite antigo para de valer.</div>') +
+    T('<label class="aj-label" for="ts-atual">Senha atual da casa</label><input class="aj-input" id="ts-atual" type="password" autocomplete="off">') +
+    T('<label class="aj-label" for="ts-nova">Senha nova (mínimo 10 caracteres)</label><input class="aj-input" id="ts-nova" type="password" autocomplete="new-password">') +
+    T('<label class="aj-label" for="ts-nova2">Repita a senha nova</label><input class="aj-input" id="ts-nova2" type="password" autocomplete="new-password">') +
+    T('<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#374151;margin-top:10px"><input type="checkbox" id="ts-ciente" style="margin-top:3px"> Anotei a senha nova. Sem ela, ninguém consegue abrir os dados (nem eu).</label>') +
     '<div id="ts-erro" style="color:#dc2626;font-size:13px;margin-top:8px;min-height:18px"></div>' +
-    '<div style="display:flex;gap:8px;margin-top:6px"><button class="aj-btn" style="flex:1" id="ts-cancelar">Cancelar</button><button class="aj-btn pri" style="flex:1" id="ts-ok">Trocar senha</button></div>');
+    T('<div style="display:flex;gap:8px;margin-top:6px"><button class="aj-btn" style="flex:1" id="ts-cancelar">Cancelar</button><button class="aj-btn pri" style="flex:1" id="ts-ok">Trocar senha</button></div>'));
   $('ts-cancelar').onclick = fecharSheet;
   $('ts-ok').onclick = trocarSenhaCasa;
 }
 function trocarSenhaCasa() {
   var atual = $('ts-atual').value, nova = $('ts-nova').value, nova2 = $('ts-nova2').value, er = $('ts-erro');
   er.textContent = '';
-  if (!atual) { er.textContent = 'Digite a senha atual.'; return; }
-  if (nova.length < 10) { er.textContent = 'A senha nova precisa ter pelo menos 10 caracteres.'; return; }
-  if (nova !== nova2) { er.textContent = 'As senhas novas não conferem.'; return; }
-  if (nova === atual) { er.textContent = 'A senha nova precisa ser diferente da atual.'; return; }
-  if (!$('ts-ciente').checked) { er.textContent = 'Confirme que anotou a senha nova.'; return; }
-  var btn = $('ts-ok'); btn.disabled = true; btn.textContent = 'Trocando…';
+  if (!atual) { er.textContent = T('Digite a senha atual.'); return; }
+  if (nova.length < 10) { er.textContent = T('A senha nova precisa ter pelo menos 10 caracteres.'); return; }
+  if (nova !== nova2) { er.textContent = T('As senhas novas não conferem.'); return; }
+  if (nova === atual) { er.textContent = T('A senha nova precisa ser diferente da atual.'); return; }
+  if (!$('ts-ciente').checked) { er.textContent = T('Confirme que anotou a senha nova.'); return; }
+  var btn = $('ts-ok'); btn.disabled = true; btn.textContent = T('Trocando…');
   var casa = S.casa, salt = b64(crypto.getRandomValues(new Uint8Array(16))), convite = rid(24), nk, upd = {};
   derivarChave(atual, S.meta.salt)
-    .then(function (k) { return decifrar(k, S.meta.verif).catch(function () { throw { msg: 'Senha atual incorreta.' }; }); })
+    .then(function (k) { return decifrar(k, S.meta.verif).catch(function () { throw { msg: T('Senha atual incorreta.') }; }); })
     .then(function () { return derivarChave(nova, salt); })
     .then(function (k) {
       nk = k;
@@ -2369,11 +2382,11 @@ function trocarSenhaCasa() {
       S.meta.salt = salt; S.meta.verif = upd.verif; S.meta.prova = upd.prova; S.meta.convite = convite; S.meta.convVer = 2;
       return IDB.set(S.user.uid + ':' + casa, nk);
     })
-    .then(function () { fecharSheet(); abrirCasa(nk); mostrarToast('🔑', 'Senha da casa trocada. Mande o link de convite novo para quem mora com você.'); })
+    .then(function () { fecharSheet(); abrirCasa(nk); mostrarToast('🔑', T('Senha da casa trocada. Mande o link de convite novo para quem mora com você.')); })
     .catch(function (e) {
       if (S.chave && !S.refs.length) escutar();
-      er.textContent = (e && e.msg) || 'Não foi possível trocar a senha agora (' + ((e && e.code) || 'erro') + '). Nada foi alterado.';
-      btn.disabled = false; btn.textContent = 'Trocar senha';
+      er.textContent = (e && e.msg) || T('Não foi possível trocar a senha agora (') + ((e && e.code) || 'erro') + T('). Nada foi alterado.');
+      btn.disabled = false; btn.textContent = T('Trocar senha');
     });
 }
 // Membro cuja chave guardada deixou de abrir os dados: a senha da casa foi trocada
@@ -2383,13 +2396,13 @@ function senhaDaCasaMudou() {
   IDB.del(S.user.uid + ':' + casa).then(function () { return db.ref('casas/' + casa).once('value'); }).then(function (snap) {
     S.meta = snap.val() || S.meta; S.chave = null; S.raw = {}; S.cfg = null;
     mostrarEntrada('card-unlock');
-    $('ul-erro').textContent = 'A senha da casa foi trocada. Digite a senha nova (peça para quem criou a casa).';
+    $('ul-erro').textContent = T('A senha da casa foi trocada. Digite a senha nova (peça para quem criou a casa).');
   }, function () { mostrarEntrada('card-unlock'); });
 }
 function abrirCat(id) {
   if (id === PARC) {
-    abrirSheet('<h3>📦 Parcelados</h3><p style="color:#6b7280;font-size:13.5px">Categoria fixa: recebe automaticamente as compras parceladas. Defina o orçamento mensal para parcelas.</p>' +
-      '<label class="aj-label">Orçamento</label><input class="aj-input" id="ed-orc" inputmode="decimal" value="' + esc(numTxt(S.cfg.orcParc)) + '" placeholder="0">' +
+    abrirSheet(T('<h3>📦 Parcelados</h3><p style="color:#6b7280;font-size:13.5px">Categoria fixa: recebe automaticamente as compras parceladas. Defina o orçamento mensal para parcelas.</p>') +
+      T('<label class="aj-label">Orçamento</label><input class="aj-input" id="ed-orc" inputmode="decimal" value="') + esc(numTxt(S.cfg.orcParc)) + '" placeholder="0">' +
       '<button class="aj-btn pri aj-full" id="ed-salvar">Salvar</button><button class="aj-btn aj-full" data-fechar>Cancelar</button>');
     $('ed-salvar').onclick = function () { var v = lerValor($('ed-orc').value); S.cfg.orcParc = v > 0 ? v : 0; salvarCfg(); fecharSheet(); renderTela(); };
     return;
@@ -2401,19 +2414,19 @@ function abrirCat(id) {
 }
 function desenharCat() {
   var c = _ed;
-  abrirSheet('<h3>' + (c.nova ? 'Nova categoria' : 'Editar categoria') + '</h3>' +
-    '<label class="aj-label">Nome</label><input class="aj-input" id="ed-nome" maxlength="30" value="' + esc(c.nome) + '">' +
-    '<label class="aj-label">Orçamento no período</label><input class="aj-input" id="ed-orc" inputmode="decimal" placeholder="0 = sem orçamento" value="' + esc(numTxt(c.orc)) + '">' +
+  abrirSheet('<h3>' + (c.nova ? T('Nova categoria') : T('Editar categoria')) + '</h3>' +
+    T('<label class="aj-label">Nome</label><input class="aj-input" id="ed-nome" maxlength="30" value="') + esc(c.nome) + '">' +
+    T('<label class="aj-label">Orçamento no período</label><input class="aj-input" id="ed-orc" inputmode="decimal" placeholder="0 = sem orçamento" value="') + esc(numTxt(c.orc)) + '">' +
     '<div class="ed-orc-info" id="ed-orc-info"></div>' +
-    '<label class="aj-label">Ícone</label><div class="emo-grid">' + EMOJIS.map(function (e) { return '<button class="' + (e === c.emoji ? 'on' : '') + '" data-emo="' + e + '">' + e + '</button>'; }).join('') + '</div>' +
-    '<label class="aj-label">Cor</label><div class="cor-grid">' + PALETA.map(function (k) { return '<button class="' + (k === c.cor ? 'on' : '') + '" data-cor="' + k + '" style="background:' + k + '"></button>'; }).join('') + '</div>' +
-    '<label class="aj-label">Subcategorias</label>' +
-    c.subs.map(function (s, i) { return '<div class="sub-ed"><input class="aj-input" data-subnome="' + i + '" maxlength="40" value="' + esc(s.nome) + '"><button class="aj-btn perigo" data-subdel="' + i + '">Excluir</button></div>'; }).join('') +
-    '<div class="sub-ed"><input class="aj-input" id="ed-novasub" maxlength="40" placeholder="Nova subcategoria"><button class="aj-btn" id="ed-addsub">Adicionar</button></div>' +
+    T('<label class="aj-label">Ícone</label><div class="emo-grid">') + EMOJIS.map(function (e) { return '<button class="' + (e === c.emoji ? 'on' : '') + '" data-emo="' + e + '">' + e + '</button>'; }).join('') + '</div>' +
+    T('<label class="aj-label">Cor</label><div class="cor-grid">') + PALETA.map(function (k) { return '<button class="' + (k === c.cor ? 'on' : '') + '" data-cor="' + k + '" style="background:' + k + '"></button>'; }).join('') + '</div>' +
+    T('<label class="aj-label">Subcategorias</label>') +
+    c.subs.map(function (s, i) { return '<div class="sub-ed"><input class="aj-input" data-subnome="' + i + '" maxlength="40" value="' + esc(s.nome) + '"><button class="aj-btn perigo" data-subdel="' + i + T('">Excluir</button></div>'); }).join('') +
+    T('<div class="sub-ed"><input class="aj-input" id="ed-novasub" maxlength="40" placeholder="Nova subcategoria"><button class="aj-btn" id="ed-addsub">Adicionar</button></div>') +
     '<div class="hv-erro" id="ed-erro"></div>' +
-    '<button class="aj-btn pri aj-full" id="ed-salvar">Salvar categoria</button>' +
-    '<button class="aj-btn aj-full" data-fechar>Cancelar</button>' +
-    (c.nova ? '' : '<button class="aj-btn perigo aj-full" id="ed-excluir">Excluir categoria</button>'));
+    T('<button class="aj-btn pri aj-full" id="ed-salvar">Salvar categoria</button>') +
+    T('<button class="aj-btn aj-full" data-fechar>Cancelar</button>') +
+    (c.nova ? '' : T('<button class="aj-btn perigo aj-full" id="ed-excluir">Excluir categoria</button>')));
   $('ed-orc').oninput = infoOrcCat; infoOrcCat();
 }
 // Trava do orçamento na edição da categoria: quanto ainda sobra do valor para gastar para esta categoria.
@@ -2425,12 +2438,12 @@ function maxOrcCat(id) {
 function infoOrcCat() {
   var el = $('ed-orc-info'); if (!el || !_ed) return;
   var max = maxOrcCat(_ed.id);
-  if (max === Infinity) { el.textContent = 'Sem "valor para gastar" definido no Início, então não há limite para a soma das categorias.'; el.className = 'ed-orc-info'; return; }
+  if (max === Infinity) { el.textContent = T('Sem "valor para gastar" definido no Início, então não há limite para a soma das categorias.'); el.className = 'ed-orc-info'; return; }
   var v = lerValor($('ed-orc').value); v = isFinite(v) && v > 0 ? v : 0;
   var passou = v > max + 0.004 && v > (_ed.orcAntes || 0);
   el.className = 'ed-orc-info' + (passou ? ' passou' : '');
-  el.innerHTML = passou ? '⚠️ Passa ' + formatar(c2(v - max)) + ' do que sobra. Máximo para esta categoria: <b>' + formatar(max) + '</b>.'
-    : 'Disponível para esta categoria: até <b>' + formatar(max) + '</b> (valor para gastar ' + formatar(+S.cfg.limite) + ').' + (v ? ' Depois sobram ' + formatar(c2(max - v)) + ' para as outras.' : '');
+  el.innerHTML = passou ? T('⚠️ Passa {v}', { v: formatar(c2(v - max)) }) + T(' do que sobra. Máximo para esta categoria: <b>') + formatar(max) + '</b>.'
+    : T('Disponível para esta categoria: até <b>') + formatar(max) + T('</b> (valor para gastar ') + formatar(+S.cfg.limite) + ').' + (v ? T(' Depois sobram ') + formatar(c2(max - v)) + T(' para as outras.') : '');
 }
 function lerCatInputs() {
   if (!_ed || !$('ed-nome')) return;
@@ -2441,10 +2454,10 @@ function lerCatInputs() {
 function salvarCat() {
   lerCatInputs();
   var c = _ed; c.nome = c.nome.trim();
-  if (!c.nome) { $('ed-erro').textContent = 'Informe o nome da categoria.'; return; }
+  if (!c.nome) { $('ed-erro').textContent = T('Informe o nome da categoria.'); return; }
   var maxO = maxOrcCat(c.id);
   if (c.orc > maxO + 0.004 && c.orc > (c.orcAntes || 0)) {
-    $('ed-erro').textContent = 'A soma das categorias passaria do valor para gastar (' + formatar(+S.cfg.limite) + '). O máximo para esta categoria é ' + formatar(maxO) + '.';
+    $('ed-erro').textContent = T('A soma das categorias passaria do valor para gastar (') + formatar(+S.cfg.limite) + T('). O máximo para esta categoria é ') + formatar(maxO) + '.';
     return;
   }
   delete c.orcAntes;
@@ -2455,11 +2468,11 @@ function salvarCat() {
   if (nova) S.cfg.cats.push(c);
   else S.cfg.cats = S.cfg.cats.map(function (x) { return x.id === c.id ? c : x; });
   fecharSheet(); renderTela();
-  salvarCfg().then(function () { mostrarToast('✅', 'Categoria salva'); });
+  salvarCfg().then(function () { mostrarToast('✅', T('Categoria salva')); });
 }
 function excluirCat() {
   var c = _ed, usados = lancamentos().filter(function (l) { return l.cat === c.id; }).length;
-  if (!confirm('Excluir a categoria "' + c.nome + '"?' + (usados ? '\n\n' + usados + ' lançamento(s) ficarão como "Sem categoria".' : ''))) return;
+  if (!confirm(T('Excluir a categoria "') + c.nome + '"?' + (usados ? '\n\n' + usados + T(' lançamento(s) ficarão como "Sem categoria".') : ''))) return;
   S.cfg.cats = S.cfg.cats.filter(function (x) { return x.id !== c.id; });
   fecharSheet(); renderTela(); salvarCfg();
 }
@@ -2473,7 +2486,7 @@ function excluirCat() {
 var _adm = { uid: null, codigo: null, confirmar: null, convites: {}, contas: {} };
 var CHARS_COD = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 function aleatorio(n) { var r = crypto.getRandomValues(new Uint8Array(n)), t = ''; for (var i = 0; i < n; i++) t += CHARS_COD[r[i] % CHARS_COD.length]; return t; }
-function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString(I18N.locale) + ' ' + d.toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' }); }
 function renderAdmin() {
   var box = $('aj-admin'); if (!box || !S.user) return;
   if (_adm.uid === S.user.uid) { mostrarAdmin(); return; }
@@ -2483,35 +2496,35 @@ function renderAdmin() {
 function carregarConvites() {
   return Promise.all([db.ref('convites').once('value'), db.ref('contas').once('value').catch(function () { return null; })]).then(function (r) {
     _adm.convites = r[0].val() || {}; _adm.contas = (r[1] && r[1].val()) || {}; mostrarAdmin();
-  }, function (e) { $('adm-erro').textContent = 'Não foi possível ler os convites (' + ((e && e.code) || e) + '). As regras do Firebase estão atualizadas?'; });
+  }, function (e) { $('adm-erro').textContent = T('Não foi possível ler os convites (') + ((e && e.code) || e) + T('). As regras do Firebase estão atualizadas?'); });
 }
 function msgConvite(nome, cod) {
-  return '🏠 Olá, ' + nome + '! Você foi convidado para testar o Minha Casa.\n\n1. Abra: ' + location.origin + '\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o seu código pessoal: ' + cod + '\n\nEste código é só seu e vale uma vez.';
+  return T('🏠 Olá, ') + nome + T('! Você foi convidado para testar o Minha Casa.\n\n1. Abra: ') + location.origin + T('\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o seu código pessoal: ') + cod + T('\n\nEste código é só seu e vale uma vez.');
 }
 function mostrarAdmin() {
   var box = $('aj-admin'); if (_adm.codigo === null) { box.style.display = 'none'; return; }
   box.style.display = '';
   // convites com nome
   var ids = Object.keys(_adm.convites).sort(function (a, b) { return (_adm.convites[b].criado || 0) - (_adm.convites[a].criado || 0); });
-  $('adm-lista').innerHTML = !ids.length ? '<div style="font-size:13px;color:#9ca3af;padding:8px 0">Nenhum convite criado ainda.</div>' : ids.map(function (cod) {
+  $('adm-lista').innerHTML = !ids.length ? T('<div style="font-size:13px;color:#9ca3af;padding:8px 0">Nenhum convite criado ainda.</div>') : ids.map(function (cod) {
     var c = _adm.convites[cod], conta = c.usadoPor ? _adm.contas[c.usadoPor] || {} : null;
-    var st = c.usadoPor ? '<span style="color:#16a34a;font-weight:700">✅ Criou a casa em ' + dataHora(c.usadoEm) + '</span>'
-      : c.cancelado ? '<span style="color:#9ca3af;font-weight:700">⛔ Cancelado</span>' : '<span style="color:#b45309;font-weight:700">⏳ Ainda não usou</span>';
-    var det = c.usadoPor ? esc(c.email || conta.email || '') + '<br>Último acesso: ' + dataHora(conta.ultimo) : '<span style="font-family:monospace">' + esc(cod) + '</span>';
+    var st = c.usadoPor ? T('<span style="color:#16a34a;font-weight:700">✅ Criou a casa em ') + dataHora(c.usadoEm) + '</span>'
+      : c.cancelado ? '<span style="color:#9ca3af;font-weight:700">⛔ Cancelado</span>' : T('<span style="color:#b45309;font-weight:700">⏳ Ainda não usou</span>');
+    var det = c.usadoPor ? esc(c.email || conta.email || '') + T('<br>Último acesso: ') + dataHora(conta.ultimo) : '<span style="font-family:monospace">' + esc(cod) + '</span>';
     var conf = _adm.confirmar === cod;
-    var bts = c.usadoPor ? '' : c.cancelado ? '<button class="aj-btn perigo" data-admapagar="' + esc(cod) + '">' + (conf ? 'Confirmar' : 'Apagar') + '</button>'
-      : '<button class="aj-btn" data-admenviar="' + esc(cod) + '">Enviar</button><button class="aj-btn perigo" data-admcancelar="' + esc(cod) + '">' + (conf ? 'Confirmar' : 'Cancelar') + '</button>';
+    var bts = c.usadoPor ? '' : c.cancelado ? '<button class="aj-btn perigo" data-admapagar="' + esc(cod) + '">' + (conf ? T('Confirmar') : T('Apagar')) + '</button>'
+      : '<button class="aj-btn" data-admenviar="' + esc(cod) + T('">Enviar</button><button class="aj-btn perigo" data-admcancelar="') + esc(cod) + '">' + (conf ? T('Confirmar') : T('Cancelar')) + '</button>';
     return '<div class="aj-linha" style="align-items:flex-start"><div class="aj-ic" style="background:#eef2ff">👤</div><div class="aj-nm">' + esc(c.nome) +
       '<small style="display:block;line-height:1.5">' + st + '<br>' + det + '</small></div>' + (bts ? '<div style="display:flex;flex-direction:column;gap:4px">' + bts + '</div>' : '') + '</div>';
   }).join('');
   $('adm-criar').onclick = function () {
     var nome = $('adm-nome').value.trim(), er = $('adm-erro'); er.textContent = '';
-    if (!nome) { er.textContent = 'Digite o nome da pessoa.'; return; }
+    if (!nome) { er.textContent = T('Digite o nome da pessoa.'); return; }
     var base = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'PESSOA';
     var cod = 'CASA-' + base + '-' + aleatorio(5), btn = $('adm-criar'); btn.disabled = true;
     db.ref('convites/' + cod).set({ nome: nome, criado: firebase.database.ServerValue.TIMESTAMP }).then(function () {
-      $('adm-nome').value = ''; mostrarToast('✅', 'Convite criado para ' + nome + '. Toque em Enviar.', 4000); return carregarConvites();
-    }, function (e) { er.textContent = 'Não foi possível criar o convite (' + ((e && e.code) || e) + ').'; }).then(function () { btn.disabled = false; });
+      $('adm-nome').value = ''; mostrarToast('✅', T('Convite criado para ') + nome + T('. Toque em Enviar.'), 4000); return carregarConvites();
+    }, function (e) { er.textContent = T('Não foi possível criar o convite (') + ((e && e.code) || e) + ').'; }).then(function () { btn.disabled = false; });
   };
   qsa('#adm-lista [data-admenviar]').forEach(function (b) { b.onclick = function () {
     var cod = b.dataset.admenviar, txt = msgConvite(_adm.convites[cod].nome, cod);
@@ -2519,7 +2532,7 @@ function mostrarAdmin() {
   }; });
   function confirmarDepois(cod, acao) {
     if (_adm.confirmar !== cod) { _adm.confirmar = cod; mostrarAdmin(); setTimeout(function () { if (_adm.confirmar === cod) { _adm.confirmar = null; mostrarAdmin(); } }, 5000); return; }
-    _adm.confirmar = null; acao().then(carregarConvites, function (e) { $('adm-erro').textContent = 'Não foi possível (' + ((e && e.code) || e) + ').'; });
+    _adm.confirmar = null; acao().then(carregarConvites, function (e) { $('adm-erro').textContent = T('Não foi possível (') + ((e && e.code) || e) + ').'; });
   }
   qsa('#adm-lista [data-admcancelar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admcancelar; confirmarDepois(cod, function () { return db.ref('convites/' + cod + '/cancelado').set(true); }); }; });
   qsa('#adm-lista [data-admapagar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admapagar; confirmarDepois(cod, function () { return db.ref('convites/' + cod).remove(); }); }; });
@@ -2528,14 +2541,14 @@ function mostrarAdmin() {
   $('adm-copiar').disabled = !_adm.codigo; $('adm-desativar').disabled = !_adm.codigo;
   $('adm-copiar').onclick = function () { if (_adm.codigo) copiar(_adm.codigo); };
   var bn = $('adm-novo'), bd = $('adm-desativar');
-  bn.textContent = _adm.confirmar === '_trocar' ? 'Confirmar' : (_adm.codigo ? 'Trocar' : 'Ativar');
-  bd.textContent = _adm.confirmar === '_desativar' ? 'Confirmar' : 'Desativar';
+  bn.textContent = _adm.confirmar === '_trocar' ? T('Confirmar') : (_adm.codigo ? T('Trocar') : T('Ativar'));
+  bd.textContent = _adm.confirmar === '_desativar' ? T('Confirmar') : T('Desativar');
   bn.onclick = function () { confirmarDepois('_trocar', function () {
     var c = 'CASA-' + aleatorio(4) + '-' + aleatorio(4);
-    return db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', 'Código geral novo: ' + c + '. O anterior não vale mais.', 5000); });
+    return db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', T('Código geral novo: ') + c + T('. O anterior não vale mais.'), 5000); });
   }); };
   bd.onclick = function () { if (!_adm.codigo) return; confirmarDepois('_desativar', function () {
-    return db.ref('admin/codigoAcesso').remove().then(function () { _adm.codigo = ''; mostrarToast('⛔', 'Código geral desativado. Só os convites com nome funcionam.', 5000); });
+    return db.ref('admin/codigoAcesso').remove().then(function () { _adm.codigo = ''; mostrarToast('⛔', T('Código geral desativado. Só os convites com nome funcionam.'), 5000); });
   }); };
 }
 
@@ -2889,6 +2902,57 @@ function mostrarNovidades(todas) {
     '<button class="aj-btn pri aj-full" data-fechar>Ok</button>');
 }
 
+// ═════════════════ IDIOMA (20/11/2026) ═════════════════
+// Cada pessoa escolhe o seu (fica no aparelho e no perfil dela, criptografado com o resto da casa).
+// Trocar recarrega o app para tudo ser desenhado de novo no idioma novo.
+var CHAVE_LANG_PEND = 'mc_lang_pend';
+function marcarIdiomaBotoes() {
+  qsa('[data-idioma]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-idioma') === I18N.lang ? 'true' : 'false'); });
+  var g = $('aj-idiomas'); if (g) g.setAttribute('aria-label', T('Idioma'));
+}
+function salvarIdiomaNoPerfil(l) {
+  if (!S.user || !S.casa || !S.chave || !db) return Promise.resolve();
+  var p = {}, at = S.perfis[S.user.uid] || {};
+  for (var k in at) if (Object.prototype.hasOwnProperty.call(at, k)) p[k] = at[k];
+  if (!p.nome) p.nome = nomeUsuario();
+  if (p.email == null) p.email = S.user.email || '';
+  p.idioma = l;
+  return cifrar(S.chave, p).then(function (c) { return db.ref('casas/' + S.casa + '/dados/perfis/' + S.user.uid).set(c); });
+}
+function escolherIdioma(l) {
+  if (I18N.idiomas && I18N.idiomas.indexOf(l) < 0) return;
+  if (l === I18N.lang) return;
+  if (!S.chave) { // ainda na entrada: guarda e, quando a casa abrir, leva para o perfil
+    I18N.definir(l); lsSet(CHAVE_LANG_PEND, '1'); location.reload(); return;
+  }
+  I18N.definir(l);
+  salvarIdiomaNoPerfil(l).catch(function () { lsSet(CHAVE_LANG_PEND, '1'); }).then(function () {
+    return IDB.get(S.user.uid + ':' + S.casa);
+  }).then(function (k) {
+    if (!k && !confirm(T('Para trocar o idioma, o app vai abrir de novo e pedir a senha da casa. Continuar?'))) { mostrarToast('🌐', T('O idioma novo vale na próxima vez que abrir o app')); return; }
+    location.reload();
+  });
+}
+// Ao abrir a casa: o idioma do perfil vale para todos os aparelhos da pessoa.
+function idiomaDoPerfil() {
+  if (!S.user || !S.chave) return;
+  var me = S.perfis[S.user.uid]; if (!me) return;
+  if (lsGet(CHAVE_LANG_PEND) || !me.idioma) { // escolheu na entrada (ou perfil antigo, sem idioma): leva para o perfil
+    salvarIdiomaNoPerfil(I18N.lang).then(function () { lsSet(CHAVE_LANG_PEND, ''); }, function () {});
+    return;
+  }
+  if (me.idioma !== I18N.lang && I18N.idiomas.indexOf(me.idioma) >= 0 && !S.idiomaAplicado) {
+    S.idiomaAplicado = true;
+    I18N.definir(me.idioma);
+    IDB.get(S.user.uid + ':' + S.casa).then(function (k) { if (k) location.reload(); });
+  }
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-idioma]');
+  if (b) { e.preventDefault(); escolherIdioma(b.getAttribute('data-idioma')); }
+});
+marcarIdiomaBotoes();
+
 // ═════════════════ LANÇAR AO PAGAR (Apple Pay, 16/11/2026) ═════════════════
 // O atalho do iPhone (automação "Carteira"/"Transação") abre  …/#lancar=<valor>|<loja>|<cartão>
 // (a parte depois do "=" vem codificada). O app abre o Registrar já preenchido e sugere a categoria pela loja.
@@ -3074,27 +3138,27 @@ function renderLimparTeste() {
     if (!_limparConf) { _limparConf = true; renderLimparTeste(); setTimeout(function () { if (_limparConf) { _limparConf = false; renderLimparTeste(); } }, 5000); return; }
     _limparConf = false; b.disabled = true; b.textContent = 'Apagando…';
     db.ref('casas/' + S.casa + '/dados/lanc').remove().then(function () {
-      S.raw = {}; mostrarToast('🗑️', n + ' lançamento' + (n === 1 ? '' : 's') + ' apagado' + (n === 1 ? '' : 's')); renderLogo();
-    }, function (e) { mostrarToast('⚠️', 'Erro ao apagar (' + ((e && e.code) || e) + ')'); renderLimparTeste(); });
+      S.raw = {}; mostrarToast('🗑️', n + T(' lançamento') + (n === 1 ? '' : 's') + ' apagado' + (n === 1 ? '' : 's')); renderLogo();
+    }, function (e) { mostrarToast('⚠️', T('Erro ao apagar (') + ((e && e.code) || e) + ')'); renderLimparTeste(); });
   };
 }
 function copiar(txt) {
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { mostrarToast('📋', 'Copiado'); }, function () { mostrarToast('ℹ️', 'Toque e segure o código para copiar'); });
-  else mostrarToast('ℹ️', 'Toque e segure o código para copiar');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { mostrarToast('📋', T('Copiado')); }, function () { mostrarToast('ℹ️', T('Toque e segure o código para copiar')); });
+  else mostrarToast('ℹ️', T('Toque e segure o código para copiar'));
 }
 function compartilharConvite() {
-  var txt = '🏠 Te convidei para a nossa casa no MinhaCasa!\n\n1. Toque no link: ' + linkConvite() + '\n2. Crie sua conta (e-mail e senha)\n3. Digite a senha da casa, que vou te passar à parte';
+  var txt = T('🏠 Te convidei para a nossa casa no MinhaCasa!\n\n1. Toque no link: ') + linkConvite() + T('\n2. Crie sua conta (e-mail e senha)\n3. Digite a senha da casa, que vou te passar à parte');
   if (navigator.share) navigator.share({ text: txt }).catch(function () {}); else copiar(txt);
 }
 function novoCodigo() {
-  if (!confirm('Gerar um novo código? O atual deixa de funcionar para novos convites. Quem já está na casa não é afetado.')) return;
-  db.ref('casas/' + S.casa + '/convite').set(rid(24)).then(function () { mostrarToast('✅', 'Novo código gerado'); }, function () { mostrarToast('⚠️', 'Erro'); });
+  if (!confirm(T('Gerar um novo código? O atual deixa de funcionar para novos convites. Quem já está na casa não é afetado.'))) return;
+  db.ref('casas/' + S.casa + '/convite').set(rid(24)).then(function () { mostrarToast('✅', T('Novo código gerado')); }, function () { mostrarToast('⚠️', T('Erro')); });
 }
 function removerMembro(uid) {
   var p = S.perfis[uid] || {};
-  if (!confirm('Remover ' + (p.nome || 'este membro') + ' da casa?\n\nDepois, troque a senha da casa: a pessoa conhece a senha atual e poderia voltar a ler os dados com ela.')) return;
+  if (!confirm(T('Remover ') + (p.nome || T('este membro')) + T(' da casa?\n\nDepois, troque a senha da casa: a pessoa conhece a senha atual e poderia voltar a ler os dados com ela.'))) return;
   Promise.all([db.ref('casas/' + S.casa + '/membros/' + uid).remove(), db.ref('casas/' + S.casa + '/dados/perfis/' + uid).remove()])
-    .then(function () { mostrarToast('✅', 'Membro removido. Agora troque a senha da casa.'); abrirTrocarSenha(); }, function () { mostrarToast('⚠️', 'Erro ao remover'); });
+    .then(function () { mostrarToast('✅', T('Membro removido. Agora troque a senha da casa.')); abrirTrocarSenha(); }, function () { mostrarToast('⚠️', T('Erro ao remover')); });
 }
 
 // Backup
@@ -3113,7 +3177,7 @@ function exportarJSON() {
 }
 function exportarCSV() {
   var q = function (s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
-  var linhas = ['Data;Categoria;Subcategoria;Descrição;Parcela;Valor'];
+  var linhas = [T('Data;Categoria;Subcategoria;Descrição;Parcela;Valor')];
   lancamentos().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).forEach(function (l) {
     linhas.push([l.data, q(NOME(l.cat)), q(nomeSub(l.cat, l.sub)), q(l.desc), l.parcela ? l.parcela.n + '/' + l.parcela.total : '', l.valor.toFixed(2).replace('.', ',')].join(';'));
   });
@@ -3122,20 +3186,20 @@ function exportarCSV() {
 function importarJSON(arquivo) {
   var r = new FileReader();
   r.onload = function () {
-    var d; try { d = JSON.parse(r.result); } catch (e) { mostrarToast('⚠️', 'Arquivo inválido'); return; }
-    if (!d || d.app !== 'HomeVault' || !d.lancamentos) { mostrarToast('⚠️', 'Não é um backup do MinhaCasa'); return; }
+    var d; try { d = JSON.parse(r.result); } catch (e) { mostrarToast('⚠️', T('Arquivo inválido')); return; }
+    if (!d || d.app !== 'HomeVault' || !d.lancamentos) { mostrarToast('⚠️', T('Não é um backup do MinhaCasa')); return; }
     var regs = d.lancamentos;
     if (Array.isArray(regs)) { // formato 1
       var obj = {}; regs.forEach(function (l) { if (l && l.id && l.v) obj[l.id] = { v: l.v, dt: l.dt, c: l.c, s: l.s, d: l.d, por: l.por, ts: l.ts, t: l.t, o: l.o, lj: l.lj, cl: l.cl, clv: l.clv }; }); regs = obj;
     }
     var ids = Object.keys(regs);
-    if (!confirm('Restaurar ' + ids.length + ' lançamento(s) deste backup?\n\nLançamentos com o mesmo identificador serão substituídos; os demais serão mantidos. Categorias que não existem serão adicionadas.')) return;
+    if (!confirm(T('Restaurar ') + ids.length + T(' lançamento(s) deste backup?\n\nLançamentos com o mesmo identificador serão substituídos; os demais serão mantidos. Categorias que não existem serão adicionadas.'))) return;
     var cfgB = d.config || { cats: d.categorias || [] }, existentes = {};
     S.cfg.cats.forEach(function (c) { existentes[c.id] = true; });
     (normalizarCfg(JSON.parse(JSON.stringify(cfgB))).cfg.cats || []).forEach(function (c) { if (c && c.id && !existentes[c.id]) S.cfg.cats.push(c); });
     var ps = [salvarCfg()];
     ids.forEach(function (id) { var x = limparReg(id, regs[id]); if (x) ps.push(gravarLanc(id, x)); });
-    Promise.all(ps).then(function () { mostrarToast('✅', 'Backup restaurado'); }, function () { mostrarToast('⚠️', 'Parte do backup não foi salva'); });
+    Promise.all(ps).then(function () { mostrarToast('✅', T('Backup restaurado')); }, function () { mostrarToast('⚠️', T('Parte do backup não foi salva')); });
   };
   r.readAsText(arquivo);
 }
@@ -3143,7 +3207,7 @@ function importarJSON(arquivo) {
 // ═════════════════════════ gravação ═════════════════════════
 function salvarCfg() {
   return cifrar(S.chave, S.cfg).then(function (c) { return db.ref('casas/' + S.casa + '/dados/config').set(c); })
-    .catch(function () { mostrarToast('⚠️', 'Erro ao salvar configurações'); });
+    .catch(function () { mostrarToast('⚠️', T('Erro ao salvar configurações')); });
 }
 function gravarLanc(id, reg) {
   S.raw[id] = reg; renderLogo();
@@ -3160,6 +3224,7 @@ function iniciar() {
   if (!cfg || !cfg.apiKey || /COLE_AQUI/.test(cfg.apiKey) || typeof firebase === 'undefined') { mostrarEntrada('card-semconfig'); return; }
   firebase.initializeApp(cfg);
   auth = firebase.auth(); db = firebase.database();
+  try { auth.languageCode = I18N.locale; } catch (e) {} // e-mails do Firebase (redefinir senha) no idioma do app
   auth.onAuthStateChanged(function (u) {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
@@ -3199,9 +3264,9 @@ function carregarCasa() {
     if (e && /PERMISSION_DENIED|permission/i.test(e.code || e.message || '')) {
       db.ref('usuarios/' + S.user.uid + '/casa').remove().catch(function () {});
       mostrarEntrada('card-casa');
-      $('nc-erro').textContent = 'Você não tem mais acesso à casa anterior. Crie uma casa ou use um convite.';
+      $('nc-erro').textContent = T('Você não tem mais acesso à casa anterior. Crie uma casa ou use um convite.');
     } else {
-      carregando('Não foi possível conectar. Verifique a internet e abra o app de novo.');
+      carregando(T('Não foi possível conectar. Verifique a internet e abra o app de novo.'));
     }
   });
 }
@@ -3215,7 +3280,7 @@ function abrirCasa(chave) {
         .then(function () { if (S.meta) { S.meta.prova = pv; S.meta.convVer = 2; } });
     }).catch(function (e) { console.warn('prova:', e && (e.code || e.message)); });
   }
-  carregando('Abrindo a casa…');
+  carregando(T('Abrindo a casa…'));
   escutar();
 }
 function pararEscuta() { S.refs.forEach(function (r) { r.off(); }); S.refs = []; }
@@ -3232,7 +3297,7 @@ function escutar() {
     var p = v ? decifrar(S.chave, v) : Promise.resolve(null);
     p.catch(function () { senhaDaCasaMudou(); return 'mudou'; }).then(function (c) {
       if (c === 'mudou') return;
-      var n = normalizarCfg(c || { cats: catsPadrao(), nome: 'Minha casa', moeda: 'CAD' });
+      var n = normalizarCfg(c || { cats: catsPadrao(), nome: T('Minha casa'), moeda: 'CAD' });
       S.cfg = n.cfg;
       if (n.mudou || !c) salvarCfg();
       if (primeiro) { primeiro = false; irPara('inicio'); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
@@ -3246,33 +3311,33 @@ function escutar() {
   rPerf.on('value', function (s) {
     var v = s.val() || {}, out = {};
     Promise.all(Object.keys(v).map(function (uid) { return decifrar(S.chave, v[uid]).then(function (p) { out[uid] = p; }, function () {}); }))
-      .then(function () { S.perfis = out; renderLogo(); });
+      .then(function () { S.perfis = out; idiomaDoPerfil(); renderLogo(); });
   });
   rMem.on('value', function (s) { S.membros = s.val() || {}; renderLogo(); });
   rConv.on('value', function (s) { if (S.meta) S.meta.convite = s.val(); renderLogo(); });
   rCon.on('value', function (s) {
     var on = !!s.val();
     $('sync-dot').style.background = on ? '#43a047' : '#f59e0b';
-    $('sync-txt').textContent = on ? 'sincronizado ✓' : 'offline';
+    $('sync-txt').textContent = on ? T('sincronizado ✓') : T('offline');
   });
 }
 
 var modoCriar = false;
 function msgAuth(e) {
   var c = (e && e.code) || '';
-  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'E-mail ou senha incorretos.';
-  if (/email-already-in-use/.test(c)) return 'Já existe uma conta com este e-mail. Use "Entrar".';
-  if (/weak-password/.test(c)) return 'Senha fraca. Use pelo menos 8 caracteres.';
-  if (/invalid-email/.test(c)) return 'E-mail inválido.';
-  if (/too-many-requests/.test(c)) return 'Muitas tentativas. Aguarde alguns minutos.';
-  if (/network/.test(c)) return 'Sem conexão com a internet.';
-  return 'Não foi possível concluir (' + (c || 'erro') + ').';
+  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return T('E-mail ou senha incorretos.');
+  if (/email-already-in-use/.test(c)) return T('Já existe uma conta com este e-mail. Use "Entrar".');
+  if (/weak-password/.test(c)) return T('Senha fraca. Use pelo menos 8 caracteres.');
+  if (/invalid-email/.test(c)) return T('E-mail inválido.');
+  if (/too-many-requests/.test(c)) return T('Muitas tentativas. Aguarde alguns minutos.');
+  if (/network/.test(c)) return T('Sem conexão com a internet.');
+  return T('Não foi possível concluir (') + (c || 'erro') + ').';
 }
 function setModoCriar(v) {
   modoCriar = v;
   $('tab-entrar').classList.toggle('on', !v); $('tab-criar').classList.toggle('on', v);
   $('campo-nome').style.display = v ? '' : 'none';
-  $('au-btn').textContent = v ? 'Criar conta' : 'Entrar';
+  $('au-btn').textContent = v ? T('Criar conta') : T('Entrar');
   $('au-esqueci').style.display = v ? 'none' : '';
   $('au-erro').textContent = '';
 }
@@ -3283,9 +3348,9 @@ function setAbaCasa(convite) {
 function enviarAuth() {
   var email = $('au-email').value.trim(), senha = $('au-senha').value, nome = $('au-nome').value.trim(), er = $('au-erro');
   er.textContent = '';
-  if (!email || !senha) { er.textContent = 'Preencha e-mail e senha.'; return; }
-  if (modoCriar && !nome) { er.textContent = 'Informe seu nome.'; return; }
-  if (modoCriar && senha.length < 8) { er.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if (!email || !senha) { er.textContent = T('Preencha e-mail e senha.'); return; }
+  if (modoCriar && !nome) { er.textContent = T('Informe seu nome.'); return; }
+  if (modoCriar && senha.length < 8) { er.textContent = T('A senha precisa ter pelo menos 8 caracteres.'); return; }
   var btn = $('au-btn'); btn.disabled = true;
   var p = modoCriar ? auth.createUserWithEmailAndPassword(email, senha).then(function (r) { return r.user.updateProfile({ displayName: nome }); })
     : auth.signInWithEmailAndPassword(email, senha);
@@ -3293,23 +3358,23 @@ function enviarAuth() {
 }
 function esqueci() {
   var email = $('au-email').value.trim();
-  if (!email) { $('au-erro').textContent = 'Digite seu e-mail acima e toque de novo em "Esqueci minha senha".'; return; }
-  auth.sendPasswordResetEmail(email).then(function () { $('au-erro').innerHTML = '<span style="color:#16a34a">Enviamos um e-mail para redefinir a senha.</span>'; },
+  if (!email) { $('au-erro').textContent = T('Digite seu e-mail acima e toque de novo em "Esqueci minha senha".'); return; }
+  auth.sendPasswordResetEmail(email).then(function () { $('au-erro').innerHTML = T('<span style="color:#16a34a">Enviamos um e-mail para redefinir a senha.</span>'); },
     function (e) { $('au-erro').textContent = msgAuth(e); });
 }
-function nomeUsuario() { return (S.user && (S.user.displayName || (S.user.email || '').split('@')[0])) || 'Eu'; }
+function nomeUsuario() { return (S.user && (S.user.displayName || (S.user.email || '').split('@')[0])) || T('Eu'); }
 function criarCasa() {
   var nome = $('nc-nome').value.trim(), md = $('nc-moeda').value, s1 = $('nc-senha').value, s2 = $('nc-senha2').value, er = $('nc-erro');
   er.textContent = '';
   // Fase de testes (14/11/2026): só cria casa quem tem o código de acesso. A conferência é feita nas regras do Firebase (admin/codigoAcesso).
   var acesso = $('nc-acesso').value.trim().toUpperCase().replace(/\s+/g, '');
-  if (!acesso) { er.textContent = 'Digite o código de acesso. O Minha Casa está em fase de testes.'; return; }
-  if (!/^[A-Z0-9-]{6,40}$/.test(acesso)) { er.textContent = 'Código de acesso inválido. Confira o código que você recebeu.'; return; }
-  if (!nome) { er.textContent = 'Dê um nome para a casa.'; return; }
-  if (s1.length < 8) { er.textContent = 'A senha da casa precisa ter pelo menos 8 caracteres.'; return; }
-  if (s1 !== s2) { er.textContent = 'As senhas da casa não conferem.'; return; }
-  if (!$('nc-ciente').checked) { er.textContent = 'Confirme que anotou a senha da casa.'; return; }
-  var btn = $('nc-btn'); btn.disabled = true; btn.textContent = 'Criando…';
+  if (!acesso) { er.textContent = T('Digite o código de acesso. O Minha Casa está em fase de testes.'); return; }
+  if (!/^[A-Z0-9-]{6,40}$/.test(acesso)) { er.textContent = T('Código de acesso inválido. Confira o código que você recebeu.'); return; }
+  if (!nome) { er.textContent = T('Dê um nome para a casa.'); return; }
+  if (s1.length < 8) { er.textContent = T('A senha da casa precisa ter pelo menos 8 caracteres.'); return; }
+  if (s1 !== s2) { er.textContent = T('As senhas da casa não conferem.'); return; }
+  if (!$('nc-ciente').checked) { er.textContent = T('Confirme que anotou a senha da casa.'); return; }
+  var btn = $('nc-btn'); btn.disabled = true; btn.textContent = T('Criando…');
   var casa = rid(20), convite = rid(24), salt = b64(crypto.getRandomValues(new Uint8Array(16))), chave;
   derivarChave(s1, salt).then(function (k) { chave = k; return cifrar(k, VERIF_TEXTO); }).then(function (verif) {
     var m = {}; m[S.user.uid] = convite;
@@ -3326,8 +3391,8 @@ function criarCasa() {
     return cifrar(chave, { v: 2, nome: nome, moeda: md, cats: catsPadrao(), limite: 0, alertaPct: 80, periodo: periodoMesAtual(), orcParc: 0 });
   }).then(function (c) { return db.ref('casas/' + casa + '/dados/config').set(c); })
     .then(function () { return entrouNaCasa(casa, chave, true); })
-    .catch(function (e) { er.textContent = e && e.codigoAcesso ? 'Código de acesso inválido. Confira o código que você recebeu.' : 'Não foi possível criar a casa (' + ((e && e.code) || e) + ').'; })
-    .then(function () { btn.disabled = false; btn.textContent = 'Criar casa'; });
+    .catch(function (e) { er.textContent = e && e.codigoAcesso ? T('Código de acesso inválido. Confira o código que você recebeu.') : T('Não foi possível criar a casa (') + ((e && e.code) || e) + ').'; })
+    .then(function () { btn.disabled = false; btn.textContent = T('Criar casa'); });
 }
 function lerConvite(txt) {
   var m = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').match(/^hv-([a-z0-9]{20})-([a-z0-9]{24})$/);
@@ -3336,56 +3401,56 @@ function lerConvite(txt) {
 function entrarConvite() {
   var cv = lerConvite($('cv-codigo').value), senha = $('cv-senha').value, er = $('cv-erro');
   er.textContent = '';
-  if (!cv) { er.textContent = 'Convite inválido. Toque de novo no link que você recebeu, ou cole o código inteiro (começa com HV-).'; var cp = $('cv-codigo').parentNode; if (cp) cp.style.display = ''; try { localStorage.removeItem(CHAVE_CONV); } catch (e) {} return; }
-  if (!senha) { er.textContent = 'Digite a senha da casa.'; return; }
-  var btn = $('cv-btn'); btn.disabled = true; btn.textContent = 'Entrando…';
+  if (!cv) { er.textContent = T('Convite inválido. Toque de novo no link que você recebeu, ou cole o código inteiro (começa com HV-).'); var cp = $('cv-codigo').parentNode; if (cp) cp.style.display = ''; try { localStorage.removeItem(CHAVE_CONV); } catch (e) {} return; }
+  if (!senha) { er.textContent = T('Digite a senha da casa.'); return; }
+  var btn = $('cv-btn'); btn.disabled = true; btn.textContent = T('Entrando…');
   var memRef = db.ref('casas/' + cv.casa + '/membros/' + S.user.uid), chave;
   // 1) lê o salt (público) e a versão do convite; 2) calcula a chave e a prova com a senha digitada;
   // 3) só entra se as regras aceitarem convite + prova (senha certa e convite válido)
   Promise.all([db.ref('casas/' + cv.casa + '/salt').once('value'), db.ref('casas/' + cv.casa + '/convVer').once('value')])
-    .catch(function () { throw { msg: 'Convite inválido ou expirado. Peça um link novo.' }; })
+    .catch(function () { throw { msg: T('Convite inválido ou expirado. Peça um link novo.') }; })
     .then(function (r) {
-      if (!r[0].exists()) throw { msg: 'Convite inválido ou expirado. Peça um link novo.' };
-      if (r[1].val() !== 2) throw { msg: 'Este convite ainda não está ativo. Peça para quem criou a casa abrir o MinhaCasa uma vez e mandar o link de novo.' };
+      if (!r[0].exists()) throw { msg: T('Convite inválido ou expirado. Peça um link novo.') };
+      if (r[1].val() !== 2) throw { msg: T('Este convite ainda não está ativo. Peça para quem criou a casa abrir o MinhaCasa uma vez e mandar o link de novo.') };
       return derivarChave(senha, r[0].val());
     })
     .then(function (k) { chave = k; return provaDaChave(k); })
-    .then(function (pv) { return memRef.set(cv.convite + ':' + pv).catch(function () { throw { msg: 'Senha da casa incorreta, ou o convite expirou. Confira a senha ou peça um link novo.' }; }); })
+    .then(function (pv) { return memRef.set(cv.convite + ':' + pv).catch(function () { throw { msg: T('Senha da casa incorreta, ou o convite expirou. Confira a senha ou peça um link novo.') }; }); })
     .then(function () { return db.ref('casas/' + cv.casa).once('value'); })
     .then(function (snap) {
       var m = snap.val();
       return decifrar(chave, m.verif).then(function () { S.meta = m; try { localStorage.removeItem(CHAVE_CONV); } catch (e) {} return entrouNaCasa(cv.casa, chave, false); },
-        function () { return memRef.remove().then(function () { throw { msg: 'Senha da casa incorreta.' }; }); });
-    }).catch(function (e) { er.textContent = (e && e.msg) || 'Não foi possível entrar (' + ((e && e.code) || e) + ').'; })
-    .then(function () { btn.disabled = false; btn.textContent = 'Entrar na casa'; });
+        function () { return memRef.remove().then(function () { throw { msg: T('Senha da casa incorreta.') }; }); });
+    }).catch(function (e) { er.textContent = (e && e.msg) || T('Não foi possível entrar (') + ((e && e.code) || e) + ').'; })
+    .then(function () { btn.disabled = false; btn.textContent = T('Entrar na casa'); });
 }
 function entrouNaCasa(casa, chave, criou) {
   return db.ref('usuarios/' + S.user.uid + '/casa').set(casa)
     .then(function () { return IDB.set(S.user.uid + ':' + casa, chave); })
-    .then(function () { return cifrar(chave, { nome: nomeUsuario(), email: S.user.email || '' }); })
+    .then(function () { return cifrar(chave, { nome: nomeUsuario(), email: S.user.email || '', idioma: I18N.lang }); })
     .then(function (p) { return db.ref('casas/' + casa + '/dados/perfis/' + S.user.uid).set(p); })
     .then(function () { return db.ref('casas/' + casa).once('value'); })
     .then(function (snap) {
       S.casa = casa; S.meta = snap.val();
       abrirCasa(chave);
-      mostrarToast(criou ? '🎉' : '👋', criou ? 'Casa criada!' : 'Bem-vindo(a) à casa!');
+      mostrarToast(criou ? '🎉' : '👋', criou ? T('Casa criada!') : T('Bem-vindo(a) à casa!'));
       if (criou) S.pedirOrc = true;
     });
 }
 function desbloquear() {
   var senha = $('ul-senha').value, er = $('ul-erro');
   er.textContent = '';
-  if (!senha) { er.textContent = 'Digite a senha da casa.'; return; }
-  var btn = $('ul-btn'); btn.disabled = true; btn.textContent = 'Verificando…';
+  if (!senha) { er.textContent = T('Digite a senha da casa.'); return; }
+  var btn = $('ul-btn'); btn.disabled = true; btn.textContent = T('Verificando…');
   derivarChave(senha, S.meta.salt).then(function (k) {
     return decifrar(k, S.meta.verif).then(function () {
       return ($('ul-lembrar').checked ? IDB.set(S.user.uid + ':' + S.casa, k) : Promise.resolve()).then(function () { $('ul-senha').value = ''; abrirCasa(k); });
-    }, function () { er.textContent = 'Senha da casa incorreta.'; });
-  }).catch(function () { er.textContent = 'Não foi possível desbloquear.'; })
-    .then(function () { btn.disabled = false; btn.textContent = 'Desbloquear'; });
+    }, function () { er.textContent = T('Senha da casa incorreta.'); });
+  }).catch(function () { er.textContent = T('Não foi possível desbloquear.'); })
+    .then(function () { btn.disabled = false; btn.textContent = T('Desbloquear'); });
 }
 function bloquear() {
-  if (!confirm('Bloquear? Será preciso digitar a senha da casa para abrir de novo neste aparelho.')) return;
+  if (!confirm(T('Bloquear? Será preciso digitar a senha da casa para abrir de novo neste aparelho.'))) return;
   IDB.del(S.user.uid + ':' + S.casa).then(function () { pararEscuta(); S.chave = null; S.raw = {}; S.cfg = null; mostrarEntrada('card-unlock'); });
 }
 function sair() {
@@ -3487,7 +3552,7 @@ function ligarEventos() {
   $('aj-novocod').onclick = novoCodigo;
   if (!$('aj-trocarsenha') && $('aj-membros')) {
     var bts = document.createElement('button'); bts.id = 'aj-trocarsenha'; bts.className = 'aj-btn aj-full'; bts.type = 'button';
-    bts.style.display = 'none'; bts.innerHTML = ICO('key') + 'Trocar senha da casa';
+    bts.style.display = 'none'; bts.innerHTML = ICO('key') + T('Trocar senha da casa');
     $('aj-membros').parentNode.insertBefore(bts, $('aj-membros').nextSibling);
     bts.onclick = abrirTrocarSenha;
   }
