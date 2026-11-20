@@ -176,6 +176,7 @@
         texto: cheios.filter(function (v) { return /[A-Za-zÀ-ú]{3}/.test(v) && !pareceData(v); }).length,
         tam: cheios.reduce(function (s, v) { return s + v.length; }, 0) / (cheios.length || 1),
         neg: cheios.filter(function (v) { return eNum(v) && numero(v) < 0; }).length,
+        dist: cheios.filter(function (v, i, a) { return a.indexOf(v) === i; }).length / (cheios.length || 1),
         nome: cab[c] || ''
       });
     }
@@ -186,13 +187,14 @@
     if (m.data < 0) { var ds = est.slice().sort(function (a, b) { return b.datas - a.datas; }); m.data = ds[0] && ds[0].datas ? ds[0].c : -1; }
     // valores
     var deb = porNome(/(d[ée]bito|debit|sa[íi]da|withdraw)/), cred = porNome(/(cr[ée]dito|credit|entrada|deposit)/);
-    var numCols = est.filter(function (x) { return x.c !== m.data && x.nums >= Math.max(1, x.cheios * 0.8) && x.cheios > 0; });
+    var ident = /(account|conta|card|cart[ãa]o|n[uú]mero|number|item|cheque|ref|#)/;
+    var numCols = est.filter(function (x) { return x.c !== m.data && x.nums >= Math.max(1, x.cheios * 0.8) && x.cheios > 0 && !(x.nome && ident.test(x.nome) && !/amount|valor|montant/.test(x.nome)); });
     // descarta coluna de saldo
     var saldo = porNome(/(saldo|balance)/);
     numCols = numCols.filter(function (x) { return x.c !== saldo; });
     if (deb >= 0 && cred >= 0) { m.debito = deb; m.credito = cred; }
     else {
-      var val = porNome(/^(valor|amount|montante|value|quantia)/);
+      var val = porNome(/^(valor|amount|montante|value|quantia)|transaction amount|montant|^cad\$|^r\$/);
       if (val >= 0) m.valor = val;
       else if (numCols.length >= 2) {
         // duas colunas que se completam (uma vazia quando a outra tem valor) = débito e crédito (ex.: CIBC)
@@ -204,7 +206,7 @@
     var usadas = [m.data, m.valor, m.debito, m.credito];
     var dsc = porNome(/(descri|hist[óo]rico|description|estabelecimento|title|t[íi]tulo|lan[çc]amento|memo|payee|merchant)/);
     if (dsc < 0 || usadas.indexOf(dsc) >= 0) {
-      var tx = est.filter(function (x) { return usadas.indexOf(x.c) < 0 && x.texto > 0; }).sort(function (p, q) { return q.texto * q.tam - p.texto * p.tam; });
+      var tx = est.filter(function (x) { return usadas.indexOf(x.c) < 0 && x.texto > 0; }).sort(function (p, q) { return q.texto * q.tam * (0.3 + q.dist) - p.texto * p.tam * (0.3 + p.dist); }); // nome da loja varia; "PURCHASE" se repete
       dsc = tx[0] ? tx[0].c : -1;
     }
     m.desc = dsc;
@@ -214,6 +216,11 @@
     if (m.valor != null && m.valor >= 0) {
       var e2 = est[m.valor];
       m.sinal = e2.neg >= e2.nums / 2 ? 'negativo' : 'positivo';
+      // pagamento da fatura ("PAYMENT", "PAGAMENTO", "MERCI") é sempre entrada: o sinal dele decide (20/11/2026)
+      if (m.desc >= 0) {
+        var pg = corpo.filter(function (r) { return /payment.{0,12}(received|thank)|thank you|merci|paiement re[çc]u|pagamento recebido|pagamento da fatura|pagto\.? fatura/i.test(r[m.desc] || '') && eNum(r[m.valor] || ''); });
+        if (pg.length) { var pn = pg.filter(function (r) { return numero(r[m.valor]) < 0; }).length; m.sinal = pn > pg.length / 2 ? 'positivo' : 'negativo'; }
+      }
     }
     return m;
   }
@@ -315,5 +322,23 @@
     return (outras || []).some(function (o) { return mesmaLoja(credito.desc, o.desc); });
   }
 
-  raiz.MCBanco = { loja: loja, mesmaLoja: mesmaLoja, pareceDevolucao: pareceDevolucao, BANCOS: BANCOS, ler: ler, adivinhar: adivinhar, aplicar: aplicar, numero: numero, data: data, ordemDatas: ordemDatas, conferir: conferir, linhasCSV: linhasCSV, separador: separador };
+  // Qual banco é este arquivo? Pelo OFX (ORG/FID), por cabeçalhos típicos ou pelo nome do arquivo (20/11/2026).
+  // Não olha a descrição das compras (uma loja "Scotiabank Arena" enganaria). Sem certeza, devolve ''.
+  function detectarBanco(texto, nome) {
+    var t = String(texto || '').slice(0, 4000), n = String(nome || '').toLowerCase(), cab = '';
+    if (eOFX(t)) cab = (((/<ORG>\s*([^<\r\n]+)/i.exec(t) || [])[1] || '') + ' ' + ((/<FID>\s*([^<\r\n]+)/i.exec(t) || [])[1] || '')).toUpperCase();
+    else cab = (t.split(/\r?\n/).slice(0, 8).filter(function (l) { return !/\d{1,4}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(l); }).join(' | ')).toUpperCase();
+    var L = [
+      ['desjardins', /DESJARDINS/, /desjardins/], ['cibc', /\bCIBC\b/, /cibc/], ['rbc', /ROYAL BANK|\bRBC\b|DESCRIPTION 1"?\s*,/, /\brbc|^csv\d/],
+      ['td', /\bTD\b|TORONTO-DOMINION/, /^td[\s_-]|accountactivity/], ['scotia', /SCOTIA/, /scotia/], ['bmo', /\bBMO\b|BANK OF MONTREAL|ITEM #|CARD #/, /bmo/],
+      ['nubank', /NUBANK|NU PAGAMENTOS/, /nubank|^nu_/], ['itau', /ITA[UÚ]/, /ita[uú]/], ['bradesco', /BRADESCO/, /bradesco/], ['bb', /BANCO DO BRASIL/, /bancodobrasil|banco_do_brasil/],
+      ['caixa', /CAIXA ECON/, /caixa/], ['santander', /SANTANDER/, /santander/], ['inter', /BANCO INTER\b/, /bancointer|banco_inter/], ['c6', /C6 BANK/, /c6bank|c6_bank/]
+    ];
+    for (var i = 0; i < L.length; i++) if ((cab && L[i][1].test(cab)) || L[i][2].test(n)) return BANCOS.some(function (b) { return b.id === L[i][0]; }) ? L[i][0] : '';
+    // CIBC sem cabeçalho: aaaa-mm-dd, descrição, débito, crédito, cartão mascarado
+    if (/^\d{4}-\d{2}-\d{2},.*,\d{4}\*{4,}\d{4}\s*$/m.test(t.split(/\r?\n/)[0] || '')) return 'cibc';
+    return '';
+  }
+
+  raiz.MCBanco = { detectarBanco: detectarBanco, loja: loja, mesmaLoja: mesmaLoja, pareceDevolucao: pareceDevolucao, BANCOS: BANCOS, ler: ler, adivinhar: adivinhar, aplicar: aplicar, numero: numero, data: data, ordemDatas: ordemDatas, conferir: conferir, linhasCSV: linhasCSV, separador: separador };
 })(typeof window !== 'undefined' ? window : globalThis);
