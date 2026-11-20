@@ -10,7 +10,8 @@ var VERSAO = '2.31.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.31.0', d: '20/11/2026', itens: [
-    '<b>🏦 Vários cartões de uma vez</b>: em Conferir com o banco, escolha todos os arquivos juntos (um por cartão ou conta, de bancos diferentes). O app reconhece o banco de cada um e mostra de qual arquivo veio cada lançamento.'] },
+    '<b>🏦 Vários cartões de uma vez</b>: em Conferir com o banco, escolha todos os arquivos juntos (um por cartão ou conta, de bancos diferentes). O app reconhece o banco de cada um e mostra de qual arquivo veio cada lançamento.',
+    '<b>🏦 Tela da conferência em passos</b>, com ? em cada grupo do resultado explicando o que fazer.'] },
   { v: '2.30.0', d: '20/11/2026', itens: [
     '<b>❓ Botões de ajuda</b>: na Projeção e nos relatórios, toque no <b>?</b> ao lado de um número ou título para ver o que ele quer dizer.',
     '<b>🔔 Novidades</b>: quando o app for atualizado, esta janela mostra o que mudou. Para rever, vá em Ajustes → Novidades.'] },
@@ -2527,15 +2528,24 @@ function abrirConferencia() {
     return '<optgroup label="' + rot + '">' + MCBanco.BANCOS.filter(function (x) { return x.pais === pais; }).map(function (x) {
       return '<option value="' + x.id + '"' + (x.id === b.id ? ' selected' : '') + '>' + esc(x.nome) + '</option>'; }).join('') + '</optgroup>';
   };
+  // Tela em 3 passos, para quem nunca usou (20/11/2026)
   abrirSheet('<h3>🏦 Conferir com o banco</h3>' +
-    '<label class="aj-label" for="cf-banco" style="margin-top:4px">Seu banco</label>' +
-    '<select class="aj-input" id="cf-banco">' + grupo('BR', 'Brasil') + grupo('CA', 'Canadá') + grupo('', 'Outro') + '</select>' +
-    '<div style="font-size:13px;font-weight:700;color:#111827;margin-top:12px">Como baixar o extrato no ' + esc(b.nome) + ' (' + esc(b.formato) + '):</div>' +
-    '<ol class="cf-passos">' + b.como.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' +
-    '<div style="font-size:12px;color:#6b7280;margin:-4px 0 10px">Os nomes dos menus podem mudar no site ou app do banco.</div>' +
-    '<div class="cf-multi">💳 Tem mais de um cartão ou conta? Baixe um arquivo de cada um e <b>escolha todos de uma vez</b>: no iPhone, toque em <b>Selecionar</b> (canto de cima) na janela de arquivos e marque cada um. Pode misturar bancos; o app reconhece qual é qual.</div>' +
-    '<label class="aj-btn pri aj-full" for="cf-arq" style="display:block;text-align:center;cursor:pointer">Escolher os arquivos do extrato</label>' +
-    '<input type="file" id="cf-arq" multiple accept=".ofx,.qfx,.csv,.txt,text/csv,application/x-ofx" style="display:none">' +
+    '<div class="cf-intro">Compare os gastos do seu cartão com o que está no app e descubra <b>o que faltou lançar</b>. O arquivo é lido só neste aparelho.</div>' +
+    '<div class="cf-passo"><span class="cf-n">1</span><div><b>Escolha o banco</b>' +
+      '<select class="aj-input" id="cf-banco" style="margin-top:6px">' + grupo('BR', 'Brasil') + grupo('CA', 'Canadá') + grupo('', 'Outro') + '</select></div></div>' +
+    '<div class="cf-passo"><span class="cf-n">2</span><div><b>Baixe o extrato no site do ' + esc(b.nome) + '</b> <span class="cf-fmt">' + esc(b.formato) + '</span>' +
+      '<details class="cf-det"><summary>Ver como baixar</summary><ol class="cf-passos">' + b.como.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' +
+      '<div style="font-size:12px;color:#6b7280;margin:-4px 0 6px">Os nomes dos menus podem mudar no site do banco.</div></details>' +
+      '<div class="cf-dica">💳 Tem <b>mais de um cartão</b>, até de bancos diferentes? Baixe <b>um arquivo de cada</b>. No próximo passo você escolhe todos juntos.</div></div></div>' +
+    '<div class="cf-passo"><span class="cf-n">3</span><div><b>Escolha os arquivos</b>' +
+      '<div class="cf-dica" style="margin-top:6px">📱 No iPhone, na janela de arquivos: abra a pasta <b>Downloads</b> (ou onde salvou), toque em <b>Selecionar</b> em cima, marque os arquivos e toque em <b>Abrir</b>.</div>' +
+      '<label class="aj-btn pri aj-full" for="cf-arq" style="display:block;text-align:center;cursor:pointer;margin-top:8px">Escolher os arquivos</label>' +
+      '<input type="file" id="cf-arq" multiple accept=".ofx,.qfx,.csv,.txt,text/csv,application/x-ofx" style="display:none"></div></div>' +
+    '<div class="cf-passo"><span class="cf-n">4</span><div><b>Veja o resultado</b><div class="cf-leg">' +
+      '<span><i style="background:#ef4444"></i>Falta no app: toque em <b>Lançar</b></span>' +
+      '<span><i style="background:#f59e0b"></i>Valor diferente: toque em <b>Corrigir</b></span>' +
+      '<span><i style="background:#a855f7"></i>Só no app: pago com outro cartão ou dinheiro</span>' +
+      '<span><i style="background:#22c55e"></i>Batem: está tudo certo</span></div></div></div>' +
     (_conf.res ? '<button class="aj-btn aj-full" id="cf-ver">Ver a última conferência (' + esc(_conf.nomeArq || '') + ')</button>' : '') +
     '<button class="aj-btn aj-full" data-fechar>Fechar</button>');
   $('cf-banco').onchange = function () { _conf.banco = this.value; lsSet('mc_banco', this.value); abrirConferencia(); };
@@ -2699,30 +2709,30 @@ function mostrarConferencia() {
   var org = function (l) { return multi && l.banco && l.banco.origem ? ' · <span class="cf-org">' + esc(l.banco.origem) + '</span>' : ''; };
   var html = '<h3>🏦 Banco × app</h3><div style="font-size:12px;color:#6b7280">' + esc(_conf.nomeArq) + ' · ' + formatarData(c.inicio) + ' a ' + formatarData(c.fim) + ' · gastos e devoluções' + (_conf.ignorados ? ' (' + _conf.ignorados + ' outro' + (_conf.ignorados > 1 ? 's' : '') + ' crédito' + (_conf.ignorados > 1 ? 's' : '') + ' ignorado' + (_conf.ignorados > 1 ? 's' : '') + ': pagamentos, salário, transferências)' : '') + '</div>' +
     '<div class="cf-resumo"><div class="cf-ok"><b>' + por.ok.length + '</b>batem</div><div class="cf-data"><b>' + por.data.length + '</b>data dif.</div><div class="cf-valor"><b>' + por.valor.length + '</b>valor dif.</div><div class="cf-falta"><b>' + por.falta.length + '</b>faltam</div></div>';
-  if (por.falta.length) html += '<div class="cf-grupo">No banco e não no app</div>' + por.falta.map(function (l) {
+  if (por.falta.length) html += '<div class="cf-grupo">No banco e não no app' + aj('cf-falta') + '</div>' + por.falta.map(function (l) {
     var i = c.linhas.indexOf(l);
     return item('cf-falta', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l), formatar(l.banco.valor), '<button class="aj-btn pri" data-cflancar="' + i + '">Lançar</button>');
   }).join('');
   var D = _conf.dev || { ok: [], falta: [], soApp: [] };
-  if (D.falta.length) html += '<div class="cf-grupo">Devolução no banco e não no app</div>' + D.falta.map(function (l, i) {
+  if (D.falta.length) html += '<div class="cf-grupo">Devolução no banco e não no app' + aj('cf-dev') + '</div>' + D.falta.map(function (l, i) {
     var o = compraDaDevolucao(l.banco);
     return item('cf-dev', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l) + (o ? ' · da compra ' + esc(descLanc(o)) + ' de ' + formatarData(o.data) : ''), '+' + formatar(l.banco.valor), '<button class="aj-btn pri" data-cfdev="' + i + '">Lançar</button>');
   }).join('');
-  if (por.valor.length) html += '<div class="cf-grupo">Valor diferente</div>' + por.valor.map(function (l) {
+  if (por.valor.length) html += '<div class="cf-grupo">Valor diferente' + aj('cf-valor') + '</div>' + por.valor.map(function (l) {
     var i = c.linhas.indexOf(l);
     return item('cf-valor', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + org(l) + ' · no app: ' + nomeApp(l.app) + ' ' + formatar(l.app.valor) + (l.app.credLoja ? ' no cartão (+' + formatar(l.app.credLoja) + ' de crédito da loja)' : ''), formatar(l.banco.valor), '<button class="aj-btn" data-cfcorrigir="' + i + '">Corrigir</button>');
   }).join('');
-  if (c.soApp.length) html += '<div class="cf-grupo">No app e não no banco</div>' + c.soApp.map(function (a) {
+  if (c.soApp.length) html += '<div class="cf-grupo">No app e não no banco' + aj('cf-soapp') + '</div>' + c.soApp.map(function (a) {
     return item('cf-soapp', nomeApp(a), formatarData(a.data) + ' · pode ter sido pago com outro cartão ou conta', formatar(a.valor));
   }).join('');
-  if (D.soApp.length) html += '<div class="cf-grupo">Devolução no app e não no banco</div>' + D.soApp.map(function (a) {
+  if (D.soApp.length) html += '<div class="cf-grupo">Devolução no app e não no banco' + aj('cf-devapp') + '</div>' + D.soApp.map(function (a) {
     return item('cf-soapp', nomeApp(a), formatarData(a.data) + ' · pode ter voltado em outro cartão ou conta, ou ainda não caiu', '+' + formatar(a.valor));
   }).join('');
   if (D.ok.length) html += '<div class="cf-grupo">Devoluções que batem (' + D.ok.length + ')</div>' + D.ok.map(function (l) {
     return item('cf-ok', esc(l.banco.desc || '(sem descrição)'), formatarData(l.banco.data) + ' · ' + nomeApp(l.app) + (l.status === 'data' ? ' (app ' + formatarData(l.app.data) + ')' : l.status === 'valor' ? ' (app ' + formatar(l.app.valor) + ')' : ''), '+' + formatar(l.banco.valor));
   }).join('');
   // mesmo valor, data diferente: corrigir a data do app para a do banco, um a um ou todos (16/11/2026)
-  if (por.data.length) html += '<div class="cf-grupo">Mesmo valor, data diferente</div>' + por.data.map(function (l) {
+  if (por.data.length) html += '<div class="cf-grupo">Mesmo valor, data diferente' + aj('cf-data') + '</div>' + por.data.map(function (l) {
     var i = c.linhas.indexOf(l);
     return item('cf-data', esc(l.banco.desc || '(sem descrição)'), 'banco ' + formatarData(l.banco.data) + ' · app ' + formatarData(l.app.data) + ' (' + nomeApp(l.app) + ')' + org(l), formatar(l.banco.valor), '<button class="aj-btn" data-cfdata="' + i + '">Corrigir data</button>');
   }).join('') + (por.data.length > 1 ? '<button class="aj-btn aj-full" id="cf-datas">Corrigir as ' + por.data.length + ' datas para as do banco</button>' : '');
@@ -2797,6 +2807,12 @@ var AJUDA = {
   'sem-media': ['Sua média', 'Quanto você costuma gastar numa semana, pela <b>média das semanas anteriores</b>.<br><br>Com a semana em andamento, a média é só até o mesmo dia da semana, para comparar igual com igual.'],
   'sem-vazou': ['Onde mais vazou', 'Lugares onde você gastou <b>mais do que a sua média por semana</b> ali.<br><br><b>Esta semana</b>: quanto gastou ali nesta semana.<br><b>Média</b>: quanto costuma gastar ali por semana (soma das semanas anteriores ÷ número de semanas).<br><b>A mais</b>: a diferença.<br><br>Compras de vez em quando (roupas, presentes, eletrônicos, móveis) não entram. Um lugar onde você não costuma comprar pode aparecer com tudo "a mais"; nesse caso veja se não foi só troca de loja (ex.: mercado diferente).'],
   'sem-cats': ['Categorias × orçamento semanal', 'O orçamento de cada categoria convertido para <b>uma semana</b>: orçamento do período ÷ dias do período × 7.<br><br>A barra mostra quanto da semana você já usou em cada categoria.'],
+  'cf-falta': ['No banco e não no app', 'Gastos que aparecem no extrato do banco, mas <b>não foram lançados</b> no app.<br><br>Toque em <b>Lançar</b>: o app abre o registro já com o valor, a data e a loja. É só escolher a categoria e salvar.'],
+  'cf-dev': ['Devolução no banco e não no app', 'Dinheiro que <b>voltou</b> para o cartão (uma devolução ou estorno) e ainda não foi registrado no app.<br><br>Toque em <b>Lançar</b>: o app sugere a compra de onde veio a devolução.'],
+  'cf-valor': ['Valor diferente', 'O app achou o gasto, mas o <b>valor não é igual</b> ao do banco (ex.: gorjeta, troca de moeda ou erro de digitação).<br><br>Toque em <b>Corrigir</b> para usar o valor do banco.'],
+  'cf-soapp': ['No app e não no banco', 'Lançamentos do app que <b>não estão nos arquivos</b> que você escolheu.<br><br>Normalmente foram pagos com <b>outro cartão, conta ou dinheiro</b>, ou ainda não caíram no banco. Se você tem outro cartão, escolha o arquivo dele também.'],
+  'cf-devapp': ['Devolução no app e não no banco', 'Devoluções registradas no app que ainda <b>não apareceram</b> nos arquivos. Podem ter voltado em outro cartão ou ainda não caíram.'],
+  'cf-data': ['Mesmo valor, data diferente', 'O gasto está no app com o <b>mesmo valor</b>, mas em outra data (comum quando se lança dias depois).<br><br>Toque em <b>Corrigir data</b> para usar a data do banco. Confira antes: duas compras iguais no mesmo lugar podem se confundir.'],
   'sem-acoes': ['O que fazer nesta semana', 'Sugestões automáticas tiradas dos números acima: limite do período, lugares onde mais vazou e quantas idas ao mercado.<br><br>São um ponto de partida. Gastos essenciais, como combustível e ração, você decide se dá para reduzir.']
 };
 function aj(k) { return '<button type="button" class="aj-q" data-ajuda="' + k + '" aria-label="O que é isto?">?</button>'; }
