@@ -29,9 +29,6 @@ I18N.traduzirPagina(document.body);
 var VERSAO = '2.33.2';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
-  { v: '2.33.2', d: '20/11/2026', itens: [
-    '<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como "Juros / Parcelas". O "% utilizado" dos cartões também foi traduzido.'
-  ] },
   { v: '2.33.1', d: '20/11/2026', itens: [
     'O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.'
   ] },
