@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.33.3';
+var VERSAO = '2.33.4';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -1406,14 +1406,25 @@ function normNome(t) {
 // "Walmart", "walmart" e "Wal Mart" são a mesma loja: o app mostra, agrupa e salva uma grafia só, a mais usada
 // (empate: ver abaixo). Os lançamentos antigos só mudam pelo "Juntar nomes iguais".
 function grafiasLojas(exceto) {
-  var g = {};
-  Object.keys(S.raw || {}).forEach(function (id) {
-    var r = S.raw[id]; if (!r || !r.d || id === exceto || r.t === 'receita') return;
-    var d = String(r.d).trim(), k = normNome(d); if (!k) return;
+  var g = {}, usoSub = {};
+  var conta = function (d, ts, sub) {
+    var k = normNome(d); if (!k) return;
     var x = g[k] || (g[k] = { k: k, sp: {}, n: 0, ts: 0 });
-    var e = x.sp[d] || (x.sp[d] = { nome: d, n: 0, ts: 0 });
-    e.n++; x.n++; var ts = +r.ts || 0; if (ts > e.ts) e.ts = ts; if (ts > x.ts) x.ts = ts;
+    var e = x.sp[d] || (x.sp[d] = { nome: d, n: 0, ts: 0, subs: [] });
+    e.n += sub ? sub.n : 1; x.n += sub ? sub.n : 1; if (ts > e.ts) e.ts = ts; if (ts > x.ts) x.ts = ts;
+    if (sub) e.subs.push(sub);
+  };
+  Object.keys(S.raw || {}).forEach(function (id) {
+    var r = S.raw[id]; if (!r || id === exceto || r.t === 'receita') return;
+    if (r.c && r.s && !r.d) { var q = r.c + '|' + r.s; usoSub[q] = (usoSub[q] || 0) + 1; }
+    if (!r.d) return;
+    conta(String(r.d).trim(), +r.ts || 0);
   });
+  // subcategorias também são nomes de loja (ex.: "Walmart" em Supermercado e "walmart" digitado em Pets) (20/11/2026)
+  catsComuns().forEach(function (c) {
+    (c.subs || []).forEach(function (sb) { var nm = String(sb.nome || '').trim(); if (nm) conta(nm, 0, { cat: c.id, sub: sb.id, n: usoSub[c.id + '|' + sb.id] || 0 }); });
+  });
+  Object.keys(g).forEach(function (k) { if (!g[k].n && !Object.keys(g[k].sp).some(function (d) { return g[k].sp[d].subs.length; })) delete g[k]; });
   // empate: sem emoji/símbolo, não tudo em maiúsculas, mais palavras com inicial maiúscula
   var simb = function (t) { return /[^\p{L}\p{N}\s.,'’&\/()+-]/u.test(t) ? 1 : 0; };
   var caps = function (t) { return /\p{Lu}/u.test(t) && t === t.toUpperCase() && /\p{L}{2}/u.test(t) ? 1 : 0; };
@@ -2803,7 +2814,7 @@ function abrirJuntarNomes() {
     (_jn.length ? T('<div class="cf-intro">Estes nomes são a mesma loja escrita de jeitos diferentes. Escolha a grafia certa e toque em <b>Juntar</b>: os lançamentos antigos passam a usar esse nome.</div>') +
       _jn.map(function (x, i) {
         return '<div class="jn-grupo">' + x.lista.map(function (e, j) {
-          return '<label class="jn-op"><input type="radio" name="jn-' + i + '" value="' + j + '"' + (j === 0 ? ' checked' : '') + '><span class="jn-nm">' + esc(e.nome) + '</span><span class="jn-n">' + lanc(e.n) + '</span></label>';
+          return '<label class="jn-op"><input type="radio" name="jn-' + i + '" value="' + j + '"' + (j === 0 ? ' checked' : '') + '><span class="jn-nm">' + esc(e.nome) + '</span><span class="jn-n">' + (e.subs.length ? T('subcategoria') + ' · ' : '') + lanc(e.n) + '</span></label>';
         }).join('') + '<button type="button" class="aj-btn pri aj-full" data-jn="' + i + '">' + T('Juntar') + '</button></div>';
       }).join('') +
       (_jn.length > 1 ? '<button type="button" class="aj-btn aj-full" data-jn="todos" style="margin-top:4px">' + T('Juntar todos ({n})', { n: _jn.length }) + '</button>' : '')
@@ -2813,7 +2824,7 @@ function abrirJuntarNomes() {
   qsa('[data-jn]').forEach(function (b) {
     b.onclick = function () {
       var idx = b.dataset.jn === 'todos' ? _jn.map(function (x, i) { return i; }) : [+b.dataset.jn];
-      var ps = [], n = 0;
+      var ps = [], n = 0, mudouCfg = false;
       idx.forEach(function (i) {
         var x = _jn[i], sel = document.querySelector('input[name="jn-' + i + '"]:checked'), nome = x.lista[sel ? +sel.value : 0].nome;
         Object.keys(S.raw).forEach(function (id) {
@@ -2821,7 +2832,13 @@ function abrirJuntarNomes() {
           var d = String(r.d).trim(); if (normNome(d) !== x.k || r.d === nome) return;
           var novo = Object.assign({}, r); novo.d = nome; n++; ps.push(gravarLanc(id, novo));
         });
+        // subcategoria com outra grafia: passa a ter o nome escolhido
+        x.lista.forEach(function (e) {
+          if (e.nome === nome) return;
+          e.subs.forEach(function (q) { var c = catPorId(q.cat), sb = c && (c.subs || []).filter(function (z) { return z.id === q.sub; })[0]; if (sb) { sb.nome = nome; mudouCfg = true; n += q.n; } });
+        });
       });
+      if (mudouCfg) ps.push(salvarCfg());
       qsa('[data-jn]').forEach(function (z) { z.disabled = true; });
       Promise.all(ps).then(function () {
         mostrarToast('✅', n === 1 ? T('1 lançamento corrigido') : T('{n} lançamentos corrigidos', { n: n }));

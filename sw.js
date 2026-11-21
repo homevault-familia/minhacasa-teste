@@ -1,5 +1,5 @@
 // MinhaCasa — service worker (funciona offline para abrir o app; dados vêm do Firebase)
-var CACHE = 'minhacasa-v2.33.3';
+var CACHE = 'minhacasa-v2.33.4';
 var ARQUIVOS = ['./', 'index.html', 'app.js', 'banco.js', 'i18n.js', 'i18n-en.js', 'i18n-fr.js', 'config.js', 'manifest.json', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
