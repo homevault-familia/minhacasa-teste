@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.33.2';
+var VERSAO = '2.33.3';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -392,11 +392,12 @@ function orcDe(id) { var c = catPorId(id); return c ? (+c.orc || 0) : 0; }
 // ═════════════════════════ lançamentos (visão) ═════════════════════════
 // Registro guardado (cifrado): { v: centavos, dt, c, s, d, por, ts, p?: { n, total, g, vt } }
 function lancamentos() {
+  var G = grafiasLojas();
   return Object.keys(S.raw).map(function (id) {
     var r = S.raw[id];
     if (!r || r.t === 'receita') return null;
     return {
-      id: id, data: r.dt, valor: (r.t === 'dev' ? -1 : 1) * (r.v || 0) / 100, cat: r.p ? PARC : r.c, sub: r.s || null, desc: r.d || '',
+      id: id, data: r.dt, valor: (r.t === 'dev' ? -1 : 1) * (r.v || 0) / 100, cat: r.p ? PARC : r.c, sub: r.s || null, desc: lojaPadrao(r.d, G),
       por: r.por, ts: r.ts || 0,
       dev: r.t === 'dev', orig: r.t === 'dev' && r.o ? r.o : null, lj: !!(r.t === 'dev' && r.lj),
       cl: r.cl || null, clv: (r.clv || 0) / 100, ap: !!r.ap,
@@ -855,7 +856,7 @@ function irParaCategoria(cat, soRender) {
 function novoLancamento() {
   S.add = { cat: S.add.cat && catPorId(S.add.cat) && S.add.cat !== PARC ? S.add.cat : (catsComuns()[0] ? catsComuns()[0].id : null), sub: null, nParc: 1, parcIni: 1, editId: null,
     tipo: 'compra', orig: null, lj: false, cl: null };
-  $('inp-valor').value = ''; $('inp-desc').value = ''; $('inp-data').value = hoje(); $('orig-busca').value = '';
+  $('inp-valor').value = ''; $('inp-desc').value = ''; $('inp-data').value = hoje(); $('orig-busca').value = ''; if ($('desc-sug')) $('desc-sug').innerHTML = '';
   $('valor-pre').textContent = SIMB[moeda()];
   $('add-edit-extra').style.display = 'none'; $('pag-aviso').style.display = 'none';
   atualizarParcUI();
@@ -866,7 +867,7 @@ function editarLancamento(id) {
   if (!l) return;
   S.add = { cat: l.cat, sub: l.sub, nParc: 1, parcIni: 1, editId: id, tipo: l.dev ? 'dev' : 'compra', orig: l.orig, lj: l.lj, cl: l.cl, parc: !!l.parcela };
   $('inp-valor').value = numTxt(Math.abs(l.valor).toFixed(2));
-  $('inp-data').value = l.data; $('inp-desc').value = l.desc || ''; $('orig-busca').value = '';
+  $('inp-data').value = l.data; $('inp-desc').value = l.desc || ''; $('orig-busca').value = ''; if ($('desc-sug')) $('desc-sug').innerHTML = '';
   $('valor-pre').textContent = SIMB[moeda()];
   $('add-edit-extra').style.display = ''; $('pag-aviso').style.display = 'none';
   irPara('add');
@@ -1028,6 +1029,7 @@ function atualizarPreviewParcela() {
 }
 function salvarLancamento() {
   var a = S.add, valor = lerValor($('inp-valor').value), data = $('inp-data').value, desc = $('inp-desc').value.trim();
+  if (desc) desc = lojaPadrao(desc, grafiasLojas(a.editId));
   var dev = a.tipo === 'dev';
   if (!$('inp-valor').value.trim()) { mostrarToast('⚠️', dev ? T('Informe o valor devolvido') : T('Informe o valor gasto')); return; }
   if (!(valor > 0)) { mostrarToast('⚠️', T('Valor inválido. Use, por exemplo, 12,50 ou 1.234,56 (até 10 milhões)')); return; }
@@ -1393,7 +1395,76 @@ function cancelarPlano(gid) {
 // Ex.: Costco 2×/período e já foi 2× → não conta mais nenhuma ida.
 // Compra sem histórico não é repetida. Sem histórico nenhum, usa o ritmo por dia.
 // nome comparável: sem acento, emoji, espaço ou apóstrofo (McDonald's = McDonalds = Mc Donalds) (16/11/2026)
-function normNome(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+var _normC = {};
+function normNome(t) {
+  t = String(t || ''); if (Object.prototype.hasOwnProperty.call(_normC, t)) return _normC[t];
+  var n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (t.length < 200) _normC[t] = n;
+  return n;
+}
+// ── Nomes de lojas padronizados (20/11/2026) ──
+// "Walmart", "walmart" e "Wal Mart" são a mesma loja: o app mostra, agrupa e salva uma grafia só, a mais usada
+// (empate: ver abaixo). Os lançamentos antigos só mudam pelo "Juntar nomes iguais".
+function grafiasLojas(exceto) {
+  var g = {};
+  Object.keys(S.raw || {}).forEach(function (id) {
+    var r = S.raw[id]; if (!r || !r.d || id === exceto || r.t === 'receita') return;
+    var d = String(r.d).trim(), k = normNome(d); if (!k) return;
+    var x = g[k] || (g[k] = { k: k, sp: {}, n: 0, ts: 0 });
+    var e = x.sp[d] || (x.sp[d] = { nome: d, n: 0, ts: 0 });
+    e.n++; x.n++; var ts = +r.ts || 0; if (ts > e.ts) e.ts = ts; if (ts > x.ts) x.ts = ts;
+  });
+  // empate: sem emoji/símbolo, não tudo em maiúsculas, mais palavras com inicial maiúscula
+  var simb = function (t) { return /[^\p{L}\p{N}\s.,'’&\/()+-]/u.test(t) ? 1 : 0; };
+  var caps = function (t) { return /\p{Lu}/u.test(t) && t === t.toUpperCase() && /\p{L}{2}/u.test(t) ? 1 : 0; };
+  var ini = function (t) { return (t.match(/(^|\s)\p{Lu}/gu) || []).length; };
+  Object.keys(g).forEach(function (k) {
+    var x = g[k];
+    x.lista = Object.keys(x.sp).map(function (n) { return x.sp[n]; }).sort(function (a, b) { return b.n - a.n || simb(a.nome) - simb(b.nome) || caps(a.nome) - caps(b.nome) || ini(b.nome) - ini(a.nome) || b.ts - a.ts; });
+    x.nome = x.lista[0].nome;
+  });
+  return g;
+}
+function lojaPadrao(d, G) {
+  if (!d) return '';
+  var t = String(d).trim(), x = (G || grafiasLojas())[normNome(t)];
+  return x ? x.nome : t;
+}
+// distância de edição (para "Você quis dizer…?")
+function distNomes(a, b) {
+  if (a === b) return 0;
+  var p = [], i, j; for (j = 0; j <= b.length; j++) p[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var ant = p[0], c; p[0] = i;
+    for (j = 1; j <= b.length; j++) { c = p[j]; p[j] = Math.min(p[j] + 1, p[j - 1] + 1, ant + (a[i - 1] === b[j - 1] ? 0 : 1)); ant = c; }
+  }
+  return p[b.length];
+}
+var _descSug = [];
+function atualizarSugDesc() {
+  var el = $('desc-sug'); if (!el) return;
+  var campo = $('inp-desc'), v = campo.value.trim(), k = normNome(v), html = '';
+  _descSug = [];
+  if (k.length >= 2) {
+    var G = grafiasLojas(S.add && S.add.editId), todos = Object.keys(G).map(function (x) { return G[x]; }).filter(function (x) { return x.nome.length <= 60; });
+    var ordem = function (a, b) { return b.n - a.n || b.ts - a.ts; };
+    var ex = G[k];
+    if (ex) {
+      if (ex.nome !== v) { _descSug = [ex.nome]; html = '<div class="desc-sug-av">' + T('Já existe como <b>{n}</b>. Vai ser salvo assim.', { n: esc(ex.nome) }) + '</div>'; }
+    } else {
+      var pre = todos.filter(function (x) { return x.k.indexOf(k) === 0 || (k.length >= 3 && x.k.indexOf(k) > 0); }).sort(function (a, b) { return (b.k.indexOf(k) === 0) - (a.k.indexOf(k) === 0) || ordem(a, b); }).slice(0, 4);
+      if (pre.length) {
+        _descSug = pre.map(function (x) { return x.nome; });
+        html = '<div class="desc-sug-lst">' + pre.map(function (x, i) { return '<button type="button" class="desc-sug-chip" data-descsug="' + i + '">' + esc(x.nome) + '</button>'; }).join('') + '</div>';
+      } else if (k.length >= 4) {
+        var lim = k.length <= 6 ? 1 : 2;
+        var par = todos.filter(function (x) { return x.k.length >= 4 && Math.abs(x.k.length - k.length) <= lim && distNomes(x.k, k) <= lim; }).sort(ordem)[0];
+        if (par) { _descSug = [par.nome]; html = '<div class="desc-sug-dq">' + T('Você quis dizer <b>{n}</b>?', { n: esc(par.nome) }) + ' <button type="button" class="desc-sug-chip" data-descsug="0">' + T('Sim, usar') + '</button></div>'; }
+      }
+    }
+  }
+  el.innerHTML = html;
+}
 function lugarDe(l) {
   var nome = nomeSub(l.cat, l.sub) || (l.desc ? String(l.desc).trim() : '') || NOME(l.cat);
   return { chave: l.cat + '|' + (normNome(nome) || nome.toLowerCase()), nome: nome };
@@ -2414,6 +2485,7 @@ function renderAjustes() {
   renderAdmin();
   renderLimparTeste();
   $('aj-conferir').onclick = abrirConferencia;
+  $('aj-juntar').onclick = abrirJuntarNomes;
   $('aj-applepay').onclick = abrirApplePay; renderStatusApplePay();
   $('aj-conta').textContent = T('Conectado como ') + (S.user.email || '') + '.';
   $('aj-versao').textContent = VERSAO;
@@ -2721,6 +2793,43 @@ function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function bancoPorId(id) { return MCBanco.BANCOS.filter(function (b) { return b.id === id; })[0] || MCBanco.BANCOS[MCBanco.BANCOS.length - 1]; }
 // bancos sem leitura própria: o app usa o leitor automático e, se precisar, pergunta as colunas uma vez (20/11/2026)
 var SEM_LEITOR = ['desjardins', 'outro'];
+// ── Juntar nomes iguais (20/11/2026): corrige os lançamentos antigos para uma grafia só ──
+var _jn = [];
+function abrirJuntarNomes() {
+  var G = grafiasLojas();
+  _jn = Object.keys(G).map(function (k) { return G[k]; }).filter(function (x) { return x.lista.length > 1; }).sort(function (a, b) { return b.n - a.n; });
+  var lanc = function (n) { return n === 1 ? T('1 lançamento') : T('{n} lançamentos', { n: n }); };
+  abrirSheet(T('<h3>🔤 Juntar nomes iguais</h3>') +
+    (_jn.length ? T('<div class="cf-intro">Estes nomes são a mesma loja escrita de jeitos diferentes. Escolha a grafia certa e toque em <b>Juntar</b>: os lançamentos antigos passam a usar esse nome.</div>') +
+      _jn.map(function (x, i) {
+        return '<div class="jn-grupo">' + x.lista.map(function (e, j) {
+          return '<label class="jn-op"><input type="radio" name="jn-' + i + '" value="' + j + '"' + (j === 0 ? ' checked' : '') + '><span class="jn-nm">' + esc(e.nome) + '</span><span class="jn-n">' + lanc(e.n) + '</span></label>';
+        }).join('') + '<button type="button" class="aj-btn pri aj-full" data-jn="' + i + '">' + T('Juntar') + '</button></div>';
+      }).join('') +
+      (_jn.length > 1 ? '<button type="button" class="aj-btn aj-full" data-jn="todos" style="margin-top:4px">' + T('Juntar todos ({n})', { n: _jn.length }) + '</button>' : '')
+      : T('<div class="cf-intro">✅ Nenhum nome repetido com grafia diferente. Está tudo padronizado.</div>')) +
+    '<button type="button" class="aj-btn aj-full" data-acao="fechar-sheet" id="jn-fechar" style="margin-top:8px">' + T('Fechar') + '</button>');
+  $('jn-fechar').onclick = fecharSheet;
+  qsa('[data-jn]').forEach(function (b) {
+    b.onclick = function () {
+      var idx = b.dataset.jn === 'todos' ? _jn.map(function (x, i) { return i; }) : [+b.dataset.jn];
+      var ps = [], n = 0;
+      idx.forEach(function (i) {
+        var x = _jn[i], sel = document.querySelector('input[name="jn-' + i + '"]:checked'), nome = x.lista[sel ? +sel.value : 0].nome;
+        Object.keys(S.raw).forEach(function (id) {
+          var r = S.raw[id]; if (!r || !r.d || r.t === 'receita') return;
+          var d = String(r.d).trim(); if (normNome(d) !== x.k || r.d === nome) return;
+          var novo = Object.assign({}, r); novo.d = nome; n++; ps.push(gravarLanc(id, novo));
+        });
+      });
+      qsa('[data-jn]').forEach(function (z) { z.disabled = true; });
+      Promise.all(ps).then(function () {
+        mostrarToast('✅', n === 1 ? T('1 lançamento corrigido') : T('{n} lançamentos corrigidos', { n: n }));
+        renderTela(); abrirJuntarNomes();
+      }, function () { mostrarToast('⚠️', T('Erro ao salvar. Tente de novo.')); abrirJuntarNomes(); });
+    };
+  });
+}
 function abrirConferencia() {
   if (!window.MCBanco) { mostrarToast('⚠️', T('Atualize o app para usar a conferência')); return; }
   if (!_conf.banco) _conf.banco = lsGet('mc_banco') || (moeda() === 'BRL' ? 'nubank' : 'cibc');
@@ -3179,7 +3288,7 @@ function aplicarPagamento() {
   S.add.editId = null;
   irPara('add');
   if (p.valor > 0) $('inp-valor').value = numTxt(p.valor.toFixed(2));
-  $('inp-desc').value = p.loja;
+  $('inp-desc').value = p.loja; atualizarSugDesc();
   $('inp-data').value = hoje();
   var sg = sugerirCatLoja(p.loja);
   S.add.cat = sg ? sg.cat : null; S.add.sub = sg ? sg.sub : null;
@@ -3646,6 +3755,7 @@ function ligarEventos() {
     if ((b = t.closest('.card-cat[data-cat]'))) { irParaCategoria(b.dataset.cat); return; }
     if ((b = t.closest('[data-addtipo]'))) { if (S.add.tipo !== b.dataset.addtipo) { S.add.tipo = b.dataset.addtipo; if (S.add.tipo === 'compra') { S.add.orig = null; S.add.lj = false; } else S.add.cl = null; pintarTipoAdd(); } return; }
     if ((b = t.closest('[data-addlj]'))) { S.add.lj = b.dataset.addlj === '1'; pintarTipoAdd(); return; }
+    if ((b = t.closest('[data-descsug]'))) { var ns = _descSug[+b.dataset.descsug]; if (ns) { $('inp-desc').value = ns; atualizarSugDesc(); } return; }
     if (t.closest('[data-origtrocar]')) { S.add.orig = null; $('inp-valor').value = ''; $('inp-desc').value = ''; renderOrig(); atualizarAvisoValor(); return; }
     if ((b = t.closest('[data-origem]'))) { if (S.add.orig !== b.dataset.origem) escolherOrig(b.dataset.origem); return; }
     if ((b = t.closest('[data-addcat]'))) { if (S.add.cat !== b.dataset.addcat) S.add.sub = null; S.add.cat = b.dataset.addcat; renderAdd(); return; }
@@ -3687,6 +3797,7 @@ function ligarEventos() {
   $('btn-hoje').onclick = function () { $('inp-data').value = hoje(); };
   $('inp-valor').oninput = function () { atualizarPreviewParcela(); atualizarAvisoValor(); };
   $('orig-busca').oninput = renderOrig;
+  $('inp-desc').addEventListener('input', atualizarSugDesc);
   $('inp-data').addEventListener('change', renderOrig);
   $('sel-credito').onchange = function () { S.add.cl = this.value || null; atualizarAvisoValor(); };
   if (!COM_PARCELADOS) {

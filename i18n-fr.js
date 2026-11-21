@@ -1238,5 +1238,21 @@ MCI18N.add('fr', {
  "<b>🌐 Idiomas, etapa 2</b>: relatórios (semanal, por categoria e completo), projeção, gráficos, ajudas do ?, conferir com o banco, Apple Pay e novidades agora aparecem no idioma escolhido.": "<b>🌐 Langues, étape 2</b> : les rapports (hebdomadaire, par catégorie et complet), la projection, les graphiques, l’aide des ?, la comparaison avec la banque, Apple Pay et les nouveautés apparaissent maintenant dans la langue choisie.",
  "<b>🏷️ Categorias no seu idioma</b>: as categorias padrão do app (Carro, Supermercado…) aparecem traduzidas sozinhas. Para as suas, edite a categoria em Ajustes e preencha <b>Nomes em outros idiomas</b>: cada pessoa da casa vê no idioma dela.": "<b>🏷️ Catégories dans votre langue</b> : les catégories par défaut de l’application (Voiture, Épicerie…) sont traduites automatiquement. Pour les vôtres, modifiez la catégorie dans Réglages et remplissez <b>Noms dans d’autres langues</b> : chaque personne du foyer les voit dans sa langue.",
  "O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.": "L’avis de mise à jour montre seulement ce qui a changé depuis la dernière fois que vous l’avez vu, sur n’importe quel appareil.",
- "<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como \"Juros / Parcelas\". O \"% utilizado\" dos cartões também foi traduzido.": "<b>🏷️ Plus de catégories traduites automatiquement</b> : les noms courants créés par la famille (Voitures, Gym, Intérêts, Versements, École, Dentiste…) apparaissent maintenant en anglais et en français, y compris les noms combinés comme « Intérêts / Versements ». Le « % utilisé » des cartes est aussi traduit."
+ "<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como \"Juros / Parcelas\". O \"% utilizado\" dos cartões também foi traduzido.": "<b>🏷️ Plus de catégories traduites automatiquement</b> : les noms courants créés par la famille (Voitures, Gym, Intérêts, Versements, École, Dentiste…) apparaissent maintenant en anglais et en français, y compris les noms combinés comme « Intérêts / Versements ». Le « % utilisé » des cartes est aussi traduit.",
+ "Já existe como <b>{n}</b>. Vai ser salvo assim.": "Existe déjà comme <b>{n}</b>. Ce sera enregistré ainsi.",
+ "Você quis dizer <b>{n}</b>?": "Vouliez-vous dire <b>{n}</b>?",
+ "Sim, usar": "Oui, utiliser",
+ "1 lançamento": "1 transaction",
+ "{n} lançamentos": "{n} transactions",
+ "<h3>🔤 Juntar nomes iguais</h3>": "<h3>🔤 Fusionner les noms identiques</h3>",
+ "<div class=\"cf-intro\">Estes nomes são a mesma loja escrita de jeitos diferentes. Escolha a grafia certa e toque em <b>Juntar</b>: os lançamentos antigos passam a usar esse nome.</div>": "<div class=\"cf-intro\">Ces noms désignent le même magasin écrit de façons différentes. Choisissez la bonne orthographe et touchez <b>Fusionner</b> : les transactions passées utiliseront ce nom.</div>",
+ "Juntar": "Fusionner",
+ "Juntar todos ({n})": "Tout fusionner ({n})",
+ "<div class=\"cf-intro\">✅ Nenhum nome repetido com grafia diferente. Está tudo padronizado.</div>": "<div class=\"cf-intro\">✅ Aucun nom répété avec une orthographe différente. Tout est uniforme.</div>",
+ "1 lançamento corrigido": "1 transaction corrigée",
+ "{n} lançamentos corrigidos": "{n} transactions corrigées",
+ "Erro ao salvar. Tente de novo.": "Erreur d’enregistrement. Réessayez.",
+ "🔤 Nomes de lojas": "🔤 Noms de magasins",
+ "Junta o mesmo nome escrito de jeitos diferentes (ex.: <b>Walmart</b>, <b>walmart</b> e <b>Wal Mart</b>) nos lançamentos antigos. Você escolhe a grafia certa.": "Fusionne un même nom écrit de façons différentes (ex. : <b>Walmart</b>, <b>walmart</b> et <b>Wal Mart</b>) dans les transactions passées. Vous choisissez la bonne orthographe.",
+ "Juntar nomes iguais": "Fusionner les noms identiques"
 });

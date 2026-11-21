@@ -1238,5 +1238,21 @@ MCI18N.add('en', {
  "<b>🌐 Idiomas, etapa 2</b>: relatórios (semanal, por categoria e completo), projeção, gráficos, ajudas do ?, conferir com o banco, Apple Pay e novidades agora aparecem no idioma escolhido.": "<b>🌐 Languages, stage 2</b>: reports (weekly, by category and complete), forecast, charts, ? help, check against the bank, Apple Pay and what’s new now appear in the chosen language.",
  "<b>🏷️ Categorias no seu idioma</b>: as categorias padrão do app (Carro, Supermercado…) aparecem traduzidas sozinhas. Para as suas, edite a categoria em Ajustes e preencha <b>Nomes em outros idiomas</b>: cada pessoa da casa vê no idioma dela.": "<b>🏷️ Categories in your language</b>: the app’s default categories (Car, Groceries…) are translated automatically. For your own, edit the category in Settings and fill in <b>Names in other languages</b>: each person in the household sees them in their language.",
  "O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.": "The update notice only shows what changed since the last time you saw it, on any device.",
- "<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como \"Juros / Parcelas\". O \"% utilizado\" dos cartões também foi traduzido.": "<b>🏷️ More categories translated automatically</b>: common names created by the family (Cars, Gym, Interest, Installments, School, Dentist…) now appear in English and French, including combined names like \"Interest / Installments\". The \"% used\" on the cards is translated too."
+ "<b>🏷️ Mais categorias traduzidas sozinhas</b>: nomes comuns criados pela família (Carros, Academia, Juros, Parcelamentos, Escola, Dentista…) agora aparecem em inglês e francês, inclusive nomes compostos como \"Juros / Parcelas\". O \"% utilizado\" dos cartões também foi traduzido.": "<b>🏷️ More categories translated automatically</b>: common names created by the family (Cars, Gym, Interest, Installments, School, Dentist…) now appear in English and French, including combined names like \"Interest / Installments\". The \"% used\" on the cards is translated too.",
+ "Já existe como <b>{n}</b>. Vai ser salvo assim.": "Already saved as <b>{n}</b>. It will be saved that way.",
+ "Você quis dizer <b>{n}</b>?": "Did you mean <b>{n}</b>?",
+ "Sim, usar": "Yes, use it",
+ "1 lançamento": "1 entry",
+ "{n} lançamentos": "{n} entries",
+ "<h3>🔤 Juntar nomes iguais</h3>": "<h3>🔤 Merge matching names</h3>",
+ "<div class=\"cf-intro\">Estes nomes são a mesma loja escrita de jeitos diferentes. Escolha a grafia certa e toque em <b>Juntar</b>: os lançamentos antigos passam a usar esse nome.</div>": "<div class=\"cf-intro\">These names are the same store written in different ways. Choose the correct spelling and tap <b>Merge</b>: past entries will use that name.</div>",
+ "Juntar": "Merge",
+ "Juntar todos ({n})": "Merge all ({n})",
+ "<div class=\"cf-intro\">✅ Nenhum nome repetido com grafia diferente. Está tudo padronizado.</div>": "<div class=\"cf-intro\">✅ No names repeated with different spellings. Everything is consistent.</div>",
+ "1 lançamento corrigido": "1 entry updated",
+ "{n} lançamentos corrigidos": "{n} entries updated",
+ "Erro ao salvar. Tente de novo.": "Error saving. Please try again.",
+ "🔤 Nomes de lojas": "🔤 Store names",
+ "Junta o mesmo nome escrito de jeitos diferentes (ex.: <b>Walmart</b>, <b>walmart</b> e <b>Wal Mart</b>) nos lançamentos antigos. Você escolhe a grafia certa.": "Merges the same name written in different ways (e.g. <b>Walmart</b>, <b>walmart</b> and <b>Wal Mart</b>) in past entries. You choose the correct spelling.",
+ "Juntar nomes iguais": "Merge matching names"
 });
