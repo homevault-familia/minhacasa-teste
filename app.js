@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.2';
+var VERSAO = '2.35.3';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -477,12 +477,14 @@ function renderCartaoAdd() {
     (a.ctAberto ? '' : '<button type="button" class="ct-trocar" id="ct-trocar">' + T('trocar') + '</button>') + '</div>';
   if (a.ctAberto) h += '<div class="ct-ops">' + opcoesCartao().map(function (c) {
     return '<button type="button" class="ct-op' + (c.id === a.k ? ' on' : '') + '" data-ctop="' + c.id + '"><i style="background:' + c.cor + '"></i>' + esc(nomeCartao(c.id)) + (c.id === meu ? ' ⭐' : '') + '</button>';
-  }).join('') + '</div>';
+  }).join('') +
+    // 23/11/2026: dá para voltar um lançamento para "sem cartão"
+    '<button type="button" class="ct-op' + (!atual ? ' on' : '') + '" data-ctop=""><i style="background:#d1d5db"></i>' + esc(T('Sem cartão')) + '</button></div>';
   box.querySelector('.ct-corpo').innerHTML = h;
   var tb = $('ct-trocar'); if (tb) tb.onclick = function () { S.add.ctAberto = true; renderCartaoAdd(); };
   qsa('#card-cartao [data-ctop]').forEach(function (b) { b.onclick = function () {
-    S.add.k = b.dataset.ctop; S.add.ctAberto = false;
-    if (S.add.apNovo && S.add.k !== DIN) S.add.apAprender = { nome: S.add.apNovo, id: S.add.k };
+    S.add.k = b.dataset.ctop || null; S.add.ctAberto = false;
+    if (S.add.apNovo && S.add.k && S.add.k !== DIN) S.add.apAprender = { nome: S.add.apNovo, id: S.add.k };
     S.add.apNovo = null; renderCartaoAdd();
   }; });
 }
