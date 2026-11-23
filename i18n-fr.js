@@ -1308,5 +1308,8 @@ MCI18N.add('fr', {
  "Este extrato é do cartão:": "Ce relevé est celui de la carte :",
  "no app em {c}: {d}": "dans l’app sur {c} : {d}",
  "Corrigir cartão": "Corriger la carte",
- "Cartão corrigido para {c}": "Carte changée pour {c}"
+ "Cartão corrigido para {c}": "Carte changée pour {c}",
+ "Banco ou apelido": "Banque ou surnom",
+ "Banco ou apelido (opcional)": "Banque ou surnom (facultatif)",
+ "Ex.: CIBC, Cartão da Kate": "Ex. : CIBC, Carte de Kate"
 });

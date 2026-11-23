@@ -1308,5 +1308,8 @@ MCI18N.add('en', {
  "Este extrato é do cartão:": "This statement is for card:",
  "no app em {c}: {d}": "in the app on {c}: {d}",
  "Corrigir cartão": "Fix card",
- "Cartão corrigido para {c}": "Card changed to {c}"
+ "Cartão corrigido para {c}": "Card changed to {c}",
+ "Banco ou apelido": "Bank or nickname",
+ "Banco ou apelido (opcional)": "Bank or nickname (optional)",
+ "Ex.: CIBC, Cartão da Kate": "E.g. CIBC, Kate’s card"
 });

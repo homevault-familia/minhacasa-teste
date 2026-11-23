@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.3';
+var VERSAO = '2.35.4';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -356,10 +356,12 @@ function limparCfg(c) {
     var tc = limparTr(x.tr); if (tc) o.tr = tc;
     return o;
   });
-  // cartões da casa (23/11/2026): {id, nome, fim (4 últimos), cor, ap (nomes que o Apple Pay usa)}
+  // cartões da casa (23/11/2026): {id, nome, banco (banco ou apelido livre), cor, ap (nomes que o Apple Pay usa)}
+  // 'fim' (4 últimos números) era da 1ª versão: fica guardado nos cartões antigos, mas não é mais pedido nem mostrado.
   c.cartoes = (Array.isArray(c.cartoes) ? c.cartoes : []).filter(function (x) { return x && ID_OK.test(x.id) && x.id !== DIN; }).slice(0, 20).map(function (x, i) {
     var o = { id: x.id, nome: txtCurto(x.nome || T('Cartão'), 30), cor: COR_OK.test(x.cor) ? x.cor : PALETA[(i + 3) % PALETA.length] };
     if (/^\d{4}$/.test(x.fim)) o.fim = x.fim;
+    var bc = txtCurto(x.banco || '', 30).trim(); if (bc) o.banco = bc;
     var ap = (Array.isArray(x.ap) ? x.ap : []).map(function (a) { return txtCurto(a, 60).trim(); }).filter(Boolean).slice(0, 10);
     if (ap.length) o.ap = ap;
     return o;
@@ -438,7 +440,7 @@ function descLanc(l) { return l.desc || nomeSub(l.cat, l.sub) || NOME(l.cat); }
 // ═════════════════════════ CARTÕES (23/11/2026) ═════════════════════════
 // A casa cadastra os cartões em Ajustes. Cada pessoa marca o seu principal (fica no perfil dela, cifrado).
 // Registrar já vem com o principal; "trocar" muda só aquela compra. Apple Pay: o atalho manda o nome do
-// cartão; o app reconhece pelo nome, pelos 4 últimos números ou pelo que aprendeu, e pergunta uma vez se não souber.
+// cartão; o app reconhece pelo nome e pelo banco ou apelido, ou pelo que aprendeu, e pergunta uma vez se não souber.
 // Sem cartão cadastrado, nada disso aparece. O orçamento continua um só; o cartão é só para saber onde foi.
 var DIN = 'dinheiro';
 function cartoes() { return (S.cfg && S.cfg.cartoes) || []; }
@@ -447,7 +449,7 @@ function opcoesCartao() { return usaCartoes() ? cartoes().concat([{ id: DIN, nom
 function cartaoPorId(id) { return id ? opcoesCartao().filter(function (c) { return c.id === id; })[0] || null : null; }
 function nomeCartao(id, curto) {
   var c = cartaoPorId(id); if (!c) return T('Sem cartão');
-  return (c.din ? '💵 ' : '💳 ') + c.nome + (!curto && c.fim ? ' ••' + c.fim : '');
+  return (c.din ? '💵 ' : '💳 ') + c.nome + (!curto && c.banco ? ' · ' + c.banco : '');
 }
 function meuCartao() {
   var p = (S.user && S.perfis[S.user.uid]) || {};
@@ -459,10 +461,13 @@ function cartaoDoApplePay(nome) {
   var cs = cartoes(), i;
   for (i = 0; i < cs.length; i++) if ((cs[i].ap || []).some(function (a) { return normNome(a) === n; })) return cs[i].id;
   for (i = 0; i < cs.length; i++) if (cs[i].fim && String(nome).indexOf(cs[i].fim) >= 0) return cs[i].id;
-  for (i = 0; i < cs.length; i++) { var cn = normNome(cs[i].nome); if (cn.length >= 3 && (n.indexOf(cn) >= 0 || cn.indexOf(n) >= 0)) return cs[i].id; }
+  for (i = 0; i < cs.length; i++) { var cn = normNome(cs[i].nome + ' ' + (cs[i].banco || '')), cn1 = normNome(cs[i].nome); if ((cn.length >= 3 && (n.indexOf(cn) >= 0 || cn.indexOf(n) >= 0)) || (cn1.length >= 3 && n === cn1)) return cs[i].id; }
   // todas as palavras do nome cadastrado aparecem no nome do Apple Pay ("Visa TD" × "TD Aeroplan Visa Infinite"), e só um cartão bate
   var pal = function (t) { return String(t || '').split(/[^\p{L}\p{N}]+/u).map(normNome).filter(Boolean); };
-  var pAp = pal(nome), achou = cs.filter(function (c) { var pc = pal(c.nome); return pc.length && pc.every(function (w) { return pAp.indexOf(w) >= 0; }); });
+  var pAp = pal(nome), todas = function (pc) { return pc.length && pc.every(function (w) { return pAp.indexOf(w) >= 0; }); };
+  var achou = cs.filter(function (c) { return todas(pal(c.nome + ' ' + (c.banco || ''))); });
+  if (achou.length !== 1) achou = cs.filter(function (c) { return todas(pal(c.nome)); });
+  if (achou.length !== 1) achou = cs.filter(function (c) { return c.banco && todas(pal(c.banco)); });
   return achou.length === 1 ? achou[0].id : null;
 }
 function renderCartaoAdd() {
@@ -495,7 +500,7 @@ function renderCartoesAj() {
   var linha = function (c) {
     var principal = c.id === meu;
     return '<div class="aj-linha"><div class="aj-ic" style="background:' + alfa(c.cor, '22') + '">' + (c.din ? '💵' : '💳') + '</div>' +
-      '<div class="aj-nm">' + esc(c.nome) + (c.fim ? ' <span style="color:#9ca3af">••' + c.fim + '</span>' : '') +
+      '<div class="aj-nm">' + esc(c.nome) + (c.banco ? ' <span style="color:#9ca3af">· ' + esc(c.banco) + '</span>' : '') +
       '<small>' + (principal ? T('⭐ Seu principal') : (c.ap && c.ap.length ? T('Apple Pay: {n}', { n: esc(c.ap.join(', ')) }) : '&nbsp;')) + '</small></div>' +
       (principal ? '' : '<button class="aj-btn" data-ctprinc="' + c.id + '">' + T('Tornar principal') + '</button>') +
       (c.din ? '' : '<button class="aj-btn" data-ctedit="' + c.id + '" aria-label="' + esc(T('Editar')) + '">✏️</button>') + '</div>';
@@ -503,14 +508,13 @@ function renderCartoesAj() {
   box.innerHTML = T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:6px">Cadastre os cartões da casa para saber em qual deles foi cada gasto. O ⭐ é o <b>seu</b> principal: ele já vem marcado ao registrar, e dá para trocar na hora. Cada pessoa escolhe o seu.</div>') +
     opcoesCartao().map(linha).join('') +
     '<div style="display:flex;gap:8px;margin-top:10px"><input class="aj-input" id="ct-nome" maxlength="30" placeholder="' + esc(T('Nome do cartão (ex.: Visa TD)')) + '" style="flex:1;margin:0">' +
-    '<input class="aj-input" id="ct-fim" maxlength="4" inputmode="numeric" placeholder="' + esc(T('4 últimos')) + '" style="width:92px;margin:0"></div>' +
+    '<input class="aj-input" id="ct-banco" maxlength="30" placeholder="' + esc(T('Banco ou apelido')) + '" style="flex:1;margin:0"></div>' +
     '<button class="aj-btn pri aj-full" id="ct-add" style="margin-top:8px">' + T('Adicionar cartão') + '</button>';
   $('ct-add').onclick = function () {
-    var nome = $('ct-nome').value.trim(), fim = $('ct-fim').value.trim();
+    var nome = $('ct-nome').value.trim(), banco = $('ct-banco').value.trim();
     if (!nome) { mostrarToast('⚠️', T('Digite o nome do cartão')); return; }
-    if (fim && !/^\d{4}$/.test(fim)) { mostrarToast('⚠️', T('Os 4 últimos números são opcionais, mas precisam ter 4 dígitos')); return; }
     if (somenteLeitura()) { avisarSomenteLeitura(); return; }
-    var c = { id: 'k' + rid(7), nome: nome, cor: PALETA[(cartoes().length + 3) % PALETA.length] }; if (fim) c.fim = fim;
+    var c = { id: 'k' + rid(7), nome: nome, cor: PALETA[(cartoes().length + 3) % PALETA.length] }; if (banco) c.banco = banco;
     var primeiro = !usaCartoes();
     S.cfg.cartoes = cartoes().concat([c]); salvarCfg();
     if (primeiro) atualizarPerfil({ cartao: c.id });
@@ -529,7 +533,7 @@ function editarCartao(id) {
   var desenhar = function () {
     abrirSheet(T('<h3>💳 Editar cartão</h3>') +
       '<label class="aj-lbl">' + T('Nome') + '</label><input class="aj-input" id="ce-nome" maxlength="30" value="' + esc(c.nome) + '">' +
-      '<label class="aj-lbl">' + T('4 últimos números (opcional)') + '</label><input class="aj-input" id="ce-fim" maxlength="4" inputmode="numeric" value="' + esc(c.fim || '') + '">' +
+      '<label class="aj-lbl">' + T('Banco ou apelido (opcional)') + '</label><input class="aj-input" id="ce-banco" maxlength="30" placeholder="' + esc(T('Ex.: CIBC, Cartão da Kate')) + '" value="' + esc(c.banco || '') + '">' +
       (ap.length ? '<label class="aj-lbl">' + T('Nomes que o Apple Pay usa para este cartão') + '</label>' + ap.map(function (a, i) {
         return '<div class="aj-linha" style="padding:6px 0"><div class="aj-nm" style="font-weight:600">' + esc(a) + '</div><button class="aj-btn perigo" data-ceap="' + i + '">✕</button></div>';
       }).join('') : '') +
@@ -538,10 +542,9 @@ function editarCartao(id) {
     $('ce-fechar').onclick = fecharSheet;
     qsa('[data-ceap]').forEach(function (b) { b.onclick = function () { ap.splice(+b.dataset.ceap, 1); desenhar(); }; });
     $('ce-salvar').onclick = function () {
-      var nome = $('ce-nome').value.trim(), fim = $('ce-fim').value.trim();
+      var nome = $('ce-nome').value.trim(), banco = $('ce-banco').value.trim();
       if (!nome) { mostrarToast('⚠️', T('Digite o nome do cartão')); return; }
-      if (fim && !/^\d{4}$/.test(fim)) { mostrarToast('⚠️', T('Os 4 últimos números são opcionais, mas precisam ter 4 dígitos')); return; }
-      S.cfg.cartoes = cartoes().map(function (x) { if (x.id !== id) return x; var o = { id: x.id, nome: nome, cor: x.cor }; if (fim) o.fim = fim; if (ap.length) o.ap = ap; return o; });
+      S.cfg.cartoes = cartoes().map(function (x) { if (x.id !== id) return x; var o = { id: x.id, nome: nome, cor: x.cor }; if (banco) o.banco = banco; if (x.fim) o.fim = x.fim; if (ap.length) o.ap = ap; return o; });
       salvarCfg(); fecharSheet(); renderCartoesAj(); mostrarToast('✅', T('Cartão atualizado'));
     };
     var bx = $('ce-apagar');
