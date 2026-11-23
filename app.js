@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.1';
+var VERSAO = '2.35.2';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3073,6 +3073,9 @@ function juntarArquivos() {
     a.r.transacoes.forEach(function (x) { var y = Object.assign({}, x, { origem: rot }); (x.tipo === 'debito' ? deb : cred).push(y); });
   });
   _conf.debitos = deb; _conf.creditosL = cred;
+  // cartão do extrato (23/11/2026): o último usado com esse banco, ou o seu principal
+  var kb = 'mc_conf_ct_' + ((A[0] && A[0].banco) || _conf.banco || '');
+  _conf.kBanco = kb; _conf.cartao = cartaoPorId(lsGet(kb)) ? lsGet(kb) : (lsGet(kb) === '*' ? '*' : meuCartao());
   _conf.nomeArq = A.length === 1 ? A[0].nome : A.length + ' arquivos';
   _conf.leitura = A.length === 1 ? A[0].r : null;
   recalcularConferencia();
@@ -3093,6 +3096,11 @@ function recalcularConferencia() {
     var todos = lancamentos(), deb = _conf.debitos, cred = _conf.creditosL || [];
     var datas = deb.concat(cred).map(function (x) { return x.data; }).sort();
     var faixa = { inicio: datas[0], fim: datas[datas.length - 1] };
+    // só os lançamentos do cartão deste extrato (e os antigos, sem cartão). '*' = todos.
+    var ck = usaCartoes() && cartaoPorId(_conf.cartao) ? _conf.cartao : null;
+    var doCartao = function (l) { return !ck || !cartaoPorId(l.cartao) || l.cartao === ck; };
+    _conf.outros = ck ? todos.filter(function (l) { return !l.dev && l.valor > 0 && !doCartao(l); }) : [];
+    todos = todos.filter(doCartao);
     var compras = todos.filter(function (l) { return !l.dev && l.valor > 0; }).map(function (l) {
       return l.clv > 0 ? Object.assign({}, l, { valor: c2(l.valor - l.clv), credLoja: l.clv }) : l;
     }).filter(function (l) { return l.valor > 0.005; });
@@ -3171,8 +3179,20 @@ function mostrarConferencia() {
   var org = function (l) { return multi && l.banco && l.banco.origem ? ' · <span class="cf-org">' + esc(l.banco.origem) + '</span>' : ''; };
   var html = T('<h3>🏦 Banco × app</h3><div style="font-size:12px;color:#6b7280">') + esc(_conf.nomeArq) + ' · ' + formatarData(c.inicio) + T(' a ') + formatarData(c.fim) + T(' · gastos e devoluções') + (_conf.ignorados ? ' (' + (_conf.ignorados > 1 ? T('{n} outros créditos ignorados', { n: _conf.ignorados }) : T('1 outro crédito ignorado')) + T(': pagamentos, salário, transferências)') : '') + '</div>' +
     '<div class="cf-resumo"><div class="cf-ok"><b>' + por.ok.length + T('</b>batem</div>') + '<div class="cf-data"><b>' + por.data.length + T('</b>data dif.</div><div class="cf-valor"><b>') + por.valor.length + T('</b>valor dif.</div><div class="cf-falta"><b>') + por.falta.length + T('</b>faltam</div></div>');
+  if (usaCartoes()) {
+    var opsC = opcoesCartao().filter(function (x) { return !x.din; }).map(function (x) { return { id: x.id, nome: nomeCartao(x.id, true) }; }).concat([{ id: '*', nome: T('Todos os cartões') }]);
+    var atualC = cartaoPorId(_conf.cartao) ? _conf.cartao : '*';
+    html = html.replace('<div class="cf-resumo">', '<div class="cf-ctsel"><span>' + T('Este extrato é do cartão:') + '</span><div class="ct-filtro">' + opsC.map(function (o) {
+      return '<button type="button" class="ct-fb' + (o.id === atualC ? ' on' : '') + '" data-cfcartao="' + o.id + '">' + esc(o.nome) + '</button>';
+    }).join('') + '</div></div><div class="cf-resumo">');
+  }
+  // compra que bate com o extrato, mas foi marcada em outro cartão
+  var outroCt = function (l) {
+    return (_conf.outros || []).filter(function (a) { return Math.abs(a.valor - l.banco.valor) < 0.01 && Math.abs(diasEntre(a.data, l.banco.data)) <= 3; })[0] || null;
+  };
   if (por.falta.length) html += T('<div class="cf-grupo">No banco e não no app') + aj('cf-falta') + '</div>' + por.falta.map(function (l) {
-    var i = c.linhas.indexOf(l);
+    var i = c.linhas.indexOf(l), oc = outroCt(l);
+    if (oc) return item('cf-falta', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + org(l) + ' · ' + T('no app em {c}: {d}', { c: esc(nomeCartao(oc.cartao, true)), d: nomeApp(oc) }), formatar(l.banco.valor), '<button class="aj-btn pri" data-cfct="' + i + '">' + T('Corrigir cartão') + '</button>');
     return item('cf-falta', esc(l.banco.desc || T('(sem descrição)')), formatarData(l.banco.data) + org(l), formatar(l.banco.valor), '<button class="aj-btn pri" data-cflancar="' + i + T('">Lançar</button>'));
   }).join('');
   var D = _conf.dev || { ok: [], falta: [], soApp: [] };
@@ -3212,17 +3232,28 @@ function mostrarConferencia() {
   if ($('cf-verok')) $('cf-verok').onclick = function () { _conf.verOk = true; mostrarConferencia(); };
   qsa('#sheet-box [data-cfajarq]').forEach(function (bt) { bt.onclick = function () { var i = +bt.dataset.cfajarq, a = _conf.arqs[i]; if (!a.r || !a.r.linhas) lerArq(a); abrirMapaArq(i); }; });
   $('cf-outro').onclick = abrirConferencia;
+  qsa('#sheet-box [data-cfcartao]').forEach(function (bt) { bt.onclick = function () {
+    _conf.cartao = bt.dataset.cfcartao; if (_conf.kBanco) lsSet(_conf.kBanco, _conf.cartao); recalcularConferencia();
+  }; });
+  qsa('#sheet-box [data-cfct]').forEach(function (bt) { bt.onclick = function () {
+    var l = c.linhas[+bt.dataset.cfct], oc = outroCt(l), reg = oc && S.raw[oc.id];
+    if (!reg || !cartaoPorId(_conf.cartao)) return;
+    var novo = Object.assign({}, reg); novo.k = _conf.cartao;
+    gravarLanc(oc.id, novo).then(function () { mostrarToast('💳', T('Cartão corrigido para {c}', { c: nomeCartao(_conf.cartao, true) })); }, function () {});
+    recalcularConferencia();
+  }; });
+  var ctDoExtrato = function () { if (usaCartoes() && cartaoPorId(_conf.cartao)) { S.add.k = _conf.cartao; renderCartaoAdd(); } };
   qsa('#sheet-box [data-cflancar]').forEach(function (bt) { bt.onclick = function () {
     var l = c.linhas[+bt.dataset.cflancar];
     fecharSheet(); irPara('add');
-    S.add.voltarConf = true;
+    S.add.voltarConf = true; ctDoExtrato();
     $('inp-valor').value = numTxt(l.banco.valor.toFixed(2)); $('inp-data').value = l.banco.data; $('inp-desc').value = (l.banco.desc || '').slice(0, 60);
     mostrarToast('🏦', T('Escolha a categoria e salve. Depois o app volta para a conferência.'), 4000);
   }; });
   qsa('#sheet-box [data-cfdev]').forEach(function (bt) { bt.onclick = function () {
     var l = D.falta[+bt.dataset.cfdev], o = compraDaDevolucao(l.banco);
     fecharSheet(); irPara('add');
-    S.add.voltarConf = true; S.add.tipo = 'dev'; S.add.lj = false; S.add.cl = null;
+    S.add.voltarConf = true; S.add.tipo = 'dev'; S.add.lj = false; S.add.cl = null; ctDoExtrato();
     $('inp-valor').value = numTxt(l.banco.valor.toFixed(2)); $('inp-data').value = l.banco.data; $('inp-desc').value = '';
     pintarTipoAdd();
     if (o) escolherOrig(o.id, true);
