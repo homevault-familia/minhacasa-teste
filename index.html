@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.34.3">
+<meta name="app-version" content="2.35.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -575,6 +575,19 @@ body {
 .add-textarea { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
   font-size: 16px; font-family: inherit; background: #fafafa; resize: none; height: 80px;
   box-sizing: border-box; color: #111827; transition: border-color .2s, background .2s; }
+.ct-linha { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ct-atual { font-weight:700; font-size:15px; color:#111827; display:flex; align-items:center; gap:8px; }
+.ct-atual i, .ct-op i { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.ct-trocar { border:0; background:none; color:#1d4ed8; font:inherit; font-weight:700; font-size:14px; padding:8px 4px; cursor:pointer; }
+.ct-ops { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.ct-op { display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:14px; font-weight:700; padding:9px 13px; min-height:40px; border-radius:20px; border:1.5px solid #e5e7eb; background:#fff; color:#111827; cursor:pointer; }
+.ct-op.on { border-color:#1d4ed8; background:#eef2ff; color:#1d4ed8; }
+.ct-ap { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:10px; padding:8px 10px; font-size:13px; line-height:1.4; margin-bottom:10px; }
+.ct-filtro { display:flex; gap:6px; overflow-x:auto; padding:2px 0 10px; scrollbar-width:none; }
+.ct-filtro::-webkit-scrollbar { display:none; }
+.ct-fb { flex-shrink:0; font:inherit; font-size:13px; font-weight:700; padding:7px 12px; border-radius:18px; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; white-space:nowrap; }
+.ct-fb.on { background:#111827; border-color:#111827; color:#fff; }
+.aj-lbl { display:block; font-size:12px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:.4px; margin:12px 0 6px; }
 .faixa-app:empty { display: none; }
 .faixa-app { padding: 10px 14px 0; display: flex; flex-direction: column; gap: 8px; }
 .fx { border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; font-weight: 600; display: flex; align-items: flex-start; gap: 8px; }
@@ -1239,6 +1252,10 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
         <select class="sel-parcelas" id="sel-parcela-ini"></select>
       </div>
     </div>
+    <div class="add-card" id="card-cartao" style="display:none">
+      <div class="add-card-title">💳 Cartão</div>
+      <div class="ct-corpo"></div>
+    </div>
     <div class="add-card">
       <div class="add-card-title"><span class="add-step-n">5</span>Descrição<span class="opt-badge">opcional</span></div>
       <textarea id="inp-desc" class="add-textarea" maxlength="140" placeholder="Ex: Gasolina no posto, compras da semana…"></textarea>
@@ -1434,6 +1451,9 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 
     <div class="aj-sec">Membros</div>
     <div class="card" id="aj-membros"></div>
+
+    <div class="aj-sec">💳 Cartões</div>
+    <div class="card" id="aj-cartoes"></div>
 
     <div class="aj-sec">🏦 Conferir com o banco</div>
     <div class="card">

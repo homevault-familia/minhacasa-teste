@@ -26,9 +26,12 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.34.3';
+var VERSAO = '2.35.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
+  { v: '2.35.0', d: '23/11/2026', itens: [
+    '<b>💳 Gastos por cartão</b>: em Ajustes → Cartões, cadastre os cartões da casa e marque o seu principal ⭐. Ao registrar, ele já vem escolhido; toque em "trocar" se a compra foi em outro cartão ou em dinheiro. Com Apple Pay, o app reconhece o cartão sozinho. Nos Relatórios aparece quanto foi em cada cartão, e no Histórico dá para filtrar.'
+  ] },
   { v: '2.33.1', d: '20/11/2026', itens: [
     'O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.'
   ] },
@@ -352,6 +355,15 @@ function limparCfg(c) {
     var tc = limparTr(x.tr); if (tc) o.tr = tc;
     return o;
   });
+  // cartões da casa (23/11/2026): {id, nome, fim (4 últimos), cor, ap (nomes que o Apple Pay usa)}
+  c.cartoes = (Array.isArray(c.cartoes) ? c.cartoes : []).filter(function (x) { return x && ID_OK.test(x.id) && x.id !== DIN; }).slice(0, 20).map(function (x, i) {
+    var o = { id: x.id, nome: txtCurto(x.nome || T('Cartão'), 30), cor: COR_OK.test(x.cor) ? x.cor : PALETA[(i + 3) % PALETA.length] };
+    if (/^\d{4}$/.test(x.fim)) o.fim = x.fim;
+    var ap = (Array.isArray(x.ap) ? x.ap : []).map(function (a) { return txtCurto(a, 60).trim(); }).filter(Boolean).slice(0, 10);
+    if (ap.length) o.ap = ap;
+    return o;
+  });
+  if (!c.cartoes.length) delete c.cartoes;
   return c;
 }
 function limparReg(id, r) {
@@ -364,6 +376,7 @@ function limparReg(id, r) {
   if (ID_OK.test(r.o)) o.o = r.o;
   if (r.lj) o.lj = 1;
   if (r.ap) o.ap = 1; // veio de um pagamento com Apple Pay (atalho do iPhone)
+  if (ID_OK.test(r.k)) o.k = r.k; // cartão usado (23/11/2026)
   if (ID_OK.test(r.cl)) { o.cl = r.cl; o.clv = Math.max(0, Math.min(o.v, Math.round(+r.clv || 0))); }
   if (r.p && typeof r.p === 'object') o.p = { n: Math.max(1, Math.round(+r.p.n || 1)), total: Math.max(1, Math.round(+r.p.total || 1)), g: ID_OK.test(r.p.g) ? r.p.g : 'g', vt: Math.max(0, Math.round(+r.p.vt || 0)) };
   if (!o.dt || !(o.v > 0) || o.v > VALOR_MAX * 100) return null;
@@ -400,7 +413,7 @@ function lancamentos() {
       id: id, data: r.dt, valor: (r.t === 'dev' ? -1 : 1) * (r.v || 0) / 100, cat: r.p ? PARC : r.c, sub: r.s || null, desc: lojaPadrao(r.d, G),
       por: r.por, ts: r.ts || 0,
       dev: r.t === 'dev', orig: r.t === 'dev' && r.o ? r.o : null, lj: !!(r.t === 'dev' && r.lj),
-      cl: r.cl || null, clv: (r.clv || 0) / 100, ap: !!r.ap,
+      cl: r.cl || null, clv: (r.clv || 0) / 100, ap: !!r.ap, cartao: r.k || null,
       parcela: r.p ? { n: r.p.n, total: r.p.total, grupoId: r.p.g, valorTotal: (r.p.vt || 0) / 100 } : null
     };
   }).filter(Boolean);
@@ -421,10 +434,150 @@ function creditosLoja(excetoCompra) {
 }
 function lancamentosPeriodo(lista, p) { return lista.filter(function (l) { return l.data && l.data >= p.inicio && l.data <= p.fim; }); }
 function descLanc(l) { return l.desc || nomeSub(l.cat, l.sub) || NOME(l.cat); }
+// ═════════════════════════ CARTÕES (23/11/2026) ═════════════════════════
+// A casa cadastra os cartões em Ajustes. Cada pessoa marca o seu principal (fica no perfil dela, cifrado).
+// Registrar já vem com o principal; "trocar" muda só aquela compra. Apple Pay: o atalho manda o nome do
+// cartão; o app reconhece pelo nome, pelos 4 últimos números ou pelo que aprendeu, e pergunta uma vez se não souber.
+// Sem cartão cadastrado, nada disso aparece. O orçamento continua um só; o cartão é só para saber onde foi.
+var DIN = 'dinheiro';
+function cartoes() { return (S.cfg && S.cfg.cartoes) || []; }
+function usaCartoes() { return cartoes().length > 0; }
+function opcoesCartao() { return usaCartoes() ? cartoes().concat([{ id: DIN, nome: T('Dinheiro / débito'), cor: '#16a34a', din: true }]) : []; }
+function cartaoPorId(id) { return id ? opcoesCartao().filter(function (c) { return c.id === id; })[0] || null : null; }
+function nomeCartao(id, curto) {
+  var c = cartaoPorId(id); if (!c) return T('Sem cartão');
+  return (c.din ? '💵 ' : '💳 ') + c.nome + (!curto && c.fim ? ' ••' + c.fim : '');
+}
+function meuCartao() {
+  var p = (S.user && S.perfis[S.user.uid]) || {};
+  if (cartaoPorId(p.cartao)) return p.cartao;
+  return cartoes()[0] ? cartoes()[0].id : null;
+}
+function cartaoDoApplePay(nome) {
+  var n = normNome(nome); if (!n) return null;
+  var cs = cartoes(), i;
+  for (i = 0; i < cs.length; i++) if ((cs[i].ap || []).some(function (a) { return normNome(a) === n; })) return cs[i].id;
+  for (i = 0; i < cs.length; i++) if (cs[i].fim && String(nome).indexOf(cs[i].fim) >= 0) return cs[i].id;
+  for (i = 0; i < cs.length; i++) { var cn = normNome(cs[i].nome); if (cn.length >= 3 && (n.indexOf(cn) >= 0 || cn.indexOf(n) >= 0)) return cs[i].id; }
+  // todas as palavras do nome cadastrado aparecem no nome do Apple Pay ("Visa TD" × "TD Aeroplan Visa Infinite"), e só um cartão bate
+  var pal = function (t) { return String(t || '').split(/[^\p{L}\p{N}]+/u).map(normNome).filter(Boolean); };
+  var pAp = pal(nome), achou = cs.filter(function (c) { var pc = pal(c.nome); return pc.length && pc.every(function (w) { return pAp.indexOf(w) >= 0; }); });
+  return achou.length === 1 ? achou[0].id : null;
+}
+function renderCartaoAdd() {
+  var box = $('card-cartao'); if (!box) return;
+  var a = S.add;
+  if (!usaCartoes() || a.parc) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  var meu = meuCartao(), atual = cartaoPorId(a.k);
+  var h = '';
+  if (a.apNovo) h += '<div class="ct-ap">📲 ' + T('O Apple Pay usou o cartão “{n}”. Qual é ele? O app vai lembrar.', { n: esc(a.apNovo) }) + '</div>';
+  h += '<div class="ct-linha"><span class="ct-atual">' + (atual ? '<i style="background:' + atual.cor + '"></i>' + esc(nomeCartao(atual.id)) + (atual.id === meu ? ' ⭐' : '') : esc(T('Sem cartão'))) + '</span>' +
+    (a.ctAberto ? '' : '<button type="button" class="ct-trocar" id="ct-trocar">' + T('trocar') + '</button>') + '</div>';
+  if (a.ctAberto) h += '<div class="ct-ops">' + opcoesCartao().map(function (c) {
+    return '<button type="button" class="ct-op' + (c.id === a.k ? ' on' : '') + '" data-ctop="' + c.id + '"><i style="background:' + c.cor + '"></i>' + esc(nomeCartao(c.id)) + (c.id === meu ? ' ⭐' : '') + '</button>';
+  }).join('') + '</div>';
+  box.querySelector('.ct-corpo').innerHTML = h;
+  var tb = $('ct-trocar'); if (tb) tb.onclick = function () { S.add.ctAberto = true; renderCartaoAdd(); };
+  qsa('#card-cartao [data-ctop]').forEach(function (b) { b.onclick = function () {
+    S.add.k = b.dataset.ctop; S.add.ctAberto = false;
+    if (S.add.apNovo && S.add.k !== DIN) S.add.apAprender = { nome: S.add.apNovo, id: S.add.k };
+    S.add.apNovo = null; renderCartaoAdd();
+  }; });
+}
+// Ajustes → Cartões
+function renderCartoesAj() {
+  var box = $('aj-cartoes'); if (!box) return;
+  var meu = meuCartao();
+  var linha = function (c) {
+    var principal = c.id === meu;
+    return '<div class="aj-linha"><div class="aj-ic" style="background:' + alfa(c.cor, '22') + '">' + (c.din ? '💵' : '💳') + '</div>' +
+      '<div class="aj-nm">' + esc(c.nome) + (c.fim ? ' <span style="color:#9ca3af">••' + c.fim + '</span>' : '') +
+      '<small>' + (principal ? T('⭐ Seu principal') : (c.ap && c.ap.length ? T('Apple Pay: {n}', { n: esc(c.ap.join(', ')) }) : '&nbsp;')) + '</small></div>' +
+      (principal ? '' : '<button class="aj-btn" data-ctprinc="' + c.id + '">' + T('Tornar principal') + '</button>') +
+      (c.din ? '' : '<button class="aj-btn" data-ctedit="' + c.id + '" aria-label="' + esc(T('Editar')) + '">✏️</button>') + '</div>';
+  };
+  box.innerHTML = T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:6px">Cadastre os cartões da casa para saber em qual deles foi cada gasto. O ⭐ é o <b>seu</b> principal: ele já vem marcado ao registrar, e dá para trocar na hora. Cada pessoa escolhe o seu.</div>') +
+    opcoesCartao().map(linha).join('') +
+    '<div style="display:flex;gap:8px;margin-top:10px"><input class="aj-input" id="ct-nome" maxlength="30" placeholder="' + esc(T('Nome do cartão (ex.: Visa TD)')) + '" style="flex:1;margin:0">' +
+    '<input class="aj-input" id="ct-fim" maxlength="4" inputmode="numeric" placeholder="' + esc(T('4 últimos')) + '" style="width:92px;margin:0"></div>' +
+    '<button class="aj-btn pri aj-full" id="ct-add" style="margin-top:8px">' + T('Adicionar cartão') + '</button>';
+  $('ct-add').onclick = function () {
+    var nome = $('ct-nome').value.trim(), fim = $('ct-fim').value.trim();
+    if (!nome) { mostrarToast('⚠️', T('Digite o nome do cartão')); return; }
+    if (fim && !/^\d{4}$/.test(fim)) { mostrarToast('⚠️', T('Os 4 últimos números são opcionais, mas precisam ter 4 dígitos')); return; }
+    if (somenteLeitura()) { avisarSomenteLeitura(); return; }
+    var c = { id: 'k' + rid(7), nome: nome, cor: PALETA[(cartoes().length + 3) % PALETA.length] }; if (fim) c.fim = fim;
+    var primeiro = !usaCartoes();
+    S.cfg.cartoes = cartoes().concat([c]); salvarCfg();
+    if (primeiro) atualizarPerfil({ cartao: c.id });
+    mostrarToast('💳', T('Cartão {n} adicionado', { n: nome }));
+    renderCartoesAj();
+  };
+  qsa('#aj-cartoes [data-ctprinc]').forEach(function (b) { b.onclick = function () {
+    atualizarPerfil({ cartao: b.dataset.ctprinc }).then(function () { renderCartoesAj(); });
+    mostrarToast('⭐', T('{n} agora é o seu principal', { n: nomeCartao(b.dataset.ctprinc, true) }));
+  }; });
+  qsa('#aj-cartoes [data-ctedit]').forEach(function (b) { b.onclick = function () { editarCartao(b.dataset.ctedit); }; });
+}
+function editarCartao(id) {
+  var c = cartoes().filter(function (x) { return x.id === id; })[0]; if (!c) return;
+  var ap = (c.ap || []).slice();
+  var desenhar = function () {
+    abrirSheet(T('<h3>💳 Editar cartão</h3>') +
+      '<label class="aj-lbl">' + T('Nome') + '</label><input class="aj-input" id="ce-nome" maxlength="30" value="' + esc(c.nome) + '">' +
+      '<label class="aj-lbl">' + T('4 últimos números (opcional)') + '</label><input class="aj-input" id="ce-fim" maxlength="4" inputmode="numeric" value="' + esc(c.fim || '') + '">' +
+      (ap.length ? '<label class="aj-lbl">' + T('Nomes que o Apple Pay usa para este cartão') + '</label>' + ap.map(function (a, i) {
+        return '<div class="aj-linha" style="padding:6px 0"><div class="aj-nm" style="font-weight:600">' + esc(a) + '</div><button class="aj-btn perigo" data-ceap="' + i + '">✕</button></div>';
+      }).join('') : '') +
+      '<div style="display:flex;gap:8px;margin-top:12px"><button class="aj-btn pri" id="ce-salvar" style="flex:1">' + T('Salvar') + '</button><button class="aj-btn" id="ce-fechar">' + T('Fechar') + '</button></div>' +
+      '<button class="aj-btn perigo aj-full" id="ce-apagar" style="margin-top:10px">' + T('Excluir cartão') + '</button>');
+    $('ce-fechar').onclick = fecharSheet;
+    qsa('[data-ceap]').forEach(function (b) { b.onclick = function () { ap.splice(+b.dataset.ceap, 1); desenhar(); }; });
+    $('ce-salvar').onclick = function () {
+      var nome = $('ce-nome').value.trim(), fim = $('ce-fim').value.trim();
+      if (!nome) { mostrarToast('⚠️', T('Digite o nome do cartão')); return; }
+      if (fim && !/^\d{4}$/.test(fim)) { mostrarToast('⚠️', T('Os 4 últimos números são opcionais, mas precisam ter 4 dígitos')); return; }
+      S.cfg.cartoes = cartoes().map(function (x) { if (x.id !== id) return x; var o = { id: x.id, nome: nome, cor: x.cor }; if (fim) o.fim = fim; if (ap.length) o.ap = ap; return o; });
+      salvarCfg(); fecharSheet(); renderCartoesAj(); mostrarToast('✅', T('Cartão atualizado'));
+    };
+    var bx = $('ce-apagar');
+    bx.onclick = function () {
+      if (bx.dataset.ok !== '1') { bx.dataset.ok = '1'; bx.textContent = T('Toque de novo para excluir. Os gastos antigos ficam como "sem cartão".'); return; }
+      S.cfg.cartoes = cartoes().filter(function (x) { return x.id !== id; }); if (!S.cfg.cartoes.length) delete S.cfg.cartoes;
+      salvarCfg(); fecharSheet(); renderCartoesAj(); mostrarToast('🗑️', T('Cartão excluído'));
+    };
+  };
+  desenhar();
+}
+// Relatório: quanto foi em cada cartão no período (devoluções descontam do cartão)
+function blocoPorCartao(lista) {
+  var tem = lista.some(function (l) { return l.cartao; });
+  if (!usaCartoes() && !tem) return '';
+  var t = {}, n = {}, total = 0;
+  lista.forEach(function (l) { if (l.cat === PARC) return; var k = cartaoPorId(l.cartao) ? l.cartao : '_sem'; t[k] = (t[k] || 0) + l.valor; if (l.valor > 0) n[k] = (n[k] || 0) + 1; total += l.valor; });
+  var ks = Object.keys(t).filter(function (k) { return Math.abs(t[k]) > 0.004; }).sort(function (a, b) { return t[b] - t[a]; });
+  if (!ks.length) return '';
+  var max = Math.max.apply(null, ks.map(function (k) { return Math.abs(t[k]); }));
+  return T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">💳 Por cartão</div>') + ks.map(function (k) {
+    var c = cartaoPorId(k), cor = c ? c.cor : '#9ca3af', pc = total > 0 ? t[k] / total * 100 : 0;
+    return '<div style="padding:8px 0;border-top:1px solid #f3f4f6"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">' +
+      '<span style="font-weight:700;font-size:14px">' + esc(c ? nomeCartao(k) : T('Sem cartão')) + '<small style="color:#9ca3af;font-weight:600"> · ' + (n[k] === 1 ? T('1 compra') : T('{n} compras', { n: n[k] || 0 })) + '</small></span>' +
+      '<span style="font-weight:800;color:' + cor + ';white-space:nowrap">' + formatar(t[k]) + ' <small style="color:#6b7280">' + pc.toFixed(0) + '%</small></span></div>' +
+      '<div style="height:7px;background:#f3f4f6;border-radius:4px;margin-top:6px"><div style="height:7px;border-radius:4px;background:' + cor + ';width:' + Math.max(2, Math.abs(t[k]) / max * 100).toFixed(1) + '%"></div></div></div>';
+  }).join('') + '</div>';
+}
+function textoPorCartao(lista) {
+  if (!usaCartoes()) return '';
+  var t = {}; lista.forEach(function (l) { if (l.cat === PARC) return; var k = cartaoPorId(l.cartao) ? l.cartao : '_sem'; t[k] = (t[k] || 0) + l.valor; });
+  var ks = Object.keys(t).filter(function (k) { return Math.abs(t[k]) > 0.004; }); if (!ks.length) return '';
+  return T('\n💳 *Por cartão*\n') + ks.map(function (k) { return (k === '_sem' ? T('Sem cartão') : nomeCartao(k)) + ': ' + formatar(t[k]); }).join('\n') + '\n';
+}
 function metaLanc(l, comData) {
   var s = (comData ? formatarData(l.data) + ' · ' : '') + NOME(l.cat);
   var sb = nomeSub(l.cat, l.sub);
   if (sb && l.desc) s += ' · ' + sb;
+  if (usaCartoes() && l.cartao && cartaoPorId(l.cartao)) s += ' · ' + nomeCartao(l.cartao, true);
   if (Object.keys(S.membros).length > 1 && S.perfis[l.por]) s += ' · ' + S.perfis[l.por].nome;
   return esc(s);
 }
@@ -538,7 +691,7 @@ function renderTela() { dCont('render ' + S.tela);
   if (!S.chave || !S.cfg) return;
   var t = S.tela;
   if (t === 'inicio') renderizar();
-  else if (t === 'add') renderAdd();
+  else if (t === 'add') { renderAdd(); renderCartaoAdd(); }
   else if (t === 'historico') renderizarHistorico();
   else if (t === 'relatorio') renderizarRelatorio();
   else if (t === 'relcat') renderizarRelcat();
@@ -856,7 +1009,7 @@ function irParaCategoria(cat, soRender) {
 // ═════════════════════════ REGISTRAR / EDITAR ═════════════════════════
 function novoLancamento() {
   S.add = { cat: S.add.cat && catPorId(S.add.cat) && S.add.cat !== PARC ? S.add.cat : (catsComuns()[0] ? catsComuns()[0].id : null), sub: null, nParc: 1, parcIni: 1, editId: null,
-    tipo: 'compra', orig: null, lj: false, cl: null };
+    tipo: 'compra', orig: null, lj: false, cl: null, k: meuCartao(), ctAberto: false, apNovo: null, apAprender: null };
   $('inp-valor').value = ''; $('inp-desc').value = ''; $('inp-data').value = hoje(); $('orig-busca').value = ''; if ($('desc-sug')) $('desc-sug').innerHTML = '';
   $('valor-pre').textContent = SIMB[moeda()];
   $('add-edit-extra').style.display = 'none'; $('pag-aviso').style.display = 'none';
@@ -866,7 +1019,8 @@ function novoLancamento() {
 function editarLancamento(id) {
   var l = lancamentos().filter(function (x) { return x.id === id; })[0];
   if (!l) return;
-  S.add = { cat: l.cat, sub: l.sub, nParc: 1, parcIni: 1, editId: id, tipo: l.dev ? 'dev' : 'compra', orig: l.orig, lj: l.lj, cl: l.cl, parc: !!l.parcela };
+  S.add = { cat: l.cat, sub: l.sub, nParc: 1, parcIni: 1, editId: id, tipo: l.dev ? 'dev' : 'compra', orig: l.orig, lj: l.lj, cl: l.cl, parc: !!l.parcela,
+    k: l.cartao, ctAberto: false, apNovo: null, apAprender: null };
   $('inp-valor').value = numTxt(Math.abs(l.valor).toFixed(2));
   $('inp-data').value = l.data; $('inp-desc').value = l.desc || ''; $('orig-busca').value = ''; if ($('desc-sug')) $('desc-sug').innerHTML = '';
   $('valor-pre').textContent = SIMB[moeda()];
@@ -892,7 +1046,7 @@ function pintarTipoAdd() {
   qsa('#card-forma [data-addlj]').forEach(function (b) { b.classList.toggle('on', (b.dataset.addlj === '1') === !!a.lj); });
   $('forma-dica').textContent = a.lj ? T('O dinheiro não volta para o banco: a loja guarda o valor para você usar lá. O app anota esse crédito, e na próxima compra nessa loja é só escolher "Pagou com crédito da loja".')
     : T('O valor volta no cartão ou na conta. Na conferência com o banco, essa devolução aparece junto do crédito do extrato.');
-  renderOrig(); renderCreditoAdd(); atualizarAvisoValor();
+  renderOrig(); renderCreditoAdd(); atualizarAvisoValor(); renderCartaoAdd();
 }
 function compraPorId(id) { return id ? lancamentos().filter(function (x) { return x.id === id && !x.dev; })[0] : null; }
 function restaDevolver(orig) { return orig ? c2(orig.valor - (devolvidoPorCompra(S.add.editId)[orig.id] || 0)) : 0; }
@@ -1047,6 +1201,7 @@ function salvarLancamento() {
     if (dev) { r.t = 'dev'; if (o) r.o = o.id; if (a.lj) r.lj = 1; }
     else if (u && u.usa > 0) { r.cl = u.c.id; r.clv = Math.round(u.usa * 100); }
     if (a.viaPag && !a.editId && !dev) r.ap = 1;
+    if (usaCartoes()) { delete r.k; if (cartaoPorId(a.k)) r.k = a.k; }
     return r;
   };
   var ps = [];
@@ -1072,10 +1227,16 @@ function salvarLancamento() {
     ps.push(gravarLanc(Date.now().toString(36) + rid(6), tipar({ v: Math.round(valor * 100), dt: data, c: a.cat, s: a.sub || null, d: desc, por: S.user.uid, ts: Date.now() })));
     mostrarToast('✅', T('Salvo: {v} em {c}', { v: formatar(valor), c: nomeVis(cat) }) + (u && u.usa > 0 ? ' (' + formatar(u.usa) + T(' do crédito da loja)') : ''));
   }
+  // Apple Pay com cartão novo: guarda o nome que o Apple Pay usa, para reconhecer sozinho da próxima vez
+  if (a.apAprender && cartoes().some(function (x) { return x.id === a.apAprender.id; })) {
+    var apr = a.apAprender;
+    S.cfg.cartoes = cartoes().map(function (x) { if (x.id !== apr.id) return x; var o = Object.assign({}, x); o.ap = (x.ap || []).filter(function (n) { return normNome(n) !== normNome(apr.nome); }).concat([apr.nome]).slice(-10); return o; });
+    ps.push(salvarCfg());
+  }
   Promise.all(ps).catch(function () { mostrarToast('⚠️', T('Erro ao salvar. Verifique a conexão.')); });
   var voltar = a.editId ? (S.voltarPara || 'inicio') : (a.voltarConf ? 'ajustes' : 'inicio');
   var reabrirConf = !!a.voltarConf;
-  S.add.editId = null; S.add.voltarConf = false; S.add.tipo = 'compra'; S.add.orig = null; S.add.lj = false; S.add.cl = null; S.add.parc = false; S.add.viaPag = false;
+  S.add.editId = null; S.add.voltarConf = false; S.add.tipo = 'compra'; S.add.orig = null; S.add.lj = false; S.add.cl = null; S.add.parc = false; S.add.viaPag = false; S.add.apAprender = null; S.add.apNovo = null; S.add.ctAberto = false;
   irPara(voltar);
   if (reabrirConf) setTimeout(recalcularConferencia, 250);
 }
@@ -1127,7 +1288,8 @@ function getPer(qual) {
 
 // ═════════════════════════ HISTÓRICO ═════════════════════════
 function listaHistorico(per) {
-  return lancamentosPeriodo(lancamentos(), per).filter(function (l) { return l.cat !== PARC; })
+  var fk = usaCartoes() ? S.histCartao : null;
+  return lancamentosPeriodo(lancamentos(), per).filter(function (l) { return l.cat !== PARC && (!fk || (fk === '_sem' ? !cartaoPorId(l.cartao) : l.cartao === fk)); })
     .sort(function (a, b) { return b.data.localeCompare(a.data) || b.ts - a.ts; });
 }
 function renderizarHistorico() {
@@ -1135,7 +1297,12 @@ function renderizarHistorico() {
   var per = getPer('hist'), el = $('corpo-historico');
   if (!per) { el.innerHTML = T('<div class="vazio">Selecione as datas do período</div>'); return; }
   var lista = listaHistorico(per);
-  if (!lista.length) { el.innerHTML = T('<div class="vazio">📭 Sem lançamentos neste período</div>'); return; }
+  var filtro = '';
+  if (usaCartoes()) {
+    var op = [{ id: '', nome: T('Todos') }].concat(opcoesCartao().map(function (c) { return { id: c.id, nome: nomeCartao(c.id, true) }; })).concat([{ id: '_sem', nome: T('Sem cartão') }]);
+    filtro = '<div class="ct-filtro">' + op.map(function (o) { return '<button type="button" class="ct-fb' + ((S.histCartao || '') === o.id ? ' on' : '') + '" data-histct="' + o.id + '">' + esc(o.nome) + '</button>'; }).join('') + '</div>';
+  }
+  if (!lista.length) { el.innerHTML = filtro + T('<div class="vazio">📭 Sem lançamentos neste período</div>'); ligarFiltroHist(); return; }
   var pm = buildPagasMap(lancamentos()), porDia = {}, dm = devolvidoPorCompra();
   lista.forEach(function (l) { (porDia[l.data] = porDia[l.data] || []).push(l); });
   var total = lista.reduce(function (s, l) { return s + l.valor; }, 0);
@@ -1145,7 +1312,9 @@ function renderizarHistorico() {
       return '<div class="hist-dia-header"><span class="hist-dia-data">' + formatarData(data) + '</span><span class="hist-dia-total">' + formatar(tot) + '</span></div>' +
         porDia[data].map(function (l) { return linhaLanc(l, pm, false, 'hist-linha', dm); }).join('');
     }).join('');
+  if (filtro) { el.innerHTML = filtro + el.innerHTML; ligarFiltroHist(); }
 }
+function ligarFiltroHist() { qsa('[data-histct]').forEach(function (b) { b.onclick = function () { S.histCartao = b.dataset.histct || null; renderizarHistorico(); }; }); }
 function compartilharTexto(msg) {
   if (navigator.share) navigator.share({ text: msg }).catch(function () {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
@@ -1273,12 +1442,13 @@ function renderizarRelatorio() {
   }).join('') + (orcDia > 0 ? T('<div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">Limite: ') + formatar(lim) + ' ÷ ' + heatDays.length + T(' dias</div>') : '') + '</div>';
 
   el.innerHTML = '<div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:10px;text-align:center">📅 ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '</div>' +
-    met + cats + top + heat + sem +
+    met + cats + blocoPorCartao(TT.lista) + top + heat + sem +
     T('<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>');
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
   $('rel-wa').onclick = function () {
     var msg = T('📊 *RELATÓRIO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
     todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + nomeVis(c) + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
+    msg += textoPorCartao(TT.lista);
     msg += T('━━━━━━━━━━━━━━━━\n💰 *Total gasto: ') + formatar(grand) + T('*\n✅ Disponível: ') + formatar(disp) + (lim ? ' (' + pctLim.toFixed(0) + '% usado)' : '') + T('\n\n_Enviado via MinhaCasa™_');
     compartilharTexto(msg);
   };
@@ -2476,6 +2646,7 @@ function capturarConviteDoLink() {
 }
 function souDono() { return S.meta && S.user && S.meta.dono === S.user.uid; }
 function renderAjustes() {
+  renderCartoesAj();
   if (document.activeElement !== $('aj-nome')) { $('aj-nome').value = S.cfg.nome || ''; $('aj-moeda').value = moeda(); }
   $('aj-cats').innerHTML = todasCats().map(function (c) {
     return '<div class="aj-linha"><div class="aj-ic" style="background:' + alfa(c.cor, '22') + '">' + esc(c.emoji) + '</div>' +
@@ -3267,8 +3438,12 @@ function aplicarPagamento() { dCont('aplicarPagamento');
   var sg = sugerirCatLoja(p.loja);
   S.add.cat = sg ? sg.cat : null; S.add.sub = sg ? sg.sub : null;
   S.add.viaPag = !p.teste;
+  if (usaCartoes()) {
+    var kAp = p.cartao ? cartaoDoApplePay(p.cartao) : null;
+    S.add.k = kAp || meuCartao(); S.add.apNovo = p.cartao && !kAp ? p.cartao : null; S.add.ctAberto = !!S.add.apNovo; S.add.apAprender = null;
+  }
   if (!p.teste) lsSet('mc_pag_ok', JSON.stringify({ t: Date.now(), valor: p.valor, loja: p.loja }));
-  renderAdd(); renderCreditoAdd(); atualizarAvisoValor();
+  renderAdd(); renderCreditoAdd(); atualizarAvisoValor(); renderCartaoAdd();
   // já existe um gasto igual hoje? (lançou à mão antes de o atalho abrir)
   var dup = p.valor > 0 && lancamentos().filter(function (l) { return !l.dev && l.data === hoje() && Math.abs(l.valor - p.valor) < 0.005; })[0];
   var av = $('pag-aviso');
@@ -3821,7 +3996,7 @@ function ligarEventos() {
   $('sel-credito').onchange = function () { S.add.cl = this.value || null; atualizarAvisoValor(); };
   if (!COM_PARCELADOS) {
     $('card-parc').style.display = 'none';
-    var n5 = $('card-parc').nextElementSibling && $('card-parc').nextElementSibling.querySelector('.add-step-n'); if (n5) n5.textContent = '4';
+    var n5 = $('inp-desc') && $('inp-desc').parentNode.querySelector('.add-step-n'); if (n5) n5.textContent = '4';
   }
   $('btn-parcela-toggle').onclick = function () { S.add.nParc = S.add.nParc > 1 ? 1 : 2; S.add.parcIni = 1; atualizarParcUI(); };
   $('sel-parcelas').onchange = function () { S.add.nParc = +this.value; if (S.add.parcIni > S.add.nParc) S.add.parcIni = 1; atualizarParcUI(); };
@@ -3856,6 +4031,6 @@ function ligarEventos() {
   $('aj-bloquear').onclick = bloquear;
 }
 
-if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto, mostrarNovidades: mostrarNovidades };
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto, mostrarNovidades: mostrarNovidades, aplicarPagamento: aplicarPagamento };
 iniciar();
 })();
