@@ -1313,5 +1313,6 @@ MCI18N.add('fr', {
  "Banco ou apelido (opcional)": "Banque ou surnom (facultatif)",
  "Ex.: CIBC, Cartão da Kate": "Ex. : CIBC, Carte de Kate",
  "Dinheiro": "Comptant",
- "<div style=\"font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:6px\">💡 Usa cartão de <b>débito</b>? Cadastre como um cartão (ex.: <b>Débito · CIBC</b>). Assim dá para conferir com o extrato da conta.</div>": "<div style=\"font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:6px\">💡 Vous utilisez une carte de <b>débit</b>? Ajoutez-la comme une carte (ex. : <b>Débit · CIBC</b>). Vous pourrez ainsi la vérifier avec le relevé du compte.</div>"
+ "<div style=\"font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:6px\">💡 Usa cartão de <b>débito</b>? Cadastre como um cartão (ex.: <b>Débito · CIBC</b>). Assim dá para conferir com o extrato da conta.</div>": "<div style=\"font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:6px\">💡 Vous utilisez une carte de <b>débit</b>? Ajoutez-la comme une carte (ex. : <b>Débit · CIBC</b>). Vous pourrez ainsi la vérifier avec le relevé du compte.</div>",
+ "A casa está demorando para abrir. Confira a internet e toque em Tentar de novo.": "Votre foyer met du temps à s’ouvrir. Vérifiez la connexion Internet et touchez Réessayer."
 });

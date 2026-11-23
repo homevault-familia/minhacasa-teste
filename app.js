@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.6';
+var VERSAO = '2.35.7';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3758,7 +3758,9 @@ function abrirCasa(chave) {
     diag('15 s sem abrir');
     var l = $('app-loading'), d = $('ld-diag');
     if (!d) { d = document.createElement('div'); d.id = 'ld-diag'; d.style.cssText = 'margin-top:14px;max-width:520px;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#78350f;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;text-align:left'; l.appendChild(d); }
-    d.textContent = T('A casa está demorando para abrir. Mande um print desta caixa para o suporte.') + '\n\n' + S.diagLog.join('\n');
+    var verDiag = /[?&#]diag\b/.test(location.search + location.hash);
+    d.style.fontFamily = verDiag ? d.style.fontFamily : 'inherit'; d.style.textAlign = verDiag ? 'left' : 'center';
+    d.textContent = verDiag ? T('A casa está demorando para abrir. Mande um print desta caixa para o suporte.') + '\n\n' + S.diagLog.join('\n') : T('A casa está demorando para abrir. Confira a internet e toque em Tentar de novo.');
     var b = document.createElement('button'); b.textContent = T('Tentar de novo'); b.style.cssText = 'display:block;margin-top:10px;padding:10px 16px;border-radius:10px;border:0;background:#1d4ed8;color:#fff;font-weight:700';
     b.onclick = function () { location.reload(); }; d.appendChild(b);
   }, 15000);
@@ -3777,7 +3779,7 @@ function diag(m) {
 (function () {
   var ant = null, ok = null; try { ant = localStorage.getItem('mc_diag'); ok = localStorage.getItem('mc_diag_ok'); } catch (e) {}
   try { localStorage.setItem('mc_diag_ok', '0'); localStorage.removeItem('mc_diag'); } catch (e) {}
-  if (!ant || ok !== '0') return;
+  if (!ant || ok !== '0' || !/[?&#]diag\b/.test(location.search + location.hash)) return; // só para suporte: abrir com ?diag
   var mostrarAnt = function () {
     var l = $('app-loading'); if (!l || $('ld-ant')) return;
     var d = document.createElement('div'); d.id = 'ld-ant';
