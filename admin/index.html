@@ -101,6 +101,15 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
   </div>
 </div>
 
+<div id="v-trava" class="login" style="display:none">
+  <img src="../icon.svg?v=2" alt="">
+  <h1>Painel travado</h1>
+  <p>Confirme que é você para abrir.</p>
+  <button class="btn pri cheio" id="t-abrir">🔓 Desbloquear com Face ID</button>
+  <div class="erro" id="t-erro" style="text-align:center"></div>
+  <button class="btn cheio" id="t-sair" style="margin-top:10px">Sair</button>
+</div>
+
 <div id="v-negado" class="login" style="display:none">
   <img src="../icon.svg?v=2" alt="">
   <h1>Sem acesso</h1>
@@ -175,7 +184,7 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
   $('p-amb').className = 'amb ' + (window.MINHACASA_AMBIENTE === 'producao' ? 'prod' : 'teste');
 
   function toast(t) { var el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(function () { el.style.display = 'none'; }, 3500); }
-  function mostrar(v) { ['v-login', 'v-negado', 'v-painel'].forEach(function (x) { $(x).style.display = x === v ? '' : 'none'; }); }
+  function mostrar(v) { ['v-login', 'v-negado', 'v-painel', 'v-trava'].forEach(function (x) { $(x).style.display = x === v ? '' : 'none'; }); }
   function dataBR(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR'); }
   function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
   function haQuanto(ts) {
@@ -215,7 +224,7 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     return 'Não foi possível entrar com o Google (' + c + ').';
   }
   $('l-google').onclick = function () {
-    $('l-gerro').textContent = '';
+    $('l-gerro').textContent = ''; Trava.entrouAgora = true;
     F.signInWithPopup(A, provGoogle()).catch(function (e) { $('l-gerro').textContent = erroGoogle(e); });
   };
   $('p-sair').onclick = $('n-sair').onclick = function () { F.signOut(A); };
@@ -253,6 +262,8 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     db.ref('admin/codigoAcesso').once().then(function (s) {
       D.codigo = s.val() || '';
       $('p-quem').textContent = u.email || '';
+      // trava com Face ID: quem acabou de entrar com o Google nesta página já se provou; quem voltou com a sessão guardada, desbloqueia
+      if (travaLigada() && !Trava.entrouAgora) { travar(true); return; }
       mostrar('v-painel');
       carregar();
     }, function () {
@@ -260,6 +271,50 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       $('n-msg').innerHTML = 'A conta ' + esc(u.email || '') + ' não é de administrador.<br><small style="color:#94a3b8">código ' + esc(u.uid.slice(0, 10)) + ' · entrou por ' + esc(pv || '?') + '</small>';
       mostrar('v-negado');
     });
+  });
+
+  // ── trava com Face ID / Touch ID (23/11/2026) ──
+  // Usa a chave do próprio aparelho (WebAuthn). É uma camada a mais NESTE aparelho: abrir o painel com a sessão
+  // do Google guardada pede Face ID, e de novo depois de 5 minutos fora. Quem entra agora pelo Google não é travado.
+  var Trava = { entrouAgora: false, aberto: false, saiuEm: 0 };
+  function chaveTrava() { return 'mc_adm_trava_' + (eu() ? eu().uid : ''); }
+  function travaLigada() { try { return !!localStorage.getItem(chaveTrava()); } catch (e) { return false; } }
+  function b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function deB64(t) { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; var b = atob(t), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function desafio() { return crypto.getRandomValues(new Uint8Array(32)); }
+  function travaPossivel() {
+    if (!window.PublicKeyCredential || !PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return Promise.resolve(false);
+    return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; });
+  }
+  function ligarTrava() {
+    var u = eu();
+    return navigator.credentials.create({ publicKey: {
+      challenge: desafio(), rp: { name: 'MinhaCasa Admin', id: location.hostname },
+      user: { id: new TextEncoder().encode(u.uid), name: u.email || 'admin', displayName: 'MinhaCasa Admin' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      timeout: 60000 } }).then(function (c) { localStorage.setItem(chaveTrava(), b64(c.rawId)); });
+  }
+  function desbloquear() {
+    var id = localStorage.getItem(chaveTrava());
+    return navigator.credentials.get({ publicKey: { challenge: desafio(), rpId: location.hostname,
+      allowCredentials: [{ type: 'public-key', id: deB64(id) }], userVerification: 'required', timeout: 60000 } });
+  }
+  function travar(primeira) {
+    Trava.aberto = false; $('t-erro').textContent = ''; mostrar('v-trava');
+    $('t-abrir').onclick = function () {
+      $('t-erro').textContent = '';
+      desbloquear().then(function () {
+        Trava.aberto = true; mostrar('v-painel'); if (primeira) carregar(); else render();
+      }, function (e) {
+        $('t-erro').textContent = (e && e.name === 'NotAllowedError') ? 'Não confirmado. Toque para tentar de novo. Se não funcionar, toque em Sair e entre com o Google: assim abre sem a trava.' : 'Não deu certo (' + ((e && e.name) || e) + ').';
+      });
+    };
+    $('t-sair').onclick = function () { F.signOut(A); };
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { Trava.saiuEm = Date.now(); return; }
+    if (eu() && travaLigada() && $('v-painel').style.display !== 'none' && Trava.saiuEm && Date.now() - Trava.saiuEm > 5 * 60000) travar(false);
   });
 
   // ── dados ──
@@ -427,6 +482,10 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       '<p class="nota"><b>Antes:</b> confira que a verificação em duas etapas está ligada nessa conta Google, em <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">myaccount.google.com → Segurança</a>.</p>' +
       '<button class="btn pri cheio" id="ga-autorizar">Escolher a conta Google e autorizar</button><div class="erro" id="ga-erro"></div>' +
       '<p class="nota" style="margin-top:10px">Depois: toque em <b>Sair</b> e entre com <b>Entrar com o Google</b>.</p></div>';
+    if (souDaLista()) h += '<div class="card"><h2>🔓 Trava com Face ID neste aparelho</h2>' + (travaLigada()
+        ? '<p class="nota">✅ <b>Ligada.</b> Ao abrir o painel (ou voltar depois de 5 minutos fora), ele pede o Face ID antes de mostrar qualquer coisa.</p><button class="btn perigo cheio" id="tv-desligar">Desligar a trava neste aparelho</button>'
+        : '<p class="nota">Pede o <b>Face ID</b> (ou a digital / o PIN do computador) toda vez que o painel abrir, mesmo com o Google já logado. Vale só para o aparelho onde você ligar.</p><button class="btn pri cheio" id="tv-ligar">Ligar a trava neste aparelho</button>') +
+      '<div class="erro" id="tv-erro"></div></div>';
     if (souDaLista()) h += '<div class="card"><h2>1. Verificação em duas etapas</h2><p class="nota">✅ Você entrou com o Google (<b>' + esc(eu().email) + '</b>). Toda entrada no painel passa pela segurança da sua conta Google, inclusive a verificação em duas etapas. ' +
       '<a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">Conferir se está ligada</a>.</p></div>';
     // 3. tirar o admin da conta da casa
@@ -471,6 +530,16 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     return 'Não deu certo (' + c + ').';
   }
   function ligarSeg() {
+    var tl = $('tv-ligar');
+    if (tl) tl.onclick = function () {
+      $('tv-erro').textContent = '';
+      travaPossivel().then(function (ok) {
+        if (!ok) { $('tv-erro').textContent = 'Este aparelho ou navegador não tem Face ID, digital ou PIN disponível para isso.'; return; }
+        return ligarTrava().then(function () { toast('🔓 Trava com Face ID ligada neste aparelho.'); render(); });
+      }).catch(function (e) { $('tv-erro').textContent = (e && e.name === 'NotAllowedError') ? 'Cancelado. Toque de novo para ligar.' : 'Não deu certo (' + ((e && e.name) || e) + ').'; });
+    };
+    var td = $('tv-desligar');
+    if (td) td.onclick = function () { try { localStorage.removeItem(chaveTrava()); } catch (e) {} toast('Trava desligada neste aparelho.'); render(); };
     var ga = $('ga-autorizar');
     if (ga) ga.onclick = function () {
       var er = $('ga-erro'); er.textContent = ''; ga.disabled = true;
