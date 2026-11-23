@@ -30,7 +30,8 @@ var VERSAO = '2.35.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
-    '<b>💳 Gastos por cartão</b>: em Ajustes → Cartões, cadastre os cartões da casa e marque o seu principal ⭐. Ao registrar, ele já vem escolhido; toque em "trocar" se a compra foi em outro cartão ou em dinheiro. Com Apple Pay, o app reconhece o cartão sozinho. Nos Relatórios aparece quanto foi em cada cartão, e no Histórico dá para filtrar.'
+    '<b>💳 Gastos por cartão</b>: em Ajustes → Cartões, cadastre os cartões da casa e marque o seu principal ⭐. Ao registrar, ele já vem escolhido; toque em "trocar" se a compra foi em outro cartão ou em dinheiro. Com Apple Pay, o app reconhece o cartão sozinho. Nos Relatórios aparece quanto foi em cada cartão, e no Histórico dá para filtrar.',
+    'Usa <b>mais de um cartão no Apple Pay</b>? Reinstale o atalho em Ajustes → Lançar ao pagar e marque todos os seus cartões: assim o app sabe em qual cartão foi cada compra.'
   ] },
   { v: '2.33.1', d: '20/11/2026', itens: [
     'O aviso de atualização mostra só o que mudou desde a última vez que você o viu, em qualquer aparelho.'
@@ -3456,7 +3457,7 @@ function linkPagamento() { return location.origin + location.pathname.replace(/i
 // Links do iCloud do atalho pronto ("MinhaCasa"), um por ambiente: cada um abre o endereço do seu ambiente.
 // Os dois links abrem o app oficial (minhacasaapp.com); no ambiente de teste também aparecem, com um aviso.
 var ATALHO_ICLOUD = 'https://www.icloud.com/shortcuts/5e8401a26f594d0d929cf04e8255c506';   // atalho "MinhaCasa" (as ações)
-var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/8d5e3595437b441fa14025435e1415c9'; // com Any Card // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
+var AUTOMACAO_ICLOUD = 'https://www.icloud.com/shortcuts/70c4bd58ab6140d1b934fe8032a56f74'; // 23/11/2026: com Cartão ou Passe (Card or Pass) // antes: 8d5e3595437b441fa14025435e1415c9, com Any Card // "Cartão MinhaCasa" (gatilho do cartão + Run MinhaCasa), testado 16/11/2026
 function linkAtalho() { return ATALHO_ICLOUD; }
 var FRASE_IA = {
   pt: 'Quando eu pagar com qualquer cartão da Carteira, sem perguntar: crie um Texto com o Comerciante e o Valor da transação, e execute o atalho "MinhaCasa" com esse Texto como entrada.',
@@ -3503,7 +3504,7 @@ function abrirApplePay() {
     T('<div class="ap-parte">3 · Escolher o seu cartão e ligar</div>') +
     '<ol class="cf-passos ap-passos">' +
     T('<li>No app <b>Atalhos</b>, abra <b>Automação</b> (Automation) e toque em <b>Quando eu tocar num passe ou cartão da Carteira</b> (When I tap a Wallet pass or payment card).</li>') +
-    T('<li>Toque em <b>Editar</b> (Edit). No bloco <b>Quando… for tocado</b> (When… is tapped), toque no nome do cartão e marque <b>o seu cartão</b>, o que você controla no MinhaCasa. O nome tem que ficar <b>azul</b>.</li>') +
+    T('<li>Toque em <b>Editar</b> (Edit). No bloco <b>Quando… for tocado</b> (When… is tapped), toque no nome do cartão e marque <b>os cartões que você usa</b> (pode ser mais de um). Os nomes têm que ficar <b>azuis</b>. Cadastre os mesmos cartões em <b>Ajustes → Cartões</b>.</li>') +
     T('<li>Confira se o bloco <b>Executar</b> (Run) mostra <b>MinhaCasa</b>. Se mostrar outro nome ou um aviso vermelho, toque nele e escolha <b>MinhaCasa</b>.</li>') +
     T('<li>Toque na setinha <b>›</b> ao lado de "for tocado" (is tapped) e ligue <b>Automação</b> (Automation): fica verde e some o aviso "Automação desligada" (Automation is turned off). Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li></ol>') +
     T('<details class="ap-det"><summary>Não deu certo? Criar a ligação de outro jeito</summary>') +
@@ -3512,15 +3513,15 @@ function abrirApplePay() {
     T('<div id="ap-cam-a" class="ap-cam" style="display:none"><div class="ap-cam-t">Com a IA do iPhone</div><ol class="cf-passos ap-passos">') +
     T('<li>Copie uma das frases abaixo (a do idioma do seu iPhone), cole na caixa e envie.') + fraseBtns + '</li>' +
     T('<li>Se o iPhone perguntar se pode executar outro atalho, toque em <b>Permitir</b> (Allow).</li>') +
-    T('<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e deixe marcado <b>só o cartão</b> que você controla no MinhaCasa.</li>') +
-    T('<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant) e <b>Valor</b> (Amount), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>') +
+    T('<li>Volte em <b>Automação</b>, toque na automação nova e em <b>Editar</b> (Edit). No bloco "Quando… for tocado" (When… is tapped), toque em <b>Qualquer Cartão</b> (Any Card) e marque <b>os cartões que você usa</b> (pode ser mais de um).</li>') +
+    T('<li>Confira os blocos: um <b>Texto</b> (Text) com <b>Comerciante</b> (Merchant), <b>Valor</b> (Amount) e <b>Cartão ou Passe</b> (Card or Pass), e <b>Executar MinhaCasa</b> (Run MinhaCasa) com a entrada <b>Texto</b> (toque na setinha do Run para ver).</li>') +
     T('<li>Toque na setinha do bloco do cartão e confira se <b>Automação</b> (Automation) está ligada.</li></ol></div>') +
     T('<div id="ap-cam-b" class="ap-cam" style="display:none"><div class="ap-cam-t">Sem a IA (iPhones com iOS mais antigo)</div><ol class="cf-passos ap-passos">') +
     T('<li>Se você instalou o <b>Cartão MinhaCasa</b> e ele aparece com <b>Variável Desconhecida</b> (Unknown Variable) em vermelho, apague-o (segure em cima → Apagar). Mantenha só o atalho <b>MinhaCasa</b>.</li>') +
     T('<li>Em <b>Automação</b> (Automation), toque no <b>+</b> e escolha <b>Carteira</b> (Wallet). Em alguns iPhones aparece como <b>Transação</b> (Transaction).</li>') +
-    T('<li>Marque <b>só o seu cartão</b>. Se aparecer, escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>') +
+    T('<li>Marque <b>os cartões que você usa</b> (pode ser mais de um). Se aparecer, escolha <b>Executar Imediatamente</b> (Run Immediately). Toque em <b>Seguinte</b> (Next).</li>') +
     T('<li>Toque em <b>Criar Novo Atalho</b> (Create New Shortcut) ou <b>Nova Automação em Branco</b> (New Blank Automation). Não escolha o MinhaCasa direto da lista.</li>') +
-    T('<li>Adicione <b>Texto</b> (Text). Dentro dele, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado, toque na bolinha e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code> (teclas 123 → #+=). Insira de novo a Entrada do Atalho e escolha <b>Valor</b> (Amount).</li>') +
+    T('<li>Adicione <b>Texto</b> (Text). Dentro dele, toque em <b>Entrada do Atalho</b> (Shortcut Input) acima do teclado, toque na bolinha e escolha <b>Comerciante</b> (Merchant). Digite <code>|</code> (teclas 123 → #+=). Insira de novo a Entrada do Atalho e escolha <b>Valor</b> (Amount). Digite <code>|</code> mais uma vez, insira a Entrada do Atalho e escolha <b>Cartão ou Passe</b> (Card or Pass).</li>') +
     T('<li>Adicione <b>Executar Atalho</b> (Run Shortcut), escolha <b>MinhaCasa</b> e, na setinha <b>›</b>, ponha a entrada (Input) como <b>Texto</b> (Text). Toque em <b>OK</b> (Done).</li>') +
     T('<li>Volte em <b>Automação</b>, toque na automação nova e confira se está em <b>Executar Imediatamente</b> (Run Immediately).</li></ol></div>') +
     '</details>' +
