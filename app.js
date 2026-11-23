@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.34.2';
+var VERSAO = '2.34.3';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -534,7 +534,7 @@ function irPara(tela) {
   renderTela();
   window.scrollTo(0, 0);
 }
-function renderTela() {
+function renderTela() { dCont('render ' + S.tela);
   if (!S.chave || !S.cfg) return;
   var t = S.tela;
   if (t === 'inicio') renderizar();
@@ -2734,7 +2734,7 @@ function avisarSomenteLeitura() {
   mostrarToast('🔒', S.assin && S.assin.bloqueada ? T('Esta casa está suspensa: o app está só para consulta.') : T('A assinatura venceu: o app está só para consulta até renovar.'), 4500);
 }
 function diasAte(ts) { return Math.ceil((ts - Date.now()) / 86400000); }
-function atualizarFaixa() {
+function atualizarFaixa() { dCont('faixa');
   var el = $('faixa-app'); if (!el) return;
   var h = '', a = S.assin, av = S.aviso;
   if (a && a.bloqueada) h += '<div class="fx fx-ruim">🔒 ' + T('Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.') + '</div>';
@@ -3121,7 +3121,7 @@ function cmpVer(a, b) {
 }
 // Mostra o que mudou desde a última versão que este aparelho viu. Primeira vez: só a mais recente.
 function dataNov(d) { var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(d); return m ? formatarData(m[3] + '-' + m[2] + '-' + m[1]) : d; }
-function mostrarNovidades(todas, tentativa) {
+function mostrarNovidades(todas, tentativa) { dCont('novidades ' + (tentativa || 0));
   // Só o que mudou desde a última vez que ESTA PESSOA viu o aviso (20/11/2026).
   // A última versão vista fica no aparelho e no perfil dela (vale para todos os aparelhos).
   // Pessoa sem registro nenhum (conta nova ou aparelho novo sem perfil): mostra só a última novidade.
@@ -3154,7 +3154,7 @@ function marcarIdiomaBotoes() {
   var g = $('aj-idiomas'); if (g) g.setAttribute('aria-label', T('Idioma'));
 }
 // grava campos no perfil (criptografado) desta pessoa, mantendo os outros
-function atualizarPerfil(campos) {
+function atualizarPerfil(campos) { dCont('salvar perfil ' + Object.keys(campos || {}).join(','));
   if (!S.user || !S.casa || !S.chave || !db || somenteLeitura()) return Promise.resolve();
   var p = {}, at = S.perfis[S.user.uid] || {};
   for (var k in at) if (Object.prototype.hasOwnProperty.call(at, k)) p[k] = at[k];
@@ -3180,7 +3180,7 @@ function escolherIdioma(l) {
   });
 }
 // Ao abrir a casa: o idioma do perfil vale para todos os aparelhos da pessoa.
-function idiomaDoPerfil() {
+function idiomaDoPerfil() { dCont('idiomaDoPerfil');
   if (!S.user || !S.chave) return;
   var me = S.perfis[S.user.uid]; if (!me) return;
   if (lsGet(CHAVE_LANG_PEND) || !me.idioma) { // escolheu na entrada (ou perfil antigo, sem idioma): leva para o perfil
@@ -3247,7 +3247,7 @@ function sugerirCatLoja(loja) {
   var x = melhor.split('|');
   return { cat: x[0], sub: x[1] || null, peloNome: !hist[melhor] };
 }
-function aplicarPagamento() {
+function aplicarPagamento() { dCont('aplicarPagamento');
   if (!S.pagPend) { try { S.pagPend = JSON.parse(sessionStorage.getItem(CHAVE_PAG) || 'null'); } catch (e) {} }
   var p = S.pagPend;
   if (!p || !S.chave || !S.cfg) return;
@@ -3452,7 +3452,7 @@ function importarJSON(arquivo) {
 }
 
 // ═════════════════════════ gravação ═════════════════════════
-function salvarCfg() {
+function salvarCfg() { dCont('salvar config');
   if (somenteLeitura()) { avisarSomenteLeitura(); return Promise.resolve(); }
   return cifrar(S.chave, S.cfg).then(function (c) { return db.ref('casas/' + S.casa + '/dados/config').set(c); })
     .catch(function () { mostrarToast('⚠️', T('Erro ao salvar configurações')); });
@@ -3546,6 +3546,9 @@ function abrirCasa(chave) {
 }
 // diag (23/11/2026): cada passo fica guardado neste aparelho. Se a página travar ou recarregar sozinha,
 // na próxima abertura o app mostra os passos da vez anterior, para descobrir onde parou.
+// conta chamadas repetidas: registra as 3 primeiras e depois a cada 50 (mostra se algo entrou em ciclo)
+var _dc = {};
+function dCont(k) { var n = _dc[k] = (_dc[k] || 0) + 1; if (n <= 3 || n % 50 === 0) diag(k + ' #' + n); }
 function diag(m) {
   if (!S.diagLog) S.diagLog = []; var t = new Date();
   S.diagLog.push(('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2) + ' ' + m);
@@ -3588,7 +3591,7 @@ function escutar() {
       var n = normalizarCfg(c || { cats: catsPadrao(), nome: T('Minha casa'), moeda: 'CAD' });
       S.cfg = n.cfg; diag('config conferida' + (n.mudou ? ' (alterada)' : ''));
       if (n.mudou || !c) salvarCfg();
-      if (primeiro) { primeiro = false; diag('abrindo tela inicial'); irPara('inicio'); diag('tela inicial aberta'); try { localStorage.setItem('mc_diag_ok', '1'); } catch (e) {} setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
+      if (primeiro) { primeiro = false; diag('abrindo tela inicial'); irPara('inicio'); diag('tela inicial aberta'); setTimeout(function () { diag('20 s funcionando'); try { localStorage.setItem('mc_diag_ok', '1'); } catch (e) {} }, 20000); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
       else renderLogo();
     }).catch(function (e) { diag('erro ao abrir: ' + ((e && e.message) || e)); throw e; });
   }, negado);
@@ -3598,11 +3601,11 @@ function escutar() {
   rLanc.on('child_changed', addLanc);
   rLanc.on('child_removed', function (s) { delete S.raw[s.key]; renderLogo(); });
   rPerf.on('value', function (s) {
-    var v = s.val() || {}, out = {};
+    var v = s.val() || {}, out = {}; dCont('perfis recebidos');
     Promise.all(Object.keys(v).map(function (uid) { return decifrar(S.chave, v[uid]).then(function (p) { out[uid] = p; }, function () {}); }))
       .then(function () { S.perfis = out; idiomaDoPerfil(); renderLogo(); });
   });
-  rMem.on('value', function (s) { S.membros = s.val() || {}; renderLogo(); });
+  rMem.on('value', function (s) { dCont('membros'); S.membros = s.val() || {}; renderLogo(); });
   rConv.on('value', function (s) { if (S.meta) S.meta.convite = s.val(); renderLogo(); });
   rCon.on('value', function (s) {
     var on = !!s.val(); diag(on ? 'conectado ao servidor' : 'sem conexão com o servidor');
