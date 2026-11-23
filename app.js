@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.0';
+var VERSAO = '2.35.1';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3328,6 +3328,8 @@ function marcarIdiomaBotoes() {
 // grava campos no perfil (criptografado) desta pessoa, mantendo os outros
 function atualizarPerfil(campos) { dCont('salvar perfil ' + Object.keys(campos || {}).join(','));
   if (!S.user || !S.casa || !S.chave || !db || somenteLeitura()) return Promise.resolve();
+  var atual0 = S.perfis[S.user.uid] || {};
+  if (Object.keys(campos || {}).every(function (c) { return atual0[c] === campos[c]; })) return Promise.resolve(); // nada mudou: não grava (evita ciclo)
   var p = {}, at = S.perfis[S.user.uid] || {};
   for (var k in at) if (Object.prototype.hasOwnProperty.call(at, k)) p[k] = at[k];
   if (!p.nome) p.nome = nomeUsuario();
@@ -3356,7 +3358,10 @@ function idiomaDoPerfil() { dCont('idiomaDoPerfil');
   if (!S.user || !S.chave) return;
   var me = S.perfis[S.user.uid]; if (!me) return;
   if (lsGet(CHAVE_LANG_PEND) || !me.idioma) { // escolheu na entrada (ou perfil antigo, sem idioma): leva para o perfil
-    salvarIdiomaNoPerfil(I18N.lang).then(function () { lsSet(CHAVE_LANG_PEND, ''); }, function () {});
+    // 23/11/2026: limpa a marca ANTES de salvar. Antes ela só era limpa quando o servidor confirmava; a gravação
+    // avisa os perfis na hora (antes da confirmação), e numa rede lenta isso virava um ciclo sem fim que travava a página.
+    lsSet(CHAVE_LANG_PEND, '');
+    if (me.idioma !== I18N.lang) salvarIdiomaNoPerfil(I18N.lang).catch(function () {});
     return;
   }
   if (me.idioma !== I18N.lang && I18N.idiomas.indexOf(me.idioma) >= 0 && !S.idiomaAplicado) {
