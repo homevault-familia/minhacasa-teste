@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>MinhaCasa™ · Administração</title>
+<link rel="icon" href="../icon.svg?v=2">
+<link rel="apple-touch-icon" href="../icon-180.png?v=2">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f1f5f9;color:#0f172a;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit}
+.topo{background:#0f172a;color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 0;position:sticky;top:0;z-index:5}
+.topo-l{display:flex;align-items:center;gap:10px;max-width:1100px;margin:0 auto}
+.topo img{width:32px;height:32px;border-radius:8px}
+.topo h1{font-size:17px;margin:0;flex:1}
+.topo h1 small{display:block;font-size:12px;font-weight:500;color:#94a3b8}
+.amb{font-size:11px;font-weight:800;padding:4px 8px;border-radius:8px;letter-spacing:.3px}
+.amb.teste{background:#f59e0b;color:#111}.amb.prod{background:#16a34a;color:#fff}
+.sair{background:transparent;border:1px solid #334155;color:#e2e8f0;border-radius:10px;padding:7px 12px;cursor:pointer}
+.abas{display:flex;gap:4px;overflow-x:auto;max-width:1100px;margin:12px auto 0;scrollbar-width:none}
+.abas::-webkit-scrollbar{display:none}
+.abas button{background:transparent;border:0;color:#94a3b8;font-weight:700;padding:10px 12px;border-bottom:3px solid transparent;white-space:nowrap;cursor:pointer}
+.abas button.on{color:#fff;border-bottom-color:#60a5fa}
+main{max-width:1100px;margin:0 auto;padding:16px 14px 60px}
+.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.card h2{font-size:15px;margin:0 0 10px}
+.nota{font-size:13px;color:#475569;line-height:1.5;margin:0 0 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12.5px;color:#64748b;font-weight:600}
+.kpi.verde b{color:#16a34a}.kpi.amarelo b{color:#b45309}.kpi.vermelho b{color:#dc2626}.kpi.azul b{color:#1d4ed8}
+.linha{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #f1f5f9}
+.linha:first-child{border-top:0}
+.linha .info{flex:1;min-width:0}
+.linha .t{font-weight:700;font-size:14.5px;word-break:break-word}
+.linha .s{font-size:12.5px;color:#64748b;line-height:1.5;margin-top:2px;word-break:break-word}
+.linha .t + .selo{margin:4px 0 2px}
+body.teste .topo{padding-top:calc(env(safe-area-inset-top) + 34px)}
+.selo{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.s-livre{background:#e0e7ff;color:#3730a3}.s-teste{background:#fef3c7;color:#92400e}.s-pago{background:#dcfce7;color:#166534}
+.s-cortesia{background:#f3e8ff;color:#6b21a8}.s-vencida{background:#fee2e2;color:#991b1b}.s-suspensa{background:#1f2937;color:#fff}
+.s-vence{background:#ffedd5;color:#9a3412}
+.btn{border:1.5px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:40px}
+.btn.pri{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.btn.perigo{border-color:#fecaca;color:#b91c1c;background:#fff}
+.btn.perigo.on{background:#b91c1c;color:#fff}
+.btn:disabled{opacity:.5}
+.btn.cheio{width:100%}
+.grupo-btn{display:flex;gap:8px;flex-wrap:wrap}
+input.in,select.in,textarea.in{width:100%;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;font-size:16px;color:#0f172a}
+textarea.in{min-height:90px;resize:vertical}
+label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.3px}
+.erro{color:#b91c1c;font-size:13px;font-weight:600;min-height:18px;margin-top:6px}
+.codigo{font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;background:#f1f5f9;border-radius:10px;padding:12px;text-align:center;letter-spacing:.5px;word-break:break-all}
+.busca{margin-bottom:10px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filtros button{border:1.5px solid #cbd5e1;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
+.filtros button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.vazio{color:#94a3b8;font-size:13.5px;padding:10px 0}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.barra{display:flex;align-items:center;gap:8px;margin:4px 0}
+.barra i{display:block;height:8px;border-radius:4px;background:#60a5fa}
+.barra span{font-size:12.5px;color:#475569;min-width:90px}
+/* login */
+.login{max-width:380px;margin:12vh auto 0;padding:0 18px}
+.login img{width:64px;height:64px;border-radius:16px;display:block;margin:0 auto 12px}
+.login h1{text-align:center;font-size:20px;margin:0 0 4px}
+.login p{text-align:center;color:#64748b;font-size:13.5px;margin:0 0 18px}
+/* folha */
+.fundo{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.fundo.on{display:flex}
+.folha{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px)}
+@media (min-width:700px){.fundo{align-items:center}.folha{border-radius:20px}}
+.folha h3{margin:0 0 4px;font-size:17px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:30;display:none;max-width:90vw}
+.carregando{text-align:center;color:#64748b;padding:40px 0}
+</style>
+</head>
+<body>
+
+<div id="v-login" class="login" style="display:none">
+  <img src="../icon.svg?v=2" alt="">
+  <h1>Administração</h1>
+  <p>MinhaCasa™ · área restrita</p>
+  <div class="card">
+    <label class="lb" for="l-email">E-mail</label>
+    <input class="in" id="l-email" type="email" autocomplete="username">
+    <label class="lb" for="l-senha">Senha</label>
+    <input class="in" id="l-senha" type="password" autocomplete="current-password">
+    <div class="erro" id="l-erro"></div>
+    <button class="btn pri cheio" id="l-entrar">Entrar</button>
+  </div>
+</div>
+
+<div id="v-negado" class="login" style="display:none">
+  <img src="../icon.svg?v=2" alt="">
+  <h1>Sem acesso</h1>
+  <p id="n-msg">Esta conta não é de administrador.</p>
+  <button class="btn cheio" id="n-sair">Sair e entrar com outra conta</button>
+</div>
+
+<div id="v-painel" style="display:none">
+  <div class="topo">
+    <div class="topo-l">
+      <img src="../icon.svg?v=2" alt="">
+      <h1>Administração<small id="p-quem"></small></h1>
+      <span class="amb" id="p-amb"></span>
+      <button class="sair" id="p-sair">Sair</button>
+    </div>
+    <nav class="abas" id="abas">
+      <button data-aba="geral" class="on">📊 Visão geral</button>
+      <button data-aba="casas">🏠 Casas e assinaturas</button>
+      <button data-aba="contas">👤 Contas</button>
+      <button data-aba="convites">✉️ Convites</button>
+      <button data-aba="aviso">📣 Aviso</button>
+    </nav>
+  </div>
+  <main id="conteudo"><div class="carregando">Carregando…</div></main>
+</div>
+
+<div class="fundo" id="fundo"><div class="folha" id="folha"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../config.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// MinhaCasa™ — painel do administrador (23/11/2026)
+// Página separada do app. Quem pode ler e gravar é decidido nas regras do Firebase
+// (database.rules.json): esconder esta página não é a proteção, o servidor recusa quem não é admin.
+// Os lançamentos das famílias são criptografados no aparelho delas: este painel NÃO lê nem consegue ler.
+// Ele vê só: e-mails, último acesso, versão do app, casas, convites, assinaturas e o aviso geral.
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var qsa = function (s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var DIA = 86400000;
+  var PLANOS = { teste: 'Período de teste', mensal: 'Mensal', anual: 'Anual', cortesia: 'Cortesia' };
+
+  firebase.initializeApp(window.HOMEVAULT_FIREBASE);
+  var auth = firebase.auth(), db = firebase.database();
+  auth.languageCode = 'pt-BR';
+  var TS = firebase.database.ServerValue.TIMESTAMP;
+
+  var D = { codigo: '', convites: {}, contas: {}, usuarios: {}, assin: {}, aviso: null, casas: {} };
+  var UI = { aba: 'geral', busca: '', filtro: 'todas', confirmar: null };
+
+  if (window.MINHACASA_AMBIENTE !== 'producao') document.body.classList.add('teste');
+  $('p-amb').textContent = window.MINHACASA_AMBIENTE === 'producao' ? 'PRODUÇÃO' : 'TESTE';
+  $('p-amb').className = 'amb ' + (window.MINHACASA_AMBIENTE === 'producao' ? 'prod' : 'teste');
+
+  function toast(t) { var el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(function () { el.style.display = 'none'; }, 3500); }
+  function mostrar(v) { ['v-login', 'v-negado', 'v-painel'].forEach(function (x) { $(x).style.display = x === v ? '' : 'none'; }); }
+  function dataBR(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR'); }
+  function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  function haQuanto(ts) {
+    if (!ts) return 'nunca';
+    var m = Math.round((Date.now() - ts) / 60000);
+    if (m < 2) return 'agora'; if (m < 60) return 'há ' + m + ' min';
+    var h = Math.round(m / 60); if (h < 24) return 'há ' + h + ' h';
+    var d = Math.round(h / 24); return d === 1 ? 'ontem' : 'há ' + d + ' dias';
+  }
+  function fimDoDia(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime(); }
+  function isoDe(ts) { var d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function erroTxt(e) { var c = (e && e.code) || String(e); return /PERMISSION/i.test(c) ? 'o Firebase recusou (as regras novas já foram publicadas?)' : c; }
+  var CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function aleatorio(n) { var r = crypto.getRandomValues(new Uint8Array(n)), t = ''; for (var i = 0; i < n; i++) t += CHARS[r[i] % CHARS.length]; return t; }
+  function copiar(t) {
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { toast('📋 Copiado'); }, function () { window.prompt('Copie:', t); });
+  }
+
+  // ── login ──
+  $('l-entrar').onclick = function () {
+    var em = $('l-email').value.trim(), se = $('l-senha').value, er = $('l-erro'); er.textContent = '';
+    if (!em || !se) { er.textContent = 'Digite e-mail e senha.'; return; }
+    $('l-entrar').disabled = true;
+    auth.signInWithEmailAndPassword(em, se).catch(function (e) {
+      er.textContent = /wrong-password|invalid-credential|user-not-found|invalid-login/i.test(e.code || '') ? 'E-mail ou senha incorretos.' : 'Não foi possível entrar (' + (e.code || e) + ').';
+    }).then(function () { $('l-entrar').disabled = false; });
+  };
+  $('l-senha').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('l-entrar').click(); });
+  $('p-sair').onclick = $('n-sair').onclick = function () { auth.signOut(); };
+
+  auth.onAuthStateChanged(function (u) {
+    if (!u) { mostrar('v-login'); return; }
+    // é admin? Só o admin consegue ler admin/codigoAcesso.
+    db.ref('admin/codigoAcesso').once('value').then(function (s) {
+      D.codigo = s.val() || '';
+      $('p-quem').textContent = u.email || '';
+      mostrar('v-painel');
+      carregar();
+    }, function () {
+      $('n-msg').textContent = 'A conta ' + (u.email || '') + ' não é de administrador.';
+      mostrar('v-negado');
+    });
+  });
+
+  // ── dados ──
+  function ler(ref) { return db.ref(ref).once('value').then(function (s) { return s.val() || {}; }, function (e) { console.warn(ref, e); return null; }); }
+  function carregar() {
+    $('conteudo').innerHTML = '<div class="carregando">Carregando…</div>';
+    return Promise.all([ler('convites'), ler('contas'), ler('usuarios'), ler('assinaturas'), ler('aviso'), ler('admin/codigoAcesso')]).then(function (r) {
+      D.convites = r[0] || {}; D.contas = r[1] || {}; D.usuarios = r[2]; D.assin = r[3] || {}; D.aviso = r[4] && r[4].texto ? r[4] : null;
+      D.semRegras = r[2] === null || r[3] === null;
+      D.codigo = typeof r[5] === 'string' ? r[5] : (r[5] && typeof r[5] === 'object' && !Object.keys(r[5]).length ? '' : D.codigo);
+      montarCasas();
+      return Promise.all(Object.keys(D.casas).map(function (id) {
+        return Promise.all([db.ref('casas/' + id + '/dono').once('value'), db.ref('casas/' + id + '/criada').once('value')]).then(function (x) {
+          D.casas[id].dono = x[0].val(); D.casas[id].criada = x[1].val();
+        }, function () {});
+      }));
+    }).then(render);
+  }
+  // casa ← usuarios/<uid>/casa (todos, desde o início) e contas/<uid>/casa (gravado pela versão nova)
+  function montarCasas() {
+    var c = {};
+    var add = function (id, uid) { if (!id) return; var x = c[id] || (c[id] = { id: id, membros: [] }); if (uid && x.membros.indexOf(uid) < 0) x.membros.push(uid); };
+    Object.keys(D.usuarios || {}).forEach(function (uid) { add((D.usuarios[uid] || {}).casa, uid); });
+    Object.keys(D.contas).forEach(function (uid) { if (!(D.usuarios || {})[uid]) add(D.contas[uid].casa, uid); });
+    Object.keys(D.assin).forEach(function (id) { add(id); });
+    D.casas = c;
+  }
+  function casaDe(uid) { var u = (D.usuarios || {})[uid]; return (u && u.casa) || (D.contas[uid] || {}).casa || null; }
+  function emailDe(uid) { var c = D.contas[uid]; if (c && c.email) return c.email; var cv = Object.keys(D.convites).filter(function (k) { return D.convites[k].usadoPor === uid; })[0]; return cv ? D.convites[cv].email || '' : ''; }
+  function nomeDe(uid) { var cv = Object.keys(D.convites).filter(function (k) { return D.convites[k].usadoPor === uid; })[0]; return cv ? D.convites[cv].nome : ''; }
+  function ultimoCasa(x) { return x.membros.reduce(function (m, uid) { return Math.max(m, (D.contas[uid] || {}).ultimo || 0); }, 0); }
+
+  // situação da assinatura de uma casa
+  function situacao(id) {
+    var a = D.assin[id];
+    if (!a) return { k: 'livre', txt: 'Fase de testes (livre)', cls: 's-livre' };
+    if (a.bloqueada) return { k: 'suspensa', txt: 'Suspensa · só consulta', cls: 's-suspensa' };
+    if (typeof a.vence === 'number') {
+      var dias = Math.ceil((a.vence - Date.now()) / DIA);
+      if (a.vence <= Date.now()) return { k: 'vencida', txt: (PLANOS[a.plano] || a.plano) + ' · venceu em ' + dataBR(a.vence), cls: 's-vencida' };
+      if (dias <= 7) return { k: 'vencendo', txt: (PLANOS[a.plano] || a.plano) + ' · vence em ' + dias + (dias === 1 ? ' dia' : ' dias'), cls: 's-vence' };
+      return { k: a.plano, txt: (PLANOS[a.plano] || a.plano) + ' · até ' + dataBR(a.vence), cls: a.plano === 'teste' ? 's-teste' : a.plano === 'cortesia' ? 's-cortesia' : 's-pago' };
+    }
+    return { k: a.plano, txt: (PLANOS[a.plano] || a.plano) + ' · sem vencimento', cls: a.plano === 'cortesia' ? 's-cortesia' : a.plano === 'teste' ? 's-teste' : 's-pago' };
+  }
+
+  // ── telas ──
+  qsa('#abas button').forEach(function (b) { b.onclick = function () { UI.aba = b.dataset.aba; UI.confirmar = null; qsa('#abas button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); window.scrollTo(0, 0); }; });
+  function render() {
+    var h = D.semRegras ? '<div class="card" style="background:#fffbeb;border:1px solid #fde68a"><b>⚠️ Regras do Firebase antigas.</b><p class="nota" style="margin:6px 0 0">Algumas partes do painel (casas, assinaturas, aviso) precisam das regras novas publicadas no Firebase. Convites e código geral já funcionam.</p></div>' : '';
+    h += ({ geral: telaGeral, casas: telaCasas, contas: telaContas, convites: telaConvites, aviso: telaAviso })[UI.aba]();
+    $('conteudo').innerHTML = h;
+    ligar();
+  }
+
+  function telaGeral() {
+    var ids = Object.keys(D.casas), uids = Object.keys(D.contas), agora = Date.now();
+    var ativos7 = uids.filter(function (u) { return (D.contas[u].ultimo || 0) > agora - 7 * DIA; }).length;
+    var ativos30 = uids.filter(function (u) { return (D.contas[u].ultimo || 0) > agora - 30 * DIA; }).length;
+    var novas30 = ids.filter(function (id) { return (D.casas[id].criada || 0) > agora - 30 * DIA; }).length;
+    var cont = { livre: 0, teste: 0, pago: 0, cortesia: 0, vencendo: 0, vencida: 0, suspensa: 0 };
+    ids.forEach(function (id) { var s = situacao(id).k; if (s === 'mensal' || s === 'anual') cont.pago++; else if (cont[s] != null) cont[s]++; });
+    var conv = Object.keys(D.convites).map(function (k) { return D.convites[k]; });
+    var pend = conv.filter(function (c) { return !c.usadoPor && !c.cancelado; }).length;
+    var vers = {}; uids.forEach(function (u) { var v = D.contas[u].v || 'antiga'; vers[v] = (vers[v] || 0) + 1; });
+    var maxV = Math.max.apply(null, Object.keys(vers).map(function (k) { return vers[k]; }).concat([1]));
+    var k = function (n, t, c) { return '<div class="kpi ' + (c || '') + '"><b>' + n + '</b><span>' + t + '</span></div>'; };
+    return '<div class="kpis" style="margin-bottom:14px">' +
+      k(ids.length, 'Casas') + k(uids.length, 'Contas') + k(ativos7, 'Ativas nos últimos 7 dias', 'azul') + k(ativos30, 'Ativas em 30 dias') + k(novas30, 'Casas novas em 30 dias', 'verde') + k(pend, 'Convites não usados', pend ? 'amarelo' : '') +
+      '</div><div class="card"><h2>Assinaturas</h2><div class="kpis">' +
+      k(cont.pago, 'Pagantes (mensal/anual)', 'verde') + k(cont.teste, 'Em teste') + k(cont.cortesia, 'Cortesia') + k(cont.livre, 'Fase de testes (livre)') +
+      k(cont.vencendo, 'Vencem em 7 dias', cont.vencendo ? 'amarelo' : '') + k(cont.vencida, 'Vencidas', cont.vencida ? 'vermelho' : '') + k(cont.suspensa, 'Suspensas', cont.suspensa ? 'vermelho' : '') +
+      '</div>' + (cont.vencendo + cont.vencida ? '<button class="btn" style="margin-top:12px" data-ir="casas" data-filtro="atencao">Ver as que precisam de atenção</button>' : '') + '</div>' +
+      '<div class="card"><h2>Versão do app em uso</h2><p class="nota">Conta cada pessoa pela última vez que abriu o app. "antiga" = ainda não abriu a versão que informa isso.</p>' +
+      Object.keys(vers).sort().reverse().map(function (v) { return '<div class="barra"><span>' + esc(v) + '</span><i style="width:' + Math.max(4, Math.round(vers[v] / maxV * 100) * 2) + 'px"></i><b>' + vers[v] + '</b></div>'; }).join('') + '</div>' +
+      '<div class="card"><h2>🔐 Privacidade</h2><p class="nota" style="margin:0">Os lançamentos, valores, categorias e nomes das famílias são criptografados no aparelho delas. Este painel não lê e não consegue ler esses dados — só e-mails, acessos, casas, convites e assinaturas.</p></div>';
+  }
+
+  function telaCasas() {
+    var ids = Object.keys(D.casas), q = UI.busca.toLowerCase();
+    var lista = ids.map(function (id) { var x = D.casas[id]; return { id: id, x: x, s: situacao(id), ult: ultimoCasa(x), dono: emailDe(x.dono) || '', emails: x.membros.map(emailDe) }; });
+    lista = lista.filter(function (c) {
+      if (UI.filtro === 'atencao' && ['vencendo', 'vencida', 'suspensa'].indexOf(c.s.k) < 0) return false;
+      if (UI.filtro === 'pagas' && ['mensal', 'anual'].indexOf(c.s.k) < 0) return false;
+      if (UI.filtro === 'livres' && c.s.k !== 'livre') return false;
+      if (q && (c.dono + ' ' + c.emails.join(' ') + ' ' + c.id + ' ' + c.x.membros.map(nomeDe).join(' ')).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    }).sort(function (a, b) { return b.ult - a.ult; });
+    var f = function (k, t) { return '<button data-filtro="' + k + '" class="' + (UI.filtro === k ? 'on' : '') + '">' + t + '</button>'; };
+    return '<div class="card"><h2>🏠 Casas e assinaturas</h2>' +
+      '<p class="nota">Toque numa casa para definir o plano, o vencimento ou suspender. Casa <b>vencida</b> ou <b>suspensa</b> fica <b>só para consulta</b>: a família vê tudo, mas não lança nem altera. Casa sem assinatura definida está na <b>fase de testes (livre)</b>.</p>' +
+      '<input class="in busca" id="busca" placeholder="Buscar por e-mail, nome ou código da casa" value="' + esc(UI.busca) + '">' +
+      '<div class="filtros">' + f('todas', 'Todas') + f('atencao', '⚠️ Atenção') + f('pagas', 'Pagantes') + f('livres', 'Livres') + '</div>' +
+      (lista.length ? lista.map(function (c) {
+        var nomes = c.x.membros.map(function (u) { var n = nomeDe(u), e = emailDe(u); return esc(n ? n + ' (' + e + ')' : e || u.slice(0, 8)); });
+        return '<div class="linha" data-casa="' + esc(c.id) + '" style="cursor:pointer"><div class="info"><div class="t">' + esc(c.dono || nomes[0] || c.id) + '</div><span class="selo ' + c.s.cls + '">' + esc(c.s.txt) + '</span>' +
+          '<div class="s">' + (c.x.membros.length === 1 ? '1 pessoa' : c.x.membros.length + ' pessoas') + ' · criada ' + dataBR(c.x.criada) + ' · último acesso ' + haQuanto(c.ult) +
+          (c.x.membros.length > 1 ? '<br>' + nomes.join(', ') : '') + (D.assin[c.id] && D.assin[c.id].obs ? '<br>📝 ' + esc(D.assin[c.id].obs) : '') + '</div></div><span style="color:#94a3b8;font-size:20px">›</span></div>';
+      }).join('') : '<div class="vazio">Nenhuma casa encontrada.</div>') + '</div>';
+  }
+
+  function telaContas() {
+    var q = UI.busca.toLowerCase();
+    var uids = Object.keys(D.contas).filter(function (u) { return !q || (emailDe(u) + ' ' + nomeDe(u)).toLowerCase().indexOf(q) >= 0; })
+      .sort(function (a, b) { return (D.contas[b].ultimo || 0) - (D.contas[a].ultimo || 0); });
+    return '<div class="card"><h2>👤 Contas (' + Object.keys(D.contas).length + ')</h2>' +
+      '<p class="nota">Cada pessoa que já entrou no app. Para apagar uma conta de login ou trocar a senha de alguém, use o Firebase → Authentication (o painel não tem essa permissão).</p>' +
+      '<input class="in busca" id="busca" placeholder="Buscar por e-mail ou nome" value="' + esc(UI.busca) + '">' +
+      (uids.length ? uids.map(function (u) {
+        var c = D.contas[u], casa = casaDe(u), x = casa && D.casas[casa], dono = x && x.dono === u;
+        var s = casa ? situacao(casa) : null;
+        return '<div class="linha"' + (casa ? ' data-casa="' + esc(casa) + '" style="cursor:pointer"' : '') + '><div class="info"><div class="t">' + esc(nomeDe(u) ? nomeDe(u) + ' · ' : '') + esc(c.email || '(sem e-mail)') + '</div>' +
+          '<div class="s">Último acesso ' + haQuanto(c.ultimo) + ' (' + dataHora(c.ultimo) + ') · versão ' + esc(c.v || 'antiga') + '<br>' +
+          (casa ? (dono ? '👑 Dona da casa' : '👥 Membro da casa de ' + esc(emailDe(x && x.dono) || '…')) : 'Ainda sem casa') + '</div>' +
+          (s ? '<span class="selo ' + s.cls + '" style="margin-top:6px">' + esc(s.txt) + '</span>' : '') + '</div></div>';
+      }).join('') : '<div class="vazio">Nenhuma conta encontrada.</div>') + '</div>';
+  }
+
+  function telaConvites() {
+    var ids = Object.keys(D.convites).sort(function (a, b) { return (D.convites[b].criado || 0) - (D.convites[a].criado || 0); });
+    var cf = UI.confirmar;
+    return '<div class="card"><h2>✉️ Convites com nome</h2><p class="nota">Um código <b>por pessoa</b>, que vale <b>uma vez</b>. Assim você sabe quem criou cada casa.</p>' +
+      '<div style="display:flex;gap:8px"><input class="in" id="cv-nome" maxlength="40" placeholder="Nome da pessoa" style="flex:1"><button class="btn pri" id="cv-criar">Criar</button></div>' +
+      '<div class="erro" id="cv-erro"></div>' +
+      (ids.length ? ids.map(function (cod) {
+        var c = D.convites[cod], conta = c.usadoPor ? D.contas[c.usadoPor] || {} : null;
+        var st = c.usadoPor ? '<span style="color:#16a34a;font-weight:700">✅ Criou a casa em ' + dataHora(c.usadoEm) + '</span>'
+          : c.cancelado ? '<span style="color:#94a3b8;font-weight:700">⛔ Cancelado</span>' : '<span style="color:#b45309;font-weight:700">⏳ Ainda não usou</span>';
+        var det = c.usadoPor ? esc(c.email || conta.email || '') + ' · último acesso ' + haQuanto(conta.ultimo) : '<span class="mono">' + esc(cod) + '</span>';
+        var bts = c.usadoPor ? '' : c.cancelado ? '<button class="btn perigo' + (cf === cod ? ' on' : '') + '" data-cvapagar="' + esc(cod) + '">' + (cf === cod ? 'Confirmar' : 'Apagar') + '</button>'
+          : '<button class="btn" data-cvenviar="' + esc(cod) + '">Enviar</button><button class="btn perigo' + (cf === cod ? ' on' : '') + '" data-cvcancelar="' + esc(cod) + '">' + (cf === cod ? 'Confirmar' : 'Cancelar') + '</button>';
+        return '<div class="linha"><div class="info"><div class="t">👤 ' + esc(c.nome) + '</div><div class="s">' + st + '<br>' + det + '</div></div>' + (bts ? '<div class="grupo-btn" style="flex-direction:column">' + bts + '</div>' : '') + '</div>';
+      }).join('') : '<div class="vazio">Nenhum convite criado ainda.</div>') + '</div>' +
+      '<div class="card"><h2>🔑 Código geral</h2><p class="nota">Vale para <b>qualquer pessoa, quantas vezes for</b>, e não diz quem usou. Prefira os convites com nome. Desativado, só os convites funcionam.</p>' +
+      '<div class="codigo">' + esc(D.codigo || '(desativado)') + '</div>' +
+      '<div class="grupo-btn" style="margin-top:10px"><button class="btn" id="cg-copiar"' + (D.codigo ? '' : ' disabled') + '>Copiar</button>' +
+      '<button class="btn' + (cf === '_trocar' ? ' pri' : '') + '" id="cg-trocar">' + (cf === '_trocar' ? 'Confirmar' : D.codigo ? 'Trocar' : 'Ativar') + '</button>' +
+      '<button class="btn perigo' + (cf === '_desativar' ? ' on' : '') + '" id="cg-desativar"' + (D.codigo ? '' : ' disabled') + '>' + (cf === '_desativar' ? 'Confirmar' : 'Desativar') + '</button></div></div>';
+  }
+
+  function telaAviso() {
+    var a = D.aviso;
+    return '<div class="card"><h2>📣 Aviso para todos</h2><p class="nota">Aparece no topo da tela inicial de <b>todas as casas</b>. Cada pessoa pode fechar; um aviso novo aparece de novo para todos. Escreva no idioma do seu público (o texto não é traduzido).</p>' +
+      (a ? '<div style="background:' + (a.tipo === 'alerta' ? '#fffbeb' : '#eff6ff') + ';border-radius:12px;padding:12px;margin-bottom:12px"><b>No ar desde ' + dataHora(a.id) + ':</b><br>' + esc(a.texto).replace(/\n/g, '<br>') + '</div>' : '<div class="vazio">Nenhum aviso no ar.</div>') +
+      '<label class="lb" for="av-texto">' + (a ? 'Novo texto' : 'Texto') + '</label><textarea class="in" id="av-texto" maxlength="500" placeholder="Ex.: Manutenção programada no domingo às 22h. O app pode ficar fora do ar por alguns minutos."></textarea>' +
+      '<label class="lb" for="av-tipo">Tipo</label><select class="in" id="av-tipo"><option value="info">Informação (azul)</option><option value="alerta">Atenção (amarelo)</option></select>' +
+      '<div class="erro" id="av-erro"></div><div class="grupo-btn"><button class="btn pri" id="av-publicar">Publicar aviso</button>' +
+      (a ? '<button class="btn perigo' + (UI.confirmar === '_aviso' ? ' on' : '') + '" id="av-tirar">' + (UI.confirmar === '_aviso' ? 'Confirmar' : 'Tirar do ar') + '</button>' : '') + '</div></div>';
+  }
+
+  // ── ações ──
+  function confirmarDepois(chave, acao) {
+    if (UI.confirmar !== chave) { UI.confirmar = chave; render(); setTimeout(function () { if (UI.confirmar === chave) { UI.confirmar = null; render(); } }, 5000); return; }
+    UI.confirmar = null;
+    acao().then(function () { return carregar(); }, function (e) { toast('⚠️ Não foi possível: ' + erroTxt(e)); render(); });
+  }
+  function ligar() {
+    var b = $('busca'); if (b) b.oninput = function () { UI.busca = b.value; var p = b.selectionStart; render(); var n = $('busca'); n.focus(); n.setSelectionRange(p, p); };
+    qsa('[data-filtro]').forEach(function (x) { x.onclick = function () { UI.filtro = x.dataset.filtro; if (x.dataset.ir) { UI.aba = x.dataset.ir; qsa('#abas button').forEach(function (z) { z.classList.toggle('on', z.dataset.aba === UI.aba); }); } render(); }; });
+    qsa('[data-casa]').forEach(function (x) { x.onclick = function () { abrirCasa(x.dataset.casa); }; });
+    // convites
+    var cc = $('cv-criar');
+    if (cc) {
+      cc.onclick = function () {
+        var nome = $('cv-nome').value.trim(), er = $('cv-erro'); er.textContent = '';
+        if (!nome) { er.textContent = 'Digite o nome da pessoa.'; return; }
+        var base = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'PESSOA';
+        var cod = 'CASA-' + base + '-' + aleatorio(5); cc.disabled = true;
+        db.ref('convites/' + cod).set({ nome: nome, criado: TS }).then(function () { toast('✅ Convite criado para ' + nome + '. Toque em Enviar.'); return carregar(); },
+          function (e) { er.textContent = 'Não foi possível criar o convite: ' + erroTxt(e); cc.disabled = false; });
+      };
+      qsa('[data-cvenviar]').forEach(function (x) { x.onclick = function () {
+        var cod = x.dataset.cvenviar, nome = D.convites[cod].nome, app = location.origin + '/';
+        var txt = '🏠 Olá, ' + nome + '! Você foi convidado para testar o MinhaCasa™.\n\n1. Abra: ' + app + '\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o seu código pessoal: ' + cod + '\n\nEste código é só seu e vale uma vez.';
+        if (navigator.share) navigator.share({ text: txt }).catch(function () {}); else copiar(txt);
+      }; });
+      qsa('[data-cvcancelar]').forEach(function (x) { x.onclick = function () { var cod = x.dataset.cvcancelar; confirmarDepois(cod, function () { return db.ref('convites/' + cod + '/cancelado').set(true); }); }; });
+      qsa('[data-cvapagar]').forEach(function (x) { x.onclick = function () { var cod = x.dataset.cvapagar; confirmarDepois(cod, function () { return db.ref('convites/' + cod).remove(); }); }; });
+      $('cg-copiar').onclick = function () { if (D.codigo) copiar(D.codigo); };
+      $('cg-trocar').onclick = function () { confirmarDepois('_trocar', function () { var c = 'CASA-' + aleatorio(4) + '-' + aleatorio(4); return db.ref('admin/codigoAcesso').set(c).then(function () { D.codigo = c; toast('🔑 Código geral novo: ' + c); }); }); };
+      $('cg-desativar').onclick = function () { if (!D.codigo) return; confirmarDepois('_desativar', function () { return db.ref('admin/codigoAcesso').remove().then(function () { D.codigo = ''; toast('⛔ Código geral desativado.'); }); }); };
+    }
+    // aviso
+    var ap = $('av-publicar');
+    if (ap) {
+      ap.onclick = function () {
+        var t = $('av-texto').value.trim(), er = $('av-erro'); er.textContent = '';
+        if (!t) { er.textContent = 'Escreva o texto do aviso.'; return; }
+        ap.disabled = true;
+        db.ref('aviso').set({ texto: t, tipo: $('av-tipo').value, id: Date.now() }).then(function () { toast('📣 Aviso publicado para todos.'); return carregar(); },
+          function (e) { er.textContent = 'Não foi possível publicar: ' + erroTxt(e); ap.disabled = false; });
+      };
+      var at = $('av-tirar'); if (at) at.onclick = function () { confirmarDepois('_aviso', function () { return db.ref('aviso').remove().then(function () { toast('Aviso retirado.'); }); }); };
+    }
+  }
+
+  // ── folha da casa: assinatura ──
+  function fecharFolha() { $('fundo').classList.remove('on'); }
+  $('fundo').onclick = function (e) { if (e.target === $('fundo')) fecharFolha(); };
+  function abrirCasa(id) {
+    var x = D.casas[id], a = D.assin[id] || {}, s = situacao(id);
+    var pessoas = x.membros.map(function (u) { var n = nomeDe(u); return '<div class="s">' + (x.dono === u ? '👑 ' : '👥 ') + esc(n ? n + ' · ' : '') + esc(emailDe(u) || u) + ' · ' + haQuanto((D.contas[u] || {}).ultimo) + '</div>'; }).join('');
+    $('folha').innerHTML = '<h3>🏠 ' + esc(emailDe(x.dono) || 'Casa') + '</h3>' +
+      '<div class="s" style="font-size:12.5px;color:#64748b">Código interno <span class="mono">' + esc(id) + '</span> · criada ' + dataBR(x.criada) + '</div>' +
+      '<div style="margin:10px 0">' + pessoas + '</div>' +
+      '<div><span class="selo ' + s.cls + '">' + esc(s.txt) + '</span></div>' +
+      '<label class="lb" for="as-plano">Plano</label><select class="in" id="as-plano">' +
+      Object.keys(PLANOS).map(function (k) { return '<option value="' + k + '"' + (a.plano === k ? ' selected' : '') + '>' + PLANOS[k] + '</option>'; }).join('') + '</select>' +
+      '<label class="lb" for="as-vence">Vence em</label><input class="in" type="date" id="as-vence" value="' + (typeof a.vence === 'number' ? isoDe(a.vence) : '') + '">' +
+      '<div class="grupo-btn" style="margin-top:8px"><button class="btn" data-mais="7">+7 dias</button><button class="btn" data-mais="30">+30 dias</button><button class="btn" data-mais="365">+1 ano</button><button class="btn" data-mais="0">Sem vencimento</button></div>' +
+      '<p class="nota" style="margin-top:8px">Os botões somam a partir do vencimento atual (ou de hoje, se já venceu). Vence no fim do dia escolhido.</p>' +
+      '<label class="lb"><input type="checkbox" id="as-bloq"' + (a.bloqueada ? ' checked' : '') + ' style="width:18px;height:18px;vertical-align:middle;margin-right:6px">Suspender (só consulta)</label>' +
+      '<label class="lb" for="as-obs">Observação (só você vê)</label><input class="in" id="as-obs" maxlength="300" value="' + esc(a.obs || '') + '" placeholder="Ex.: pagou por PIX em 23/11">' +
+      '<div class="erro" id="as-erro"></div>' +
+      '<div class="grupo-btn"><button class="btn pri" id="as-salvar" style="flex:1">Salvar</button><button class="btn" id="as-fechar">Fechar</button></div>' +
+      (D.assin[id] ? '<button class="btn perigo cheio" id="as-remover" style="margin-top:10px">Tirar assinatura (volta para fase de testes livre)</button>' : '');
+    $('fundo').classList.add('on');
+    $('as-fechar').onclick = fecharFolha;
+    qsa('[data-mais]').forEach(function (b) { b.onclick = function () {
+      var n = +b.dataset.mais, v = $('as-vence');
+      if (!n) { v.value = ''; return; }
+      var base = v.value ? fimDoDia(v.value) : 0; if (base < Date.now()) base = Date.now();
+      v.value = isoDe(base + n * DIA);
+    }; });
+    $('as-salvar').onclick = function () {
+      var er = $('as-erro'), plano = $('as-plano').value, ven = $('as-vence').value, obs = $('as-obs').value.trim(); er.textContent = '';
+      if ((plano === 'teste' || plano === 'mensal' || plano === 'anual') && !ven) { er.textContent = 'Escolha a data de vencimento (ou use o plano Cortesia).'; return; }
+      var reg = { plano: plano, atualizado: TS };
+      if (ven) reg.vence = fimDoDia(ven);
+      if ($('as-bloq').checked) reg.bloqueada = true;
+      if (obs) reg.obs = obs;
+      $('as-salvar').disabled = true;
+      db.ref('assinaturas/' + id).set(reg).then(function () { fecharFolha(); toast('✅ Assinatura salva.'); return carregar(); },
+        function (e) { er.textContent = 'Não foi possível salvar: ' + erroTxt(e); $('as-salvar').disabled = false; });
+    };
+    var rm = $('as-remover');
+    if (rm) rm.onclick = function () {
+      if (rm.dataset.ok !== '1') { rm.dataset.ok = '1'; rm.textContent = 'Toque de novo para confirmar'; rm.classList.add('on'); return; }
+      db.ref('assinaturas/' + id).remove().then(function () { fecharFolha(); toast('Assinatura retirada.'); return carregar(); }, function (e) { $('as-erro').textContent = erroTxt(e); });
+    };
+  }
+})();
+</script>
+</body>
+</html>

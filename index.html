@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.33.4">
+<meta name="app-version" content="2.34.0">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -575,6 +575,14 @@ body {
 .add-textarea { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
   font-size: 16px; font-family: inherit; background: #fafafa; resize: none; height: 80px;
   box-sizing: border-box; color: #111827; transition: border-color .2s, background .2s; }
+.faixa-app:empty { display: none; }
+.faixa-app { padding: 10px 14px 0; display: flex; flex-direction: column; gap: 8px; }
+.fx { border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; font-weight: 600; display: flex; align-items: flex-start; gap: 8px; }
+.fx span { flex: 1; white-space: pre-line; }
+.fx-ruim { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.fx-alerta { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.fx-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
+.fx-x { border: 0; background: transparent; color: inherit; font-size: 16px; font-weight: 800; padding: 0 4px; min-width: 32px; min-height: 28px; cursor: pointer; }
 .desc-sug:empty { display: none; }
 .desc-sug { margin-top: 8px; font-size: 13px; color: #4b5563; line-height: 1.4; }
 .desc-sug-lst { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1100,6 +1108,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 
 <!-- ════════ INÍCIO ════════ -->
 <div class="tela" id="tela-inicio">
+  <div id="faixa-app" class="faixa-app"></div>
   <div class="topo">
     <div class="topo-bar">
       <div class="topo-title"><img src="icon.svg?v=2" alt="" class="topo-logo"><span id="txt-casa">MinhaCasa</span></div>
@@ -1421,23 +1430,6 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
       <div class="codigo" id="aj-codigo"></div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="aj-btn" style="flex:1" id="aj-copiar">Copiar código</button><button class="aj-btn" style="flex:1" id="aj-compart">Compartilhar</button></div>
       <button class="aj-btn aj-full" id="aj-novocod" style="display:none">Gerar novo código (o anterior deixa de valer)</button>
-    </div>
-
-    <div id="aj-admin" style="display:none">
-      <div class="aj-sec">🔑 Administrador · só você vê</div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:800;color:#111827;margin-bottom:4px">Convites com nome</div>
-        <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:10px">Um código <b>por pessoa</b>, que vale <b>uma vez só</b>. Assim você sabe quem é cada testador. Quem você convida para a <b>sua</b> casa não precisa disso.</div>
-        <div style="display:flex;gap:8px"><input class="aj-input" id="adm-nome" maxlength="40" placeholder="Nome da pessoa" style="flex:1;margin:0"><button class="aj-btn pri" id="adm-criar" style="margin:0">Criar convite</button></div>
-        <div class="login-erro" id="adm-erro" style="margin-top:6px"></div>
-        <div id="adm-lista" style="margin-top:6px"></div>
-      </div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:800;color:#111827;margin-bottom:4px">Código geral</div>
-        <div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:8px">Vale para <b>qualquer pessoa, quantas vezes for</b>, e não diz quem usou. Prefira os convites com nome e desative este quando não precisar mais.</div>
-        <div class="codigo" id="adm-codigo">…</div>
-        <div style="display:flex;gap:8px;margin-top:10px"><button class="aj-btn" style="flex:1" id="adm-copiar">Copiar</button><button class="aj-btn" style="flex:1" id="adm-novo">Trocar</button><button class="aj-btn perigo" style="flex:1" id="adm-desativar">Desativar</button></div>
-      </div>
     </div>
 
     <div class="aj-sec">Membros</div>

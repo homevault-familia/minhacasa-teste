@@ -1254,5 +1254,11 @@ MCI18N.add('en', {
  "Erro ao salvar. Tente de novo.": "Error saving. Please try again.",
  "🔤 Nomes de lojas": "🔤 Store names",
  "Junta o mesmo nome escrito de jeitos diferentes (ex.: <b>Walmart</b>, <b>walmart</b> e <b>Wal Mart</b>) nos lançamentos antigos. Você escolhe a grafia certa.": "Merges the same name written in different ways (e.g. <b>Walmart</b>, <b>walmart</b> and <b>Wal Mart</b>) in past entries. You choose the correct spelling.",
- "Juntar nomes iguais": "Merge matching names"
+ "Juntar nomes iguais": "Merge matching names",
+ "Esta casa está suspensa: o app está só para consulta.": "This household is suspended: the app is view-only.",
+ "A assinatura venceu: o app está só para consulta até renovar.": "The subscription has expired: the app is view-only until it is renewed.",
+ "Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.": "This household is suspended. You can view everything, but you can’t add or change anything.",
+ "A assinatura venceu em {d}. Você pode consultar tudo, mas não pode lançar nem alterar até renovar.": "The subscription expired on {d}. You can view everything, but you can’t add or change anything until it is renewed.",
+ "A assinatura vence hoje.": "The subscription expires today.",
+ "A assinatura vence em {n} dias.": "The subscription expires in {n} days."
 });

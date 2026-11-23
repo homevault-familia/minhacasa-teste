@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.33.4';
+var VERSAO = '2.34.0';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -518,6 +518,7 @@ function carregando(txt) { $('ld-txt').textContent = txt || T('Carregando…'); 
 
 function irPara(tela) {
   if (!S.chave) return;
+  if (tela === 'add' && !S.add.editId && somenteLeitura()) { avisarSomenteLeitura(); return; }
   $('tela-login').classList.remove('ativa');
   $('app-loading').style.display = 'none';
   $('nav').style.display = '';
@@ -1081,6 +1082,7 @@ function salvarLancamento() {
 
 // Exclusão (com opção de apagar o plano inteiro de parcelas)
 function excluir(id) {
+  if (somenteLeitura()) { avisarSomenteLeitura(); return; }
   var l = lancamentos().filter(function (x) { return x.id === id; })[0];
   if (!l) return;
   if (l.parcela) {
@@ -2493,7 +2495,6 @@ function renderAjustes() {
       '<small>' + esc(p.email || '') + (dono ? T(' · criou a casa') : '') + '</small></div>' +
       (souDono() && !eu ? '<button class="aj-btn perigo" data-remover="' + uid + T('">Remover</button>') : '') + '</div>';
   }).join('');
-  renderAdmin();
   renderLimparTeste();
   $('aj-conferir').onclick = abrirConferencia;
   $('aj-juntar').onclick = abrirJuntarNomes;
@@ -2720,79 +2721,34 @@ function excluirCat() {
 }
 
 // Convite / membros
-// ── Administrador (14/11/2026) ──
-// O cartão só aparece se o Firebase deixar ler admin/codigoAcesso. Quem pode ler e trocar é decidido nas regras
-// (o dono da casa do Luiz), então esconder o cartão não é a proteção: a proteção é o servidor recusar os outros.
-// Convites com nome (14/11/2026): um código por pessoa, que vale uma vez. Ao criar a casa, o app grava em
-// convites/<código> quem usou (uid, e-mail, data). contas/<uid> guarda e-mail e último acesso. Só o admin lê os dois.
-var _adm = { uid: null, codigo: null, confirmar: null, convites: {}, contas: {} };
-var CHARS_COD = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-function aleatorio(n) { var r = crypto.getRandomValues(new Uint8Array(n)), t = ''; for (var i = 0; i < n; i++) t += CHARS_COD[r[i] % CHARS_COD.length]; return t; }
-function dataHora(ts) { if (!ts) return '—'; var d = new Date(ts); return d.toLocaleDateString(I18N.locale) + ' ' + d.toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' }); }
-function renderAdmin() {
-  var box = $('aj-admin'); if (!box || !S.user) return;
-  if (_adm.uid === S.user.uid) { mostrarAdmin(); return; }
-  _adm.uid = S.user.uid; _adm.codigo = null;
-  db.ref('admin/codigoAcesso').once('value').then(function (snap) { _adm.codigo = snap.val() || ''; mostrarAdmin(); carregarConvites(); }, function () { _adm.codigo = null; box.style.display = 'none'; });
+// ── Assinatura e aviso geral (23/11/2026) ──
+// O painel /admin grava assinaturas/<casa> {plano, vence, bloqueada} e aviso {texto, id, tipo}.
+// Vencida ou suspensa = só consulta: as regras do Firebase recusam gravar; aqui o app só avisa antes de tentar.
+function somenteLeitura() {
+  var a = S.assin; if (!a) return false;
+  return a.bloqueada === true || (typeof a.vence === 'number' && a.vence <= Date.now());
 }
-function carregarConvites() {
-  return Promise.all([db.ref('convites').once('value'), db.ref('contas').once('value').catch(function () { return null; })]).then(function (r) {
-    _adm.convites = r[0].val() || {}; _adm.contas = (r[1] && r[1].val()) || {}; mostrarAdmin();
-  }, function (e) { $('adm-erro').textContent = T('Não foi possível ler os convites (') + ((e && e.code) || e) + T('). As regras do Firebase estão atualizadas?'); });
+var _avisoSL = 0;
+function avisarSomenteLeitura() {
+  if (Date.now() - _avisoSL < 4000) return; _avisoSL = Date.now();
+  mostrarToast('🔒', S.assin && S.assin.bloqueada ? T('Esta casa está suspensa: o app está só para consulta.') : T('A assinatura venceu: o app está só para consulta até renovar.'), 4500);
 }
-function msgConvite(nome, cod) {
-  return T('🏠 Olá, ') + nome + T('! Você foi convidado para testar o Minha Casa.\n\n1. Abra: ') + location.origin + T('\n2. Crie sua conta (e-mail e senha)\n3. Em "Criar casa", use o seu código pessoal: ') + cod + T('\n\nEste código é só seu e vale uma vez.');
-}
-function mostrarAdmin() {
-  var box = $('aj-admin'); if (_adm.codigo === null) { box.style.display = 'none'; return; }
-  box.style.display = '';
-  // convites com nome
-  var ids = Object.keys(_adm.convites).sort(function (a, b) { return (_adm.convites[b].criado || 0) - (_adm.convites[a].criado || 0); });
-  $('adm-lista').innerHTML = !ids.length ? T('<div style="font-size:13px;color:#9ca3af;padding:8px 0">Nenhum convite criado ainda.</div>') : ids.map(function (cod) {
-    var c = _adm.convites[cod], conta = c.usadoPor ? _adm.contas[c.usadoPor] || {} : null;
-    var st = c.usadoPor ? T('<span style="color:#16a34a;font-weight:700">✅ Criou a casa em ') + dataHora(c.usadoEm) + '</span>'
-      : c.cancelado ? '<span style="color:#9ca3af;font-weight:700">⛔ Cancelado</span>' : T('<span style="color:#b45309;font-weight:700">⏳ Ainda não usou</span>');
-    var det = c.usadoPor ? esc(c.email || conta.email || '') + T('<br>Último acesso: ') + dataHora(conta.ultimo) : '<span style="font-family:monospace">' + esc(cod) + '</span>';
-    var conf = _adm.confirmar === cod;
-    var bts = c.usadoPor ? '' : c.cancelado ? '<button class="aj-btn perigo" data-admapagar="' + esc(cod) + '">' + (conf ? T('Confirmar') : T('Apagar')) + '</button>'
-      : '<button class="aj-btn" data-admenviar="' + esc(cod) + T('">Enviar</button><button class="aj-btn perigo" data-admcancelar="') + esc(cod) + '">' + (conf ? T('Confirmar') : T('Cancelar')) + '</button>';
-    return '<div class="aj-linha" style="align-items:flex-start"><div class="aj-ic" style="background:#eef2ff">👤</div><div class="aj-nm">' + esc(c.nome) +
-      '<small style="display:block;line-height:1.5">' + st + '<br>' + det + '</small></div>' + (bts ? '<div style="display:flex;flex-direction:column;gap:4px">' + bts + '</div>' : '') + '</div>';
-  }).join('');
-  $('adm-criar').onclick = function () {
-    var nome = $('adm-nome').value.trim(), er = $('adm-erro'); er.textContent = '';
-    if (!nome) { er.textContent = T('Digite o nome da pessoa.'); return; }
-    var base = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'PESSOA';
-    var cod = 'CASA-' + base + '-' + aleatorio(5), btn = $('adm-criar'); btn.disabled = true;
-    db.ref('convites/' + cod).set({ nome: nome, criado: firebase.database.ServerValue.TIMESTAMP }).then(function () {
-      $('adm-nome').value = ''; mostrarToast('✅', T('Convite criado para ') + nome + T('. Toque em Enviar.'), 4000); return carregarConvites();
-    }, function (e) { er.textContent = T('Não foi possível criar o convite (') + ((e && e.code) || e) + ').'; }).then(function () { btn.disabled = false; });
-  };
-  qsa('#adm-lista [data-admenviar]').forEach(function (b) { b.onclick = function () {
-    var cod = b.dataset.admenviar, txt = msgConvite(_adm.convites[cod].nome, cod);
-    if (navigator.share) navigator.share({ text: txt }).catch(function () {}); else copiar(txt);
-  }; });
-  function confirmarDepois(cod, acao) {
-    if (_adm.confirmar !== cod) { _adm.confirmar = cod; mostrarAdmin(); setTimeout(function () { if (_adm.confirmar === cod) { _adm.confirmar = null; mostrarAdmin(); } }, 5000); return; }
-    _adm.confirmar = null; acao().then(carregarConvites, function (e) { $('adm-erro').textContent = T('Não foi possível (') + ((e && e.code) || e) + ').'; });
+function diasAte(ts) { return Math.ceil((ts - Date.now()) / 86400000); }
+function atualizarFaixa() {
+  var el = $('faixa-app'); if (!el) return;
+  var h = '', a = S.assin, av = S.aviso;
+  if (a && a.bloqueada) h += '<div class="fx fx-ruim">🔒 ' + T('Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.') + '</div>';
+  else if (a && typeof a.vence === 'number') {
+    var d = diasAte(a.vence);
+    if (a.vence <= Date.now()) h += '<div class="fx fx-ruim">🔒 ' + T('A assinatura venceu em {d}. Você pode consultar tudo, mas não pode lançar nem alterar até renovar.', { d: formatarData((function (d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); })(new Date(a.vence))) }) + '</div>';
+    else if (d <= 7) h += '<div class="fx fx-alerta">⏳ ' + (d <= 1 ? T('A assinatura vence hoje.') : T('A assinatura vence em {n} dias.', { n: d })) + '</div>';
   }
-  qsa('#adm-lista [data-admcancelar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admcancelar; confirmarDepois(cod, function () { return db.ref('convites/' + cod + '/cancelado').set(true); }); }; });
-  qsa('#adm-lista [data-admapagar]').forEach(function (b) { b.onclick = function () { var cod = b.dataset.admapagar; confirmarDepois(cod, function () { return db.ref('convites/' + cod).remove(); }); }; });
-  // código geral
-  $('adm-codigo').textContent = _adm.codigo || '(desativado)';
-  $('adm-copiar').disabled = !_adm.codigo; $('adm-desativar').disabled = !_adm.codigo;
-  $('adm-copiar').onclick = function () { if (_adm.codigo) copiar(_adm.codigo); };
-  var bn = $('adm-novo'), bd = $('adm-desativar');
-  bn.textContent = _adm.confirmar === '_trocar' ? T('Confirmar') : (_adm.codigo ? T('Trocar') : T('Ativar'));
-  bd.textContent = _adm.confirmar === '_desativar' ? T('Confirmar') : T('Desativar');
-  bn.onclick = function () { confirmarDepois('_trocar', function () {
-    var c = 'CASA-' + aleatorio(4) + '-' + aleatorio(4);
-    return db.ref('admin/codigoAcesso').set(c).then(function () { _adm.codigo = c; mostrarToast('🔑', T('Código geral novo: ') + c + T('. O anterior não vale mais.'), 5000); });
-  }); };
-  bd.onclick = function () { if (!_adm.codigo) return; confirmarDepois('_desativar', function () {
-    return db.ref('admin/codigoAcesso').remove().then(function () { _adm.codigo = ''; mostrarToast('⛔', T('Código geral desativado. Só os convites com nome funcionam.'), 5000); });
-  }); };
+  var visto = null; try { visto = localStorage.getItem('mc_aviso_visto'); } catch (e) {}
+  if (av && av.texto && String(av.id) !== visto) h += '<div class="fx ' + (av.tipo === 'alerta' ? 'fx-alerta' : 'fx-info') + '"><span>📣 ' + esc(av.texto) + '</span><button type="button" class="fx-x" id="fx-aviso-x" aria-label="' + T('Fechar') + '">✕</button></div>';
+  el.innerHTML = h;
+  var x = $('fx-aviso-x'); if (x) x.onclick = function () { try { localStorage.setItem('mc_aviso_visto', String(av.id)); } catch (e) {} atualizarFaixa(); };
 }
+// ── Administrador: saiu do app em 23/11/2026. Convites, código geral, casas e assinaturas ficam no painel /admin. ──
 
 // ═════════════════════════ CONFERIR COM O BANCO (16/11/2026) ═════════════════════════
 // O arquivo do banco (OFX/CSV) é lido neste aparelho, com banco.js (window.MCBanco). Só os DÉBITOS entram.
@@ -3199,7 +3155,7 @@ function marcarIdiomaBotoes() {
 }
 // grava campos no perfil (criptografado) desta pessoa, mantendo os outros
 function atualizarPerfil(campos) {
-  if (!S.user || !S.casa || !S.chave || !db) return Promise.resolve();
+  if (!S.user || !S.casa || !S.chave || !db || somenteLeitura()) return Promise.resolve();
   var p = {}, at = S.perfis[S.user.uid] || {};
   for (var k in at) if (Object.prototype.hasOwnProperty.call(at, k)) p[k] = at[k];
   if (!p.nome) p.nome = nomeUsuario();
@@ -3496,10 +3452,12 @@ function importarJSON(arquivo) {
 
 // ═════════════════════════ gravação ═════════════════════════
 function salvarCfg() {
+  if (somenteLeitura()) { avisarSomenteLeitura(); return Promise.resolve(); }
   return cifrar(S.chave, S.cfg).then(function (c) { return db.ref('casas/' + S.casa + '/dados/config').set(c); })
     .catch(function () { mostrarToast('⚠️', T('Erro ao salvar configurações')); });
 }
 function gravarLanc(id, reg) {
+  if (somenteLeitura()) { avisarSomenteLeitura(); return Promise.reject(new Error('somente-leitura')); }
   S.raw[id] = reg; renderLogo();
   return cifrar(S.chave, reg).then(function (c) { return db.ref('casas/' + S.casa + '/dados/lanc/' + id).set(c); });
 }
@@ -3519,7 +3477,7 @@ function iniciar() {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
     if (!u) { mostrarEntrada('card-auth'); return; }
-    db.ref('contas/' + u.uid).set({ email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP }).catch(function () {});
+    db.ref('contas/' + u.uid).update({ email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP, v: VERSAO }).catch(function () {});
     carregarCasa();
   });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
@@ -3579,7 +3537,12 @@ function escutar() {
   var base = 'casas/' + S.casa;
   var rCfg = db.ref(base + '/dados/config'), rLanc = db.ref(base + '/dados/lanc'), rPerf = db.ref(base + '/dados/perfis');
   var rMem = db.ref(base + '/membros'), rConv = db.ref(base + '/convite'), rCon = db.ref('.info/connected');
-  S.refs = [rCfg, rLanc, rPerf, rMem, rConv, rCon];
+  var rAss = db.ref('assinaturas/' + S.casa), rAviso = db.ref('aviso');
+  S.refs = [rCfg, rLanc, rPerf, rMem, rConv, rCon, rAss, rAviso];
+  // painel do administrador (23/11/2026): assinatura desta casa e aviso para todos. Sem permissão (regras antigas) = ignora.
+  if (S.user) db.ref('contas/' + S.user.uid + '/casa').set(S.casa).catch(function () {});
+  rAss.on('value', function (s) { S.assin = s.val(); atualizarFaixa(); }, function () { S.assin = null; atualizarFaixa(); });
+  rAviso.on('value', function (s) { S.aviso = s.val(); atualizarFaixa(); }, function () { S.aviso = null; });
   var negado = function () { carregarCasa(); };
   var primeiro = true;
   rCfg.on('value', function (s) {
@@ -3767,7 +3730,7 @@ function ligarEventos() {
     var t = e.target, b;
     if ((b = t.closest('[data-acao="sair"]'))) { sair(); return; }
     if ((b = t.closest('[data-ir]'))) { if (b.dataset.ir === 'add') S.add.editId = null; irPara(b.dataset.ir); return; }
-    if ((b = t.closest('[data-editar]'))) { S.voltarPara = S.tela === 'add' ? 'inicio' : S.tela; editarLancamento(b.dataset.editar); return; }
+    if ((b = t.closest('[data-editar]'))) { if (somenteLeitura()) { avisarSomenteLeitura(); return; } S.voltarPara = S.tela === 'add' ? 'inicio' : S.tela; editarLancamento(b.dataset.editar); return; }
     if ((b = t.closest('[data-excluir]'))) { excluir(b.dataset.excluir); return; }
     if ((b = t.closest('.card-cat[data-cat]'))) { irParaCategoria(b.dataset.cat); return; }
     if ((b = t.closest('[data-addtipo]'))) { if (S.add.tipo !== b.dataset.addtipo) { S.add.tipo = b.dataset.addtipo; if (S.add.tipo === 'compra') { S.add.orig = null; S.add.lj = false; } else S.add.cl = null; pintarTipoAdd(); } return; }

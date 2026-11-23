@@ -34,11 +34,39 @@
         ".write": "auth != null && auth.uid === $uid",
         "email":  { ".validate": "newData.isString() && newData.val() === auth.token.email" },
         "ultimo": { ".validate": "newData.isNumber() && newData.val() === now" },
+        "casa":   { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "v":      { ".validate": "newData.isString() && newData.val().length <= 20" },
         "$outro": { ".validate": false }
       }
     },
 
+    "assinaturas": {
+      ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+      "$casa": {
+        ".read": "auth != null && root.child('casas').child($casa).child('membros').child(auth.uid).exists()",
+        ".write": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['plano', 'atualizado'])",
+        "plano":      { ".validate": "newData.isString() && newData.val().matches(/^(teste|mensal|anual|cortesia)$/)" },
+        "vence":      { ".validate": "newData.isNumber()" },
+        "bloqueada":  { ".validate": "newData.isBoolean()" },
+        "obs":        { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "atualizado": { ".validate": "newData.isNumber() && newData.val() === now" },
+        "$outro":     { ".validate": false }
+      }
+    },
+
+    "aviso": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
+      ".validate": "newData.hasChildren(['texto', 'id'])",
+      "texto":  { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500" },
+      "id":     { ".validate": "newData.isNumber()" },
+      "tipo":   { ".validate": "newData.isString() && newData.val().matches(/^(info|alerta)$/)" },
+      "$outro": { ".validate": false }
+    },
+
     "usuarios": {
+      ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
@@ -52,11 +80,11 @@
         ".read": "auth != null && data.child('membros').child(auth.uid).exists()",
         ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && newData.child('acesso').isString() && newData.child('acesso').val().matches(/^[A-Z0-9-]{6,40}$/) && ((root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()) || (root.child('convites').child(newData.child('acesso').val()).child('nome').exists() && !root.child('convites').child(newData.child('acesso').val()).child('usadoPor').exists() && root.child('convites').child(newData.child('acesso').val()).child('cancelado').val() !== true && newData.parent().parent().child('convites').child(newData.child('acesso').val()).child('usadoPor').val() === auth.uid))",
 
-        "dono":   { ".validate": "newData.isString()" },
+        "dono":   { ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))", ".validate": "newData.isString()" },
         "salt":   { ".read": "auth != null", ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.isString() && newData.val().length <= 64" },
         "verif":  { ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length <= 200" },
-        "criada": { ".validate": "newData.isNumber()" },
-        "acesso": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "criada": { ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))", ".validate": "newData.isNumber()" },
+        "acesso": { ".read": "auth != null && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))", ".validate": "newData.isString() && newData.val().length <= 64" },
 
         "prova": {
           ".write": "auth != null && data.parent().child('dono').val() === auth.uid",
@@ -81,7 +109,7 @@
         },
 
         "dados": {
-          ".write": "auth != null && data.parent().child('membros').child(auth.uid).exists()",
+          ".write": "auth != null && data.parent().child('membros').child(auth.uid).exists() && root.child('assinaturas').child($casa).child('bloqueada').val() !== true && (!root.child('assinaturas').child($casa).child('vence').exists() || root.child('assinaturas').child($casa).child('vence').val() > now)",
           "config": {
             ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length < 200000",
             "iv": { ".validate": true }, "d": { ".validate": true }, "$outro": { ".validate": false }
