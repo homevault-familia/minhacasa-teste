@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.4';
+var VERSAO = '2.35.5';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -445,7 +445,7 @@ function descLanc(l) { return l.desc || nomeSub(l.cat, l.sub) || NOME(l.cat); }
 var DIN = 'dinheiro';
 function cartoes() { return (S.cfg && S.cfg.cartoes) || []; }
 function usaCartoes() { return cartoes().length > 0; }
-function opcoesCartao() { return usaCartoes() ? cartoes().concat([{ id: DIN, nome: T('Dinheiro / débito'), cor: '#16a34a', din: true }]) : []; }
+function opcoesCartao() { return usaCartoes() ? cartoes().concat([{ id: DIN, nome: T('Dinheiro'), cor: '#16a34a', din: true }]) : []; }
 function cartaoPorId(id) { return id ? opcoesCartao().filter(function (c) { return c.id === id; })[0] || null : null; }
 function nomeCartao(id, curto) {
   var c = cartaoPorId(id); if (!c) return T('Sem cartão');
@@ -505,7 +505,7 @@ function renderCartoesAj() {
       (principal ? '' : '<button class="aj-btn" data-ctprinc="' + c.id + '">' + T('Tornar principal') + '</button>') +
       (c.din ? '' : '<button class="aj-btn" data-ctedit="' + c.id + '" aria-label="' + esc(T('Editar')) + '">✏️</button>') + '</div>';
   };
-  box.innerHTML = T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:6px">Cadastre os cartões da casa para saber em qual deles foi cada gasto. O ⭐ é o <b>seu</b> principal: ele já vem marcado ao registrar, e dá para trocar na hora. Cada pessoa escolhe o seu.</div>') +
+  box.innerHTML = T('<div style="font-size:13px;color:#4b5563;line-height:1.45;margin-bottom:6px">Cadastre os cartões da casa para saber em qual deles foi cada gasto. O ⭐ é o <b>seu</b> principal: ele já vem marcado ao registrar, e dá para trocar na hora. Cada pessoa escolhe o seu.</div>') + T('<div style="font-size:12.5px;color:#6b7280;line-height:1.45;margin-bottom:6px">💡 Usa cartão de <b>débito</b>? Cadastre como um cartão (ex.: <b>Débito · CIBC</b>). Assim dá para conferir com o extrato da conta.</div>') +
     opcoesCartao().map(linha).join('') +
     '<div style="display:flex;gap:8px;margin-top:10px"><input class="aj-input" id="ct-nome" maxlength="30" placeholder="' + esc(T('Nome do cartão (ex.: Visa TD)')) + '" style="flex:1;margin:0">' +
     '<input class="aj-input" id="ct-banco" maxlength="30" placeholder="' + esc(T('Banco ou apelido')) + '" style="flex:1;margin:0"></div>' +
