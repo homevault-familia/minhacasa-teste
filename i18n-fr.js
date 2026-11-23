@@ -1262,5 +1262,6 @@ MCI18N.add('fr', {
  "A assinatura vence hoje.": "L’abonnement expire aujourd’hui.",
  "A assinatura vence em {n} dias.": "L’abonnement expire dans {n} jours.",
  "A casa está demorando para abrir. Mande um print desta caixa para o suporte.": "Le foyer met du temps à s’ouvrir. Envoyez une capture de cette boîte au soutien.",
- "Tentar de novo": "Réessayer"
+ "Tentar de novo": "Réessayer",
+ "Da última vez o app não terminou de abrir. Mande um print desta caixa para o suporte.": "La dernière fois, l’application n’a pas fini de s’ouvrir. Envoyez une capture de cette boîte au soutien."
 });

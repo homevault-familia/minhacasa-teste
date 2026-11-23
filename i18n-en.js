@@ -1262,5 +1262,6 @@ MCI18N.add('en', {
  "A assinatura vence hoje.": "The subscription expires today.",
  "A assinatura vence em {n} dias.": "The subscription expires in {n} days.",
  "A casa está demorando para abrir. Mande um print desta caixa para o suporte.": "The household is taking a long time to open. Send a screenshot of this box to support.",
- "Tentar de novo": "Try again"
+ "Tentar de novo": "Try again",
+ "Da última vez o app não terminou de abrir. Mande um print desta caixa para o suporte.": "Last time the app did not finish opening. Send a screenshot of this box to support."
 });

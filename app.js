@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.34.1';
+var VERSAO = '2.34.2';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -548,7 +548,7 @@ function renderTela() {
   else if (t === 'semana') renderizarSemana();
 }
 var _rt;
-function renderLogo() { clearTimeout(_rt); _rt = setTimeout(renderTela, 60); }
+function renderLogo() { clearTimeout(_rt); _rt = setTimeout(function () { if (!S.render1) { S.render1 = 1; diag('1º desenho da tela ' + S.tela); } renderTela(); }, 60); }
 
 // ═════════════════════════ INÍCIO ═════════════════════════
 function renderizar() {
@@ -3189,6 +3189,7 @@ function idiomaDoPerfil() {
   }
   if (me.idioma !== I18N.lang && I18N.idiomas.indexOf(me.idioma) >= 0 && !S.idiomaAplicado) {
     S.idiomaAplicado = true;
+    diag('idioma do perfil ' + me.idioma + ' ≠ ' + I18N.lang + ': recarregando');
     I18N.definir(me.idioma);
     IDB.get(S.user.uid + ':' + S.casa).then(function (k) { if (k) location.reload(); });
   }
@@ -3543,7 +3544,27 @@ function abrirCasa(chave) {
     b.onclick = function () { location.reload(); }; d.appendChild(b);
   }, 15000);
 }
-function diag(m) { if (!S.diagLog) S.diagLog = []; var t = new Date(); S.diagLog.push(('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2) + ' ' + m); if (S.diagLog.length > 40) S.diagLog.shift(); }
+// diag (23/11/2026): cada passo fica guardado neste aparelho. Se a página travar ou recarregar sozinha,
+// na próxima abertura o app mostra os passos da vez anterior, para descobrir onde parou.
+function diag(m) {
+  if (!S.diagLog) S.diagLog = []; var t = new Date();
+  S.diagLog.push(('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2) + ' ' + m);
+  if (S.diagLog.length > 60) S.diagLog.shift();
+  try { localStorage.setItem('mc_diag', S.diagLog.join('\n')); } catch (e) {}
+}
+(function () {
+  var ant = null, ok = null; try { ant = localStorage.getItem('mc_diag'); ok = localStorage.getItem('mc_diag_ok'); } catch (e) {}
+  try { localStorage.setItem('mc_diag_ok', '0'); localStorage.removeItem('mc_diag'); } catch (e) {}
+  if (!ant || ok !== '0') return;
+  var mostrarAnt = function () {
+    var l = $('app-loading'); if (!l || $('ld-ant')) return;
+    var d = document.createElement('div'); d.id = 'ld-ant';
+    d.style.cssText = 'margin-top:14px;max-width:520px;max-height:40vh;overflow:auto;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;text-align:left';
+    d.textContent = T('Da última vez o app não terminou de abrir. Mande um print desta caixa para o suporte.') + '\n\n' + ant;
+    l.appendChild(d);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mostrarAnt); else mostrarAnt();
+})();
 function pararEscuta() { S.refs.forEach(function (r) { r.off(); }); S.refs = []; }
 function escutar() {
   pararEscuta();
@@ -3563,14 +3584,16 @@ function escutar() {
     var p = v ? decifrar(S.chave, v) : Promise.resolve(null);
     p.catch(function (e) { diag('config não decifrou: ' + ((e && e.name) || e)); senhaDaCasaMudou(); return 'mudou'; }).then(function (c) {
       if (c === 'mudou') return;
+      diag('config decifrada (' + ((c && c.cats) || []).length + ' categorias)');
       var n = normalizarCfg(c || { cats: catsPadrao(), nome: T('Minha casa'), moeda: 'CAD' });
-      S.cfg = n.cfg;
+      S.cfg = n.cfg; diag('config conferida' + (n.mudou ? ' (alterada)' : ''));
       if (n.mudou || !c) salvarCfg();
-      if (primeiro) { primeiro = false; diag('abrindo tela inicial'); irPara('inicio'); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
+      if (primeiro) { primeiro = false; diag('abrindo tela inicial'); irPara('inicio'); diag('tela inicial aberta'); try { localStorage.setItem('mc_diag_ok', '1'); } catch (e) {} setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
       else renderLogo();
     }).catch(function (e) { diag('erro ao abrir: ' + ((e && e.message) || e)); throw e; });
   }, negado);
-  function addLanc(s) { var id = s.key; decifrar(S.chave, s.val()).then(function (l) { var r = limparReg(id, l); if (r) S.raw[id] = r; else delete S.raw[id]; renderLogo(); }, function () {}); }
+  var nLanc = 0;
+  function addLanc(s) { var id = s.key; if (++nLanc % 200 === 1) diag('lançamentos recebidos: ' + nLanc); decifrar(S.chave, s.val()).then(function (l) { var r = limparReg(id, l); if (r) S.raw[id] = r; else delete S.raw[id]; renderLogo(); }, function () {}); }
   rLanc.on('child_added', addLanc, negado);
   rLanc.on('child_changed', addLanc);
   rLanc.on('child_removed', function (s) { delete S.raw[s.key]; renderLogo(); });
