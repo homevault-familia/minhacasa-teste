@@ -1260,5 +1260,7 @@ MCI18N.add('fr', {
  "Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.": "Ce foyer est suspendu. Vous pouvez tout consulter, mais vous ne pouvez rien ajouter ni modifier.",
  "A assinatura venceu em {d}. Você pode consultar tudo, mas não pode lançar nem alterar até renovar.": "L’abonnement a expiré le {d}. Vous pouvez tout consulter, mais vous ne pouvez rien ajouter ni modifier avant le renouvellement.",
  "A assinatura vence hoje.": "L’abonnement expire aujourd’hui.",
- "A assinatura vence em {n} dias.": "L’abonnement expire dans {n} jours."
+ "A assinatura vence em {n} dias.": "L’abonnement expire dans {n} jours.",
+ "A casa está demorando para abrir. Mande um print desta caixa para o suporte.": "Le foyer met du temps à s’ouvrir. Envoyez une capture de cette boîte au soutien.",
+ "Tentar de novo": "Réessayer"
 });

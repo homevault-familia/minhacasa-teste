@@ -1260,5 +1260,7 @@ MCI18N.add('en', {
  "Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.": "This household is suspended. You can view everything, but you can’t add or change anything.",
  "A assinatura venceu em {d}. Você pode consultar tudo, mas não pode lançar nem alterar até renovar.": "The subscription expired on {d}. You can view everything, but you can’t add or change anything until it is renewed.",
  "A assinatura vence hoje.": "The subscription expires today.",
- "A assinatura vence em {n} dias.": "The subscription expires in {n} days."
+ "A assinatura vence em {n} dias.": "The subscription expires in {n} days.",
+ "A casa está demorando para abrir. Mande um print desta caixa para o suporte.": "The household is taking a long time to open. Send a screenshot of this box to support.",
+ "Tentar de novo": "Try again"
 });

@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.34.0';
+var VERSAO = '2.34.1';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.33.1', d: '20/11/2026', itens: [
@@ -3529,8 +3529,21 @@ function abrirCasa(chave) {
     }).catch(function (e) { console.warn('prova:', e && (e.code || e.message)); });
   }
   carregando(T('Abrindo a casa…'));
+  diag('abrir casa ' + String(S.casa || '').slice(0, 6) + '… v' + VERSAO);
   escutar();
+  // vigia (23/11/2026): se em 15 s a casa não abriu, mostra o que aconteceu em vez de ficar parado
+  clearTimeout(S.vigia);
+  S.vigia = setTimeout(function () {
+    if (S.cfg || $('app-loading').style.display === 'none') return;
+    diag('15 s sem abrir');
+    var l = $('app-loading'), d = $('ld-diag');
+    if (!d) { d = document.createElement('div'); d.id = 'ld-diag'; d.style.cssText = 'margin-top:14px;max-width:520px;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#78350f;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;text-align:left'; l.appendChild(d); }
+    d.textContent = T('A casa está demorando para abrir. Mande um print desta caixa para o suporte.') + '\n\n' + S.diagLog.join('\n');
+    var b = document.createElement('button'); b.textContent = T('Tentar de novo'); b.style.cssText = 'display:block;margin-top:10px;padding:10px 16px;border-radius:10px;border:0;background:#1d4ed8;color:#fff;font-weight:700';
+    b.onclick = function () { location.reload(); }; d.appendChild(b);
+  }, 15000);
 }
+function diag(m) { if (!S.diagLog) S.diagLog = []; var t = new Date(); S.diagLog.push(('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2) + ' ' + m); if (S.diagLog.length > 40) S.diagLog.shift(); }
 function pararEscuta() { S.refs.forEach(function (r) { r.off(); }); S.refs = []; }
 function escutar() {
   pararEscuta();
@@ -3541,21 +3554,21 @@ function escutar() {
   S.refs = [rCfg, rLanc, rPerf, rMem, rConv, rCon, rAss, rAviso];
   // painel do administrador (23/11/2026): assinatura desta casa e aviso para todos. Sem permissão (regras antigas) = ignora.
   if (S.user) db.ref('contas/' + S.user.uid + '/casa').set(S.casa).catch(function () {});
-  rAss.on('value', function (s) { S.assin = s.val(); atualizarFaixa(); }, function () { S.assin = null; atualizarFaixa(); });
+  rAss.on('value', function (s) { S.assin = s.val(); atualizarFaixa(); }, function (e) { diag('assinatura: ' + ((e && e.code) || e)); S.assin = null; atualizarFaixa(); });
   rAviso.on('value', function (s) { S.aviso = s.val(); atualizarFaixa(); }, function () { S.aviso = null; });
-  var negado = function () { carregarCasa(); };
+  var negado = function (e) { diag('negado: ' + ((e && (e.code || e.message)) || e)); carregarCasa(); };
   var primeiro = true;
   rCfg.on('value', function (s) {
-    var v = s.val();
+    var v = s.val(); diag('config recebida (' + (v ? 'com dados' : 'vazia') + ')');
     var p = v ? decifrar(S.chave, v) : Promise.resolve(null);
-    p.catch(function () { senhaDaCasaMudou(); return 'mudou'; }).then(function (c) {
+    p.catch(function (e) { diag('config não decifrou: ' + ((e && e.name) || e)); senhaDaCasaMudou(); return 'mudou'; }).then(function (c) {
       if (c === 'mudou') return;
       var n = normalizarCfg(c || { cats: catsPadrao(), nome: T('Minha casa'), moeda: 'CAD' });
       S.cfg = n.cfg;
       if (n.mudou || !c) salvarCfg();
-      if (primeiro) { primeiro = false; irPara('inicio'); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
+      if (primeiro) { primeiro = false; diag('abrindo tela inicial'); irPara('inicio'); setTimeout(aplicarPagamento, 1200); setTimeout(function () { mostrarNovidades(false); }, 2500); } // espera os lançamentos para sugerir a categoria
       else renderLogo();
-    });
+    }).catch(function (e) { diag('erro ao abrir: ' + ((e && e.message) || e)); throw e; });
   }, negado);
   function addLanc(s) { var id = s.key; decifrar(S.chave, s.val()).then(function (l) { var r = limparReg(id, l); if (r) S.raw[id] = r; else delete S.raw[id]; renderLogo(); }, function () {}); }
   rLanc.on('child_added', addLanc, negado);
@@ -3569,7 +3582,7 @@ function escutar() {
   rMem.on('value', function (s) { S.membros = s.val() || {}; renderLogo(); });
   rConv.on('value', function (s) { if (S.meta) S.meta.convite = s.val(); renderLogo(); });
   rCon.on('value', function (s) {
-    var on = !!s.val();
+    var on = !!s.val(); diag(on ? 'conectado ao servidor' : 'sem conexão com o servidor');
     $('sync-dot').style.background = on ? '#43a047' : '#f59e0b';
     $('sync-txt').textContent = on ? T('sincronizado ✓') : T('offline');
   });
