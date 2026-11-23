@@ -256,7 +256,8 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       mostrar('v-painel');
       carregar();
     }, function () {
-      $('n-msg').textContent = 'A conta ' + (u.email || '') + ' não é de administrador.';
+      var pv = (u.providerData || []).map(function (p) { return p.providerId; }).join(', ');
+      $('n-msg').innerHTML = 'A conta ' + esc(u.email || '') + ' não é de administrador.<br><small style="color:#94a3b8">código ' + esc(u.uid.slice(0, 10)) + ' · entrou por ' + esc(pv || '?') + '</small>';
       mostrar('v-negado');
     });
   });

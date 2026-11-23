@@ -4,13 +4,13 @@
     ".write": false,
 
     "admin": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "codigoAcesso": {
-        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
         ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9-]{6,40}$/)"
       },
       "legadoOff": {
-      ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com'))",
       ".validate": "newData.isBoolean()"
     },
     "casaAdmin": { ".validate": "newData.isString() && newData.val().length <= 64" },
@@ -18,17 +18,17 @@
     },
 
     "admins": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$uid": {
-        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
         ".validate": "newData.isBoolean() && newData.val() === true"
       }
     },
 
     "convites": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$cod": {
-        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
         ".validate": "$cod.matches(/^[A-Z0-9-]{6,40}$/) && newData.hasChildren(['nome', 'criado'])",
         "nome":      { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
         "criado":    { ".validate": "newData.isNumber()" },
@@ -41,7 +41,7 @@
     },
 
     "contas": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         "email":  { ".validate": "newData.isString() && newData.val() === auth.token.email" },
@@ -53,10 +53,10 @@
     },
 
     "assinaturas": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$casa": {
         ".read": "auth != null && root.child('casas').child($casa).child('membros').child(auth.uid).exists()",
-        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
         ".validate": "newData.hasChildren(['plano', 'atualizado'])",
         "plano":      { ".validate": "newData.isString() && newData.val().matches(/^(teste|mensal|anual|cortesia)$/)" },
         "vence":      { ".validate": "newData.isNumber()" },
@@ -69,7 +69,7 @@
 
     "aviso": {
       ".read": "auth != null",
-      ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       ".validate": "newData.hasChildren(['texto', 'id'])",
       "texto":  { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500" },
       "id":     { ".validate": "newData.isNumber()" },
@@ -78,7 +78,7 @@
     },
 
     "usuarios": {
-      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
@@ -92,11 +92,11 @@
         ".read": "auth != null && data.child('membros').child(auth.uid).exists()",
         ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && newData.child('acesso').isString() && newData.child('acesso').val().matches(/^[A-Z0-9-]{6,40}$/) && ((root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()) || (root.child('convites').child(newData.child('acesso').val()).child('nome').exists() && !root.child('convites').child(newData.child('acesso').val()).child('usadoPor').exists() && root.child('convites').child(newData.child('acesso').val()).child('cancelado').val() !== true && newData.parent().parent().child('convites').child(newData.child('acesso').val()).child('usadoPor').val() === auth.uid))",
 
-        "dono":   { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isString()" },
+        "dono":   { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isString()" },
         "salt":   { ".read": "auth != null", ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.isString() && newData.val().length <= 64" },
         "verif":  { ".write": "auth != null && data.parent().child('dono').val() === auth.uid", ".validate": "newData.hasChildren(['iv', 'd']) && newData.child('iv').isString() && newData.child('iv').val().length <= 24 && newData.child('d').isString() && newData.child('d').val().length <= 200" },
-        "criada": { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isNumber()" },
-        "acesso": { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && auth.token.firebase.sign_in_provider === 'google.com') || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isString() && newData.val().length <= 64" },
+        "criada": { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isNumber()" },
+        "acesso": { ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))", ".validate": "newData.isString() && newData.val().length <= 64" },
 
         "prova": {
           ".write": "auth != null && data.parent().child('dono').val() === auth.uid",
