@@ -117,6 +117,7 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
       <button data-aba="contas">👤 Contas</button>
       <button data-aba="convites">✉️ Convites</button>
       <button data-aba="aviso">📣 Aviso</button>
+      <button data-aba="seg">🔐 Segurança</button>
     </nav>
   </div>
   <main id="conteudo"><div class="carregando">Carregando…</div></main>
@@ -125,11 +126,17 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
 <div class="fundo" id="fundo"><div class="folha" id="folha"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="../config.js"></script>
-<script>
+<script type="module">
+// 23/11/2026: SDK modular (a verificação em duas etapas por código, TOTP, só existe nele)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, getMultiFactorResolver, TotpMultiFactorGenerator, TotpSecret,
+  multiFactor, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getDatabase, ref as dbRef, get as dbGet, set as dbSet, remove as dbRemove, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, getMultiFactorResolver, TotpMultiFactorGenerator, TotpSecret,
+  multiFactor, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, createUserWithEmailAndPassword,
+  getDatabase, dbRef, dbGet, dbSet, dbRemove, serverTimestamp };
+
 // ═══════════════════════════════════════════════════════════════════
 // MinhaCasa™ — painel do administrador (23/11/2026)
 // Página separada do app. Quem pode ler e gravar é decidido nas regras do Firebase
@@ -145,10 +152,14 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
   var DIA = 86400000;
   var PLANOS = { teste: 'Período de teste', mensal: 'Mensal', anual: 'Anual', cortesia: 'Cortesia' };
 
-  firebase.initializeApp(window.HOMEVAULT_FIREBASE);
-  var auth = firebase.auth(), db = firebase.database();
-  auth.languageCode = 'pt-BR';
-  var TS = firebase.database.ServerValue.TIMESTAMP;
+  var F = window.__FB;
+  var app = F.initializeApp(window.HOMEVAULT_FIREBASE), A = F.getAuth(app), DB = F.getDatabase(app);
+  A.languageCode = 'pt-BR';
+  var TS = F.serverTimestamp();
+  // mesmo jeito de usar do SDK antigo (db.ref(caminho).once/set/remove), para o resto do painel não mudar
+  var db = { ref: function (p) { var r = F.dbRef(DB, p); return {
+    once: function () { return F.dbGet(r).then(function (s) { return { val: function () { return s.val(); } }; }); },
+    set: function (v) { return F.dbSet(r, v); }, remove: function () { return F.dbRemove(r); } }; } };
 
   var D = { codigo: '', convites: {}, contas: {}, usuarios: {}, assin: {}, aviso: null, casas: {} };
   var UI = { aba: 'geral', busca: '', filtro: 'todas', confirmar: null };
@@ -182,17 +193,45 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
     var em = $('l-email').value.trim(), se = $('l-senha').value, er = $('l-erro'); er.textContent = '';
     if (!em || !se) { er.textContent = 'Digite e-mail e senha.'; return; }
     $('l-entrar').disabled = true;
-    auth.signInWithEmailAndPassword(em, se).catch(function (e) {
+    F.signInWithEmailAndPassword(A, em, se).catch(function (e) {
+      if (e && e.code === 'auth/multi-factor-auth-required') return segundaEtapa(e, er);
       er.textContent = /wrong-password|invalid-credential|user-not-found|invalid-login/i.test(e.code || '') ? 'E-mail ou senha incorretos.' : 'Não foi possível entrar (' + (e.code || e) + ').';
     }).then(function () { $('l-entrar').disabled = false; });
   };
   $('l-senha').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('l-entrar').click(); });
-  $('p-sair').onclick = $('n-sair').onclick = function () { auth.signOut(); };
+  $('p-sair').onclick = $('n-sair').onclick = function () { F.signOut(A); };
 
-  auth.onAuthStateChanged(function (u) {
+  // Pede o código de 6 dígitos do app autenticador. Devolve uma promessa com o código (ou rejeita se cancelar).
+  function pedirCodigo(titulo) {
+    return new Promise(function (ok, nao) {
+      $('folha').innerHTML = '<h3>🔐 ' + esc(titulo || 'Código do autenticador') + '</h3><p class="nota">Abra o app autenticador (Senhas do iPhone, Google Authenticator…) e digite o código de 6 dígitos de <b>MinhaCasa</b>.</p>' +
+        '<input class="in" id="mf-cod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:6px;text-align:center">' +
+        '<div class="erro" id="mf-erro"></div><div class="grupo-btn"><button class="btn pri" id="mf-ok" style="flex:1">Confirmar</button><button class="btn" id="mf-cancelar">Cancelar</button></div>';
+      $('fundo').classList.add('on'); setTimeout(function () { $('mf-cod').focus(); }, 50);
+      var envia = function () { var c = $('mf-cod').value.replace(/\D/g, ''); if (c.length !== 6) { $('mf-erro').textContent = 'São 6 números.'; return; } fecharFolha(); ok(c); };
+      $('mf-ok').onclick = envia; $('mf-cod').addEventListener('keydown', function (e) { if (e.key === 'Enter') envia(); });
+      $('mf-cancelar').onclick = function () { fecharFolha(); nao({ code: 'cancelado' }); };
+    });
+  }
+  // A conta tem verificação em duas etapas: resolve com o código (até 3 tentativas)
+  function resolverMFA(erro, tentativa) {
+    var res = F.getMultiFactorResolver(A, erro), dica = res.hints.filter(function (h) { return h.factorId === 'totp'; })[0];
+    if (!dica) return Promise.reject({ code: 'sem-totp' });
+    return pedirCodigo(tentativa ? 'Código errado, tente de novo' : 'Código do autenticador').then(function (c) {
+      return res.resolveSignIn(F.TotpMultiFactorGenerator.assertionForSignIn(dica.uid, c)).catch(function (e) {
+        if (/invalid-verification-code|code/i.test(e.code || '') && (tentativa || 0) < 2) return resolverMFA(erro, (tentativa || 0) + 1);
+        throw e;
+      });
+    });
+  }
+  function segundaEtapa(e, er) {
+    return resolverMFA(e).catch(function (x) { if (x.code !== 'cancelado') er.textContent = 'Não foi possível confirmar o código (' + (x.code || x) + ').'; });
+  }
+
+  F.onAuthStateChanged(A, function (u) {
     if (!u) { mostrar('v-login'); return; }
     // é admin? Só o admin consegue ler admin/codigoAcesso.
-    db.ref('admin/codigoAcesso').once('value').then(function (s) {
+    db.ref('admin/codigoAcesso').once().then(function (s) {
       D.codigo = s.val() || '';
       $('p-quem').textContent = u.email || '';
       mostrar('v-painel');
@@ -204,16 +243,17 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
   });
 
   // ── dados ──
-  function ler(ref) { return db.ref(ref).once('value').then(function (s) { return s.val() || {}; }, function (e) { console.warn(ref, e); return null; }); }
+  function ler(ref) { return db.ref(ref).once().then(function (s) { return s.val() || {}; }, function (e) { console.warn(ref, e); return null; }); }
   function carregar() {
     $('conteudo').innerHTML = '<div class="carregando">Carregando…</div>';
-    return Promise.all([ler('convites'), ler('contas'), ler('usuarios'), ler('assinaturas'), ler('aviso'), ler('admin/codigoAcesso')]).then(function (r) {
+    return Promise.all([ler('convites'), ler('contas'), ler('usuarios'), ler('assinaturas'), ler('aviso'), ler('admin/codigoAcesso'), ler('admins'), db.ref('admin/legadoOff').once().then(function (s) { return s.val(); }, function () { return null; })]).then(function (r) {
+      D.admins = r[6]; D.legadoOff = r[7] === true;
       D.convites = r[0] || {}; D.contas = r[1] || {}; D.usuarios = r[2]; D.assin = r[3] || {}; D.aviso = r[4] && r[4].texto ? r[4] : null;
       D.semRegras = r[2] === null || r[3] === null;
       D.codigo = typeof r[5] === 'string' ? r[5] : (r[5] && typeof r[5] === 'object' && !Object.keys(r[5]).length ? '' : D.codigo);
       montarCasas();
       return Promise.all(Object.keys(D.casas).map(function (id) {
-        return Promise.all([db.ref('casas/' + id + '/dono').once('value'), db.ref('casas/' + id + '/criada').once('value')]).then(function (x) {
+        return Promise.all([db.ref('casas/' + id + '/dono').once(), db.ref('casas/' + id + '/criada').once()]).then(function (x) {
           D.casas[id].dono = x[0].val(); D.casas[id].criada = x[1].val();
         }, function () {});
       }));
@@ -251,7 +291,7 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
   qsa('#abas button').forEach(function (b) { b.onclick = function () { UI.aba = b.dataset.aba; UI.confirmar = null; qsa('#abas button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); window.scrollTo(0, 0); }; });
   function render() {
     var h = D.semRegras ? '<div class="card" style="background:#fffbeb;border:1px solid #fde68a"><b>⚠️ Regras do Firebase antigas.</b><p class="nota" style="margin:6px 0 0">Algumas partes do painel (casas, assinaturas, aviso) precisam das regras novas publicadas no Firebase. Convites e código geral já funcionam.</p></div>' : '';
-    h += ({ geral: telaGeral, casas: telaCasas, contas: telaContas, convites: telaConvites, aviso: telaAviso })[UI.aba]();
+    h += ({ geral: telaGeral, casas: telaCasas, contas: telaContas, convites: telaConvites, aviso: telaAviso, seg: telaSeg })[UI.aba]();
     $('conteudo').innerHTML = h;
     ligar();
   }
@@ -351,6 +391,138 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
       (a ? '<button class="btn perigo' + (UI.confirmar === '_aviso' ? ' on' : '') + '" id="av-tirar">' + (UI.confirmar === '_aviso' ? 'Confirmar' : 'Tirar do ar') + '</button>' : '') + '</div></div>';
   }
 
+  // ── segurança (23/11/2026): conta só para o admin, verificação em duas etapas, trocar e-mail e senha ──
+  function eu() { return A.currentUser; }
+  function souDaLista() { return !!(D.admins && eu() && D.admins[eu().uid]); }
+  function temMFA() { return !!(eu() && F.multiFactor(eu()).enrolledFactors.length); }
+  function telaSeg() {
+    var u = eu(), lista = D.admins === null ? null : Object.keys(D.admins || {});
+    var h = '<div class="card"><h2>🔐 Segurança do painel</h2><p class="nota">Você entrou como <b>' + esc(u.email) + '</b>. ' +
+      (souDaLista() ? 'Esta conta é uma <b>conta de administrador</b>.' : 'Esta é a <b>conta da sua casa</b>, que hoje também é administradora.') + '</p>' +
+      (lista === null ? '<p class="nota" style="color:#b45309">⚠️ Para usar esta parte, cole as regras novas do Firebase (regras-firebase-v2.36.json).</p>' : '') + '</div>';
+    // 1. criar a conta só para o admin
+    if (!souDaLista() && lista !== null) h += '<div class="card"><h2>1. Criar a conta só para o painel</h2>' +
+      '<p class="nota">Use um e-mail novo, que você não usa no app (ex.: um Gmail só para isso), e uma senha forte e diferente. Essa conta entra no painel; o seu e-mail de sempre continua no app.</p>' +
+      '<label class="lb" for="na-email">E-mail novo</label><input class="in" id="na-email" type="email" autocomplete="off">' +
+      '<label class="lb" for="na-senha">Senha (mínimo 12 caracteres)</label><input class="in" id="na-senha" type="password" autocomplete="new-password">' +
+      '<label class="lb" for="na-senha2">Repita a senha</label><input class="in" id="na-senha2" type="password" autocomplete="new-password">' +
+      '<div class="erro" id="na-erro"></div><button class="btn pri cheio" id="na-criar">Criar e autorizar como administrador</button>' +
+      '<p class="nota" style="margin-top:10px">Depois: toque em <b>Sair</b>, entre com o e-mail novo e volte aqui para ligar a verificação em duas etapas.</p></div>';
+    // 2. duas etapas
+    h += '<div class="card"><h2>' + (souDaLista() ? '1' : '2') + '. Verificação em duas etapas</h2>' +
+      (temMFA() ? '<p class="nota">✅ <b>Ligada</b> nesta conta. Toda entrada no painel pede o código de 6 dígitos do app autenticador.</p>'
+        : souDaLista() ? '<p class="nota">Depois de ligada, entrar no painel pede a senha <b>e</b> um código de 6 dígitos que muda a cada 30 segundos, gerado no seu iPhone (app <b>Senhas</b>, ou Google/Microsoft Authenticator). Quem descobrir a senha não entra sem o seu celular.</p><button class="btn pri cheio" id="mf-ligar">Ligar a verificação em duas etapas</button><div class="erro" id="mf-erro2"></div>'
+        : '<p class="nota">Ligue na <b>conta só para o painel</b> (passo 1), e não nesta: nesta conta o código passaria a ser pedido também no app.</p>') + '</div>';
+    // 3. tirar o admin da conta da casa
+    if (souDaLista() && lista !== null) h += '<div class="card"><h2>2. Tirar o acesso de admin da conta da casa</h2>' +
+      (D.legadoOff ? '<p class="nota">✅ <b>Feito.</b> Só as contas de administrador entram no painel. A conta da sua casa é só do app.</p>'
+        : '<p class="nota">Hoje a conta da sua casa também entra no painel. Depois de ligar a verificação em duas etapas aqui, tire esse acesso: só esta conta (e as outras da lista abaixo) continuarão entrando.</p>' +
+          '<button class="btn perigo cheio' + (UI.confirmar === '_legado' ? ' on' : '') + '" id="lg-tirar"' + (temMFA() ? '' : ' disabled') + '>' + (UI.confirmar === '_legado' ? 'Toque de novo para confirmar' : 'Tirar o acesso de admin da conta da casa') + '</button>' +
+          (temMFA() ? '' : '<p class="nota" style="margin-top:6px">Primeiro ligue a verificação em duas etapas (passo 1).</p>')) + '</div>';
+    // lista de administradores
+    if (lista && lista.length) h += '<div class="card"><h2>Contas de administrador</h2>' + lista.map(function (uid) {
+      return '<div class="linha"><div class="info"><div class="t">' + esc(emailDe(uid) || (eu().uid === uid ? eu().email : uid.slice(0, 10) + '…')) + (eu().uid === uid ? ' (você)' : '') + '</div></div>' +
+        (eu().uid === uid ? '' : '<button class="btn perigo' + (UI.confirmar === 'adm:' + uid ? ' on' : '') + '" data-admrem="' + esc(uid) + '">' + (UI.confirmar === 'adm:' + uid ? 'Confirmar' : 'Remover') + '</button>') + '</div>';
+    }).join('') + '</div>';
+    // trocar e-mail e senha
+    h += '<div class="card"><h2>Trocar e-mail ou senha desta conta</h2>' +
+      '<label class="lb" for="mc-atual">Senha atual</label><input class="in" id="mc-atual" type="password" autocomplete="current-password">' +
+      '<label class="lb" for="mc-email">E-mail novo (deixe em branco para não trocar)</label><input class="in" id="mc-email" type="email" autocomplete="off">' +
+      '<label class="lb" for="mc-senha">Senha nova (deixe em branco para não trocar)</label><input class="in" id="mc-senha" type="password" autocomplete="new-password">' +
+      '<label class="lb" for="mc-senha2">Repita a senha nova</label><input class="in" id="mc-senha2" type="password" autocomplete="new-password">' +
+      '<div class="erro" id="mc-erro"></div><button class="btn pri cheio" id="mc-salvar">Salvar</button>' +
+      '<p class="nota" style="margin-top:10px">O e-mail só muda depois que você tocar no link de confirmação que chega no e-mail novo.' + (souDaLista() ? '' : ' Esta é a conta da sua casa: o e-mail e a senha mudam também para entrar no app.') + '</p></div>';
+    return h;
+  }
+  // entra de novo com a senha (e o código, se tiver) antes de mudar algo sensível
+  function confirmarSenha(senha) {
+    var cred = F.EmailAuthProvider.credential(eu().email, senha);
+    return F.reauthenticateWithCredential(eu(), cred).catch(function (e) {
+      if (e && e.code === 'auth/multi-factor-auth-required') return resolverMFA(e);
+      throw e;
+    });
+  }
+  function msgErro(e) {
+    var c = (e && e.code) || String(e);
+    if (/wrong-password|invalid-credential|invalid-login/.test(c)) return 'Senha atual incorreta.';
+    if (/email-already-in-use/.test(c)) return 'Esse e-mail já tem uma conta.';
+    if (/invalid-email/.test(c)) return 'E-mail inválido.';
+    if (/weak-password/.test(c)) return 'Senha fraca demais.';
+    if (/operation-not-allowed|admin-restricted|not-enabled|configuration/.test(c)) return 'Falta ativar a verificação em duas etapas no Firebase (veja o passo a passo que o Claude te mandou).';
+    if (/requires-recent-login/.test(c)) return 'Por segurança, saia e entre de novo, e tente outra vez.';
+    if (/PERMISSION/i.test(c)) return 'O Firebase recusou: as regras novas já foram publicadas?';
+    return 'Não deu certo (' + c + ').';
+  }
+  function ligarSeg() {
+    var nc = $('na-criar');
+    if (nc) nc.onclick = function () {
+      var em = $('na-email').value.trim(), s1 = $('na-senha').value, s2 = $('na-senha2').value, er = $('na-erro'); er.textContent = '';
+      if (!em) { er.textContent = 'Digite o e-mail novo.'; return; }
+      if (em.toLowerCase() === (eu().email || '').toLowerCase()) { er.textContent = 'Use um e-mail diferente do da sua casa.'; return; }
+      if (s1.length < 12) { er.textContent = 'Use uma senha com pelo menos 12 caracteres.'; return; }
+      if (s1 !== s2) { er.textContent = 'As senhas não são iguais.'; return; }
+      nc.disabled = true;
+      // cria numa instância separada, para não tirar você do painel
+      var app2 = F.initializeApp(window.HOMEVAULT_FIREBASE, 'novoAdmin' + Date.now()), A2 = F.getAuth(app2);
+      F.createUserWithEmailAndPassword(A2, em, s1).then(function (c) {
+        var uid = c.user.uid; F.signOut(A2);
+        return db.ref('admins/' + uid).set(true);
+      }).then(function () { toast('✅ Conta de administrador criada. Agora toque em Sair e entre com ela.'); return carregar(); },
+        function (e) { er.textContent = msgErro(e); nc.disabled = false; });
+    };
+    var ml = $('mf-ligar');
+    if (ml) ml.onclick = function () {
+      var er = $('mf-erro2'); er.textContent = ''; ml.disabled = true;
+      var segredo;
+      F.multiFactor(eu()).getSession().then(function (ses) { return F.TotpMultiFactorGenerator.generateSecret(ses); }).then(function (sec) {
+        segredo = sec;
+        var url = sec.generateQrCodeUrl(eu().email, 'MinhaCasa Admin');
+        $('folha').innerHTML = '<h3>🔐 Ligar a verificação em duas etapas</h3>' +
+          '<p class="nota"><b>No iPhone:</b> toque no botão abaixo. Ele abre o app <b>Senhas</b> (ou o seu autenticador) para guardar o código do MinhaCasa.</p>' +
+          '<a class="btn pri cheio" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px" href="' + esc(url) + '">Adicionar ao autenticador</a>' +
+          '<p class="nota"><b>No computador ou se o botão não funcionar:</b> no autenticador, escolha "digitar chave" e use esta chave:</p>' +
+          '<div class="codigo" style="font-size:15px">' + esc(sec.secretKey.replace(/(.{4})/g, '$1 ').trim()) + '</div>' +
+          '<div class="grupo-btn" style="margin:8px 0 4px"><button class="btn" id="mf-copiar">Copiar a chave</button></div>' +
+          '<label class="lb" for="mf-cod1">Código de 6 dígitos que apareceu</label><input class="in" id="mf-cod1" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:24px;letter-spacing:6px;text-align:center">' +
+          '<div class="erro" id="mf-erro3"></div><div class="grupo-btn"><button class="btn pri" id="mf-confirmar" style="flex:1">Confirmar e ligar</button><button class="btn" id="mf-fechar">Cancelar</button></div>' +
+          '<p class="nota" style="margin-top:10px">⚠️ Guarde a chave num lugar seguro. Se perder o celular, é com ela que você recupera os códigos.</p>';
+        $('fundo').classList.add('on');
+        $('mf-copiar').onclick = function () { copiar(sec.secretKey); };
+        $('mf-fechar').onclick = function () { fecharFolha(); ml.disabled = false; };
+        $('mf-confirmar').onclick = function () {
+          var c = $('mf-cod1').value.replace(/\D/g, ''); if (c.length !== 6) { $('mf-erro3').textContent = 'São 6 números.'; return; }
+          $('mf-confirmar').disabled = true;
+          F.multiFactor(eu()).enroll(F.TotpMultiFactorGenerator.assertionForEnrollment(segredo, c), 'Autenticador').then(function () {
+            fecharFolha(); toast('✅ Verificação em duas etapas ligada.'); render();
+          }, function (e) { $('mf-confirmar').disabled = false; $('mf-erro3').textContent = /invalid-verification-code|code/.test(e.code || '') ? 'Código errado. Confira a hora do celular e tente o código novo.' : msgErro(e); });
+        };
+      }, function (e) {
+        ml.disabled = false;
+        er.textContent = /requires-recent-login/.test(e.code || '') ? 'Por segurança, toque em Sair, entre de novo e tente outra vez.' : msgErro(e);
+      });
+    };
+    var lg = $('lg-tirar');
+    if (lg) lg.onclick = function () { confirmarDepois('_legado', function () { return db.ref('admin/legadoOff').set(true).then(function () { toast('✅ A conta da casa não entra mais no painel.'); }); }); };
+    qsa('[data-admrem]').forEach(function (b) { b.onclick = function () { var uid = b.dataset.admrem; confirmarDepois('adm:' + uid, function () { return db.ref('admins/' + uid).remove(); }); }; });
+    var ms = $('mc-salvar');
+    if (ms) ms.onclick = function () {
+      var atual = $('mc-atual').value, em = $('mc-email').value.trim(), s1 = $('mc-senha').value, s2 = $('mc-senha2').value, er = $('mc-erro'); er.textContent = '';
+      if (!atual) { er.textContent = 'Digite a senha atual.'; return; }
+      if (!em && !s1) { er.textContent = 'Preencha o e-mail novo ou a senha nova.'; return; }
+      if (s1 && s1.length < (souDaLista() ? 12 : 8)) { er.textContent = 'A senha nova precisa de pelo menos ' + (souDaLista() ? 12 : 8) + ' caracteres.'; return; }
+      if (s1 !== s2) { er.textContent = 'As senhas novas não são iguais.'; return; }
+      ms.disabled = true;
+      confirmarSenha(atual).then(function () {
+        return s1 ? F.updatePassword(eu(), s1) : null;
+      }).then(function () {
+        return em ? F.verifyBeforeUpdateEmail(eu(), em) : null;
+      }).then(function () {
+        ms.disabled = false; $('mc-atual').value = $('mc-senha').value = $('mc-senha2').value = '';
+        toast((s1 ? '✅ Senha trocada. ' : '') + (em ? '📧 Enviamos um link para ' + em + '. O e-mail muda quando você tocar nele.' : ''));
+      }, function (e) { ms.disabled = false; if (e.code !== 'cancelado') er.textContent = msgErro(e); });
+    };
+  }
+
   // ── ações ──
   function confirmarDepois(chave, acao) {
     if (UI.confirmar !== chave) { UI.confirmar = chave; render(); setTimeout(function () { if (UI.confirmar === chave) { UI.confirmar = null; render(); } }, 5000); return; }
@@ -358,6 +530,7 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
     acao().then(function () { return carregar(); }, function (e) { toast('⚠️ Não foi possível: ' + erroTxt(e)); render(); });
   }
   function ligar() {
+    if (UI.aba === 'seg') ligarSeg();
     var b = $('busca'); if (b) b.oninput = function () { UI.busca = b.value; var p = b.selectionStart; render(); var n = $('busca'); n.focus(); n.setSelectionRange(p, p); };
     qsa('[data-filtro]').forEach(function (x) { x.onclick = function () { UI.filtro = x.dataset.filtro; if (x.dataset.ir) { UI.aba = x.dataset.ir; qsa('#abas button').forEach(function (z) { z.classList.toggle('on', z.dataset.aba === UI.aba); }); } render(); }; });
     qsa('[data-casa]').forEach(function (x) { x.onclick = function () { abrirCasa(x.dataset.casa); }; });
