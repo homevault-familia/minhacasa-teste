@@ -419,9 +419,10 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
 
   function telaContas() {
     var q = UI.busca.toLowerCase();
-    var semCasa = Object.keys(D.contas).filter(function (u) { return !casaDe(u); });
+    var ehAdm = function (u) { return !!(D.admins && D.admins[u]); };
+    var semCasa = Object.keys(D.contas).filter(function (u) { return !casaDe(u) && !ehAdm(u); });
     var fc = UI.filtroConta || 'todas';
-    var uids = Object.keys(D.contas).filter(function (u) { return (fc !== 'semcasa' || !casaDe(u)) && (!q || (emailDe(u) + ' ' + nomeDe(u)).toLowerCase().indexOf(q) >= 0); })
+    var uids = Object.keys(D.contas).filter(function (u) { return (fc !== 'semcasa' || (!casaDe(u) && !ehAdm(u))) && (!q || (emailDe(u) + ' ' + nomeDe(u)).toLowerCase().indexOf(q) >= 0); })
       .sort(function (a, b) { return (D.contas[b].ultimo || 0) - (D.contas[a].ultimo || 0); });
     var fb = function (k, t) { return '<button data-fconta="' + k + '" class="' + (fc === k ? 'on' : '') + '">' + t + '</button>'; };
     return '<div class="card"><h2>👤 Contas (' + Object.keys(D.contas).length + ')</h2>' +
@@ -433,9 +434,9 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
         var s = casa ? situacao(casa) : null;
         return '<div class="linha"' + (casa ? ' data-casa="' + esc(casa) + '" style="cursor:pointer"' : '') + '><div class="info"><div class="t">' + esc(nomeDe(u) ? nomeDe(u) + ' · ' : '') + esc(c.email || '(sem e-mail)') + '</div>' +
           '<div class="s">' + (c.criado ? 'Conta criada em ' + dataHora(c.criado) + '<br>' : '') + 'Último acesso ' + haQuanto(c.ultimo) + ' (' + dataHora(c.ultimo) + ') · versão ' + esc(c.v || 'antiga') + '<br>' +
-          (casa ? (dono ? '👑 Dona da casa' : '👥 Membro da casa de ' + esc(emailDe(x && x.dono) || '…')) : '⚠️ Ainda sem casa (não usou convite)') + '</div>' +
+          (casa ? (dono ? '👑 Dona da casa' : '👥 Membro da casa de ' + esc(emailDe(x && x.dono) || '…')) : ehAdm(u) ? '🛡️ Conta de administrador do painel' : '⚠️ Ainda sem casa (não usou convite)') + '</div>' +
           (s ? '<span class="selo ' + s.cls + '" style="margin-top:6px">' + esc(s.txt) + '</span>' : '') + '</div>' +
-          (casa ? '' : '<button class="btn perigo' + (UI.confirmar === 'ct:' + u ? ' on' : '') + '" data-ctrem="' + esc(u) + '">' + (UI.confirmar === 'ct:' + u ? 'Confirmar' : 'Remover') + '</button>') + '</div>';
+          (casa || ehAdm(u) ? '' : '<button class="btn perigo' + (UI.confirmar === 'ct:' + u ? ' on' : '') + '" data-ctrem="' + esc(u) + '">' + (UI.confirmar === 'ct:' + u ? 'Confirmar' : 'Remover') + '</button>') + '</div>';
       }).join('') : '<div class="vazio">Nenhuma conta encontrada.</div>') + '</div>';
   }
 
