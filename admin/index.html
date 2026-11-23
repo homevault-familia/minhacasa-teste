@@ -419,18 +419,23 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
 
   function telaContas() {
     var q = UI.busca.toLowerCase();
-    var uids = Object.keys(D.contas).filter(function (u) { return !q || (emailDe(u) + ' ' + nomeDe(u)).toLowerCase().indexOf(q) >= 0; })
+    var semCasa = Object.keys(D.contas).filter(function (u) { return !casaDe(u); });
+    var fc = UI.filtroConta || 'todas';
+    var uids = Object.keys(D.contas).filter(function (u) { return (fc !== 'semcasa' || !casaDe(u)) && (!q || (emailDe(u) + ' ' + nomeDe(u)).toLowerCase().indexOf(q) >= 0); })
       .sort(function (a, b) { return (D.contas[b].ultimo || 0) - (D.contas[a].ultimo || 0); });
+    var fb = function (k, t) { return '<button data-fconta="' + k + '" class="' + (fc === k ? 'on' : '') + '">' + t + '</button>'; };
     return '<div class="card"><h2>👤 Contas (' + Object.keys(D.contas).length + ')</h2>' +
-      '<p class="nota">Cada pessoa que já entrou no app. Para apagar uma conta de login ou trocar a senha de alguém, use o Firebase → Authentication (o painel não tem essa permissão).</p>' +
+      '<p class="nota">Cada pessoa que já entrou no app. <b>Sem casa</b> = criou login mas não usou convite: não vê nada de ninguém. "Remover" tira a pessoa desta lista; para apagar o login dela de vez, use o Firebase → Authentication → Usuários.</p>' +
       '<input class="in busca" id="busca" placeholder="Buscar por e-mail ou nome" value="' + esc(UI.busca) + '">' +
+      '<div class="filtros">' + fb('todas', 'Todas') + fb('semcasa', 'Sem casa (' + semCasa.length + ')') + '</div>' +
       (uids.length ? uids.map(function (u) {
         var c = D.contas[u], casa = casaDe(u), x = casa && D.casas[casa], dono = x && x.dono === u;
         var s = casa ? situacao(casa) : null;
         return '<div class="linha"' + (casa ? ' data-casa="' + esc(casa) + '" style="cursor:pointer"' : '') + '><div class="info"><div class="t">' + esc(nomeDe(u) ? nomeDe(u) + ' · ' : '') + esc(c.email || '(sem e-mail)') + '</div>' +
-          '<div class="s">Último acesso ' + haQuanto(c.ultimo) + ' (' + dataHora(c.ultimo) + ') · versão ' + esc(c.v || 'antiga') + '<br>' +
-          (casa ? (dono ? '👑 Dona da casa' : '👥 Membro da casa de ' + esc(emailDe(x && x.dono) || '…')) : 'Ainda sem casa') + '</div>' +
-          (s ? '<span class="selo ' + s.cls + '" style="margin-top:6px">' + esc(s.txt) + '</span>' : '') + '</div></div>';
+          '<div class="s">' + (c.criado ? 'Conta criada em ' + dataHora(c.criado) + '<br>' : '') + 'Último acesso ' + haQuanto(c.ultimo) + ' (' + dataHora(c.ultimo) + ') · versão ' + esc(c.v || 'antiga') + '<br>' +
+          (casa ? (dono ? '👑 Dona da casa' : '👥 Membro da casa de ' + esc(emailDe(x && x.dono) || '…')) : '⚠️ Ainda sem casa (não usou convite)') + '</div>' +
+          (s ? '<span class="selo ' + s.cls + '" style="margin-top:6px">' + esc(s.txt) + '</span>' : '') + '</div>' +
+          (casa ? '' : '<button class="btn perigo' + (UI.confirmar === 'ct:' + u ? ' on' : '') + '" data-ctrem="' + esc(u) + '">' + (UI.confirmar === 'ct:' + u ? 'Confirmar' : 'Remover') + '</button>') + '</div>';
       }).join('') : '<div class="vazio">Nenhuma conta encontrada.</div>') + '</div>';
   }
 
@@ -631,6 +636,8 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     var b = $('busca'); if (b) b.oninput = function () { UI.busca = b.value; var p = b.selectionStart; render(); var n = $('busca'); n.focus(); n.setSelectionRange(p, p); };
     qsa('[data-filtro]').forEach(function (x) { x.onclick = function () { UI.filtro = x.dataset.filtro; if (x.dataset.ir) { UI.aba = x.dataset.ir; qsa('#abas button').forEach(function (z) { z.classList.toggle('on', z.dataset.aba === UI.aba); }); } render(); }; });
     qsa('[data-casa]').forEach(function (x) { x.onclick = function () { abrirCasa(x.dataset.casa); }; });
+    qsa('[data-fconta]').forEach(function (x) { x.onclick = function () { UI.filtroConta = x.dataset.fconta; render(); }; });
+    qsa('[data-ctrem]').forEach(function (x) { x.onclick = function (ev) { ev.stopPropagation(); var u = x.dataset.ctrem; confirmarDepois('ct:' + u, function () { return db.ref('contas/' + u).remove().then(function () { toast('Conta removida da lista.'); }); }); }; });
     // convites
     var cc = $('cv-criar');
     if (cc) {

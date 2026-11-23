@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.5';
+var VERSAO = '2.35.6';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3695,7 +3695,9 @@ function iniciar() {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
     if (!u) { mostrarEntrada('card-auth'); return; }
-    db.ref('contas/' + u.uid).update({ email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP, v: VERSAO }).catch(function () {});
+    var cr = u.metadata && Date.parse(u.metadata.creationTime); // quando a conta foi criada (para o painel do admin)
+    var ct = { email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP, v: VERSAO }; if (cr && cr <= Date.now()) ct.criado = cr;
+    db.ref('contas/' + u.uid).update(ct).catch(function () { delete ct.criado; db.ref('contas/' + u.uid).update(ct).catch(function () {}); });
     carregarCasa();
   });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
