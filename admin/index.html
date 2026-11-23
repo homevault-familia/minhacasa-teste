@@ -92,7 +92,12 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
     <label class="lb" for="l-senha">Senha</label>
     <input class="in" id="l-senha" type="password" autocomplete="current-password">
     <div class="erro" id="l-erro"></div>
-    <button class="btn pri cheio" id="l-entrar">Entrar</button>
+    <button class="btn cheio" id="l-entrar">Entrar com e-mail e senha</button>
+  </div>
+  <div class="card">
+    <p class="nota" style="margin:0 0 10px">Administrador com conta Google: a verificação em duas etapas é a do próprio Google.</p>
+    <button class="btn pri cheio" id="l-google">Entrar com o Google</button>
+    <div class="erro" id="l-gerro"></div>
   </div>
 </div>
 
@@ -131,11 +136,12 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
 // 23/11/2026: SDK modular (a verificação em duas etapas por código, TOTP, só existe nele)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, getMultiFactorResolver, TotpMultiFactorGenerator, TotpSecret,
-  multiFactor, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  multiFactor, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, createUserWithEmailAndPassword,
+  GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref as dbRef, get as dbGet, set as dbSet, remove as dbRemove, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, getMultiFactorResolver, TotpMultiFactorGenerator, TotpSecret,
   multiFactor, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, createUserWithEmailAndPassword,
-  getDatabase, dbRef, dbGet, dbSet, dbRemove, serverTimestamp };
+  GoogleAuthProvider, signInWithPopup, getDatabase, dbRef, dbGet, dbSet, dbRemove, serverTimestamp };
 
 // ═══════════════════════════════════════════════════════════════════
 // MinhaCasa™ — painel do administrador (23/11/2026)
@@ -199,6 +205,19 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     }).then(function () { $('l-entrar').disabled = false; });
   };
   $('l-senha').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('l-entrar').click(); });
+  function provGoogle() { var p = new F.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
+  function erroGoogle(e) {
+    var c = (e && e.code) || String(e);
+    if (/popup-closed|cancelled-popup/.test(c)) return '';
+    if (/popup-blocked/.test(c)) return 'O navegador bloqueou a janela do Google. Permita janelas (pop-ups) para este site e tente de novo.';
+    if (/operation-not-allowed/.test(c)) return 'O login com Google ainda não foi ligado no Firebase (Authentication → Método de login → Google).';
+    if (/unauthorized-domain/.test(c)) return 'Este endereço não está autorizado no Firebase (Authentication → Configurações → Domínios autorizados).';
+    return 'Não foi possível entrar com o Google (' + c + ').';
+  }
+  $('l-google').onclick = function () {
+    $('l-gerro').textContent = '';
+    F.signInWithPopup(A, provGoogle()).catch(function (e) { $('l-gerro').textContent = erroGoogle(e); });
+  };
   $('p-sair').onclick = $('n-sair').onclick = function () { F.signOut(A); };
 
   // Pede o código de 6 dígitos do app autenticador. Devolve uma promessa com o código (ou rejeita se cancelar).
@@ -393,38 +412,35 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
 
   // ── segurança (23/11/2026): conta só para o admin, verificação em duas etapas, trocar e-mail e senha ──
   function eu() { return A.currentUser; }
-  function souDaLista() { return !!(D.admins && eu() && D.admins[eu().uid]); }
+  function viaGoogle() { return !!(eu() && (eu().providerData || []).some(function (p) { return p.providerId === 'google.com'; })); }
+  function souDaLista() { return !!(D.admins && eu() && D.admins[eu().uid] && viaGoogle()); }
   function temMFA() { return !!(eu() && F.multiFactor(eu()).enrolledFactors.length); }
   function telaSeg() {
     var u = eu(), lista = D.admins === null ? null : Object.keys(D.admins || {});
     var h = '<div class="card"><h2>🔐 Segurança do painel</h2><p class="nota">Você entrou como <b>' + esc(u.email) + '</b>. ' +
       (souDaLista() ? 'Esta conta é uma <b>conta de administrador</b>.' : 'Esta é a <b>conta da sua casa</b>, que hoje também é administradora.') + '</p>' +
       (lista === null ? '<p class="nota" style="color:#b45309">⚠️ Para usar esta parte, cole as regras novas do Firebase (regras-firebase-v2.36.json).</p>' : '') + '</div>';
-    // 1. criar a conta só para o admin
-    if (!souDaLista() && lista !== null) h += '<div class="card"><h2>1. Criar a conta só para o painel</h2>' +
-      '<p class="nota">Use um e-mail novo, que você não usa no app (ex.: um Gmail só para isso), e uma senha forte e diferente. Essa conta entra no painel; o seu e-mail de sempre continua no app.</p>' +
-      '<label class="lb" for="na-email">E-mail novo</label><input class="in" id="na-email" type="email" autocomplete="off">' +
-      '<label class="lb" for="na-senha">Senha (mínimo 12 caracteres)</label><input class="in" id="na-senha" type="password" autocomplete="new-password">' +
-      '<label class="lb" for="na-senha2">Repita a senha</label><input class="in" id="na-senha2" type="password" autocomplete="new-password">' +
-      '<div class="erro" id="na-erro"></div><button class="btn pri cheio" id="na-criar">Criar e autorizar como administrador</button>' +
-      '<p class="nota" style="margin-top:10px">Depois: toque em <b>Sair</b>, entre com o e-mail novo e volte aqui para ligar a verificação em duas etapas.</p></div>';
-    // 2. duas etapas
-    h += '<div class="card"><h2>' + (souDaLista() ? '1' : '2') + '. Verificação em duas etapas</h2>' +
-      (temMFA() ? '<p class="nota">✅ <b>Ligada</b> nesta conta. Toda entrada no painel pede o código de 6 dígitos do app autenticador.</p>'
-        : souDaLista() ? '<p class="nota">Depois de ligada, entrar no painel pede a senha <b>e</b> um código de 6 dígitos que muda a cada 30 segundos, gerado no seu iPhone (app <b>Senhas</b>, ou Google/Microsoft Authenticator). Quem descobrir a senha não entra sem o seu celular.</p><button class="btn pri cheio" id="mf-ligar">Ligar a verificação em duas etapas</button><div class="erro" id="mf-erro2"></div>'
-        : '<p class="nota">Ligue na <b>conta só para o painel</b> (passo 1), e não nesta: nesta conta o código passaria a ser pedido também no app.</p>') + '</div>';
+    // 1. autorizar uma conta Google como administradora (o Google cuida da verificação em duas etapas, sem custo)
+    if (!souDaLista() && lista !== null) h += '<div class="card"><h2>1. Autorizar sua conta Google como administradora</h2>' +
+      '<p class="nota">O painel passa a entrar com uma <b>conta Google</b>. A proteção em duas etapas é a do próprio Google (código no celular ou aviso "É você?"), sem custo e sem mudar nada no app.</p>' +
+      '<p class="nota"><b>Antes:</b> confira que a verificação em duas etapas está ligada nessa conta Google, em <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">myaccount.google.com → Segurança</a>.</p>' +
+      '<button class="btn pri cheio" id="ga-autorizar">Escolher a conta Google e autorizar</button><div class="erro" id="ga-erro"></div>' +
+      '<p class="nota" style="margin-top:10px">Depois: toque em <b>Sair</b> e entre com <b>Entrar com o Google</b>.</p></div>';
+    if (souDaLista()) h += '<div class="card"><h2>1. Verificação em duas etapas</h2><p class="nota">✅ Você entrou com o Google (<b>' + esc(eu().email) + '</b>). Toda entrada no painel passa pela segurança da sua conta Google, inclusive a verificação em duas etapas. ' +
+      '<a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener">Conferir se está ligada</a>.</p></div>';
     // 3. tirar o admin da conta da casa
     if (souDaLista() && lista !== null) h += '<div class="card"><h2>2. Tirar o acesso de admin da conta da casa</h2>' +
       (D.legadoOff ? '<p class="nota">✅ <b>Feito.</b> Só as contas de administrador entram no painel. A conta da sua casa é só do app.</p>'
-        : '<p class="nota">Hoje a conta da sua casa também entra no painel. Depois de ligar a verificação em duas etapas aqui, tire esse acesso: só esta conta (e as outras da lista abaixo) continuarão entrando.</p>' +
-          '<button class="btn perigo cheio' + (UI.confirmar === '_legado' ? ' on' : '') + '" id="lg-tirar"' + (temMFA() ? '' : ' disabled') + '>' + (UI.confirmar === '_legado' ? 'Toque de novo para confirmar' : 'Tirar o acesso de admin da conta da casa') + '</button>' +
-          (temMFA() ? '' : '<p class="nota" style="margin-top:6px">Primeiro ligue a verificação em duas etapas (passo 1).</p>')) + '</div>';
+        : '<p class="nota">Hoje a conta da sua casa também entra no painel. Tire esse acesso: só as contas Google da lista abaixo continuarão entrando. A conta da casa continua funcionando normalmente no app.</p>' +
+          '<button class="btn perigo cheio' + (UI.confirmar === '_legado' ? ' on' : '') + '" id="lg-tirar">' + (UI.confirmar === '_legado' ? 'Toque de novo para confirmar' : 'Tirar o acesso de admin da conta da casa') + '</button>' +
+          '') + '</div>';
     // lista de administradores
     if (lista && lista.length) h += '<div class="card"><h2>Contas de administrador</h2>' + lista.map(function (uid) {
       return '<div class="linha"><div class="info"><div class="t">' + esc(emailDe(uid) || (eu().uid === uid ? eu().email : uid.slice(0, 10) + '…')) + (eu().uid === uid ? ' (você)' : '') + '</div></div>' +
         (eu().uid === uid ? '' : '<button class="btn perigo' + (UI.confirmar === 'adm:' + uid ? ' on' : '') + '" data-admrem="' + esc(uid) + '">' + (UI.confirmar === 'adm:' + uid ? 'Confirmar' : 'Remover') + '</button>') + '</div>';
     }).join('') + '</div>';
-    // trocar e-mail e senha
+    // trocar e-mail e senha (só contas de e-mail e senha; a conta Google se troca no próprio Google)
+    if (viaGoogle()) return h + '<div class="card"><h2>E-mail e senha</h2><p class="nota">Esta é uma conta Google: e-mail, senha e verificação em duas etapas se trocam no <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google</a>.</p></div>';
     h += '<div class="card"><h2>Trocar e-mail ou senha desta conta</h2>' +
       '<label class="lb" for="mc-atual">Senha atual</label><input class="in" id="mc-atual" type="password" autocomplete="current-password">' +
       '<label class="lb" for="mc-email">E-mail novo (deixe em branco para não trocar)</label><input class="in" id="mc-email" type="email" autocomplete="off">' +
@@ -454,6 +470,17 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     return 'Não deu certo (' + c + ').';
   }
   function ligarSeg() {
+    var ga = $('ga-autorizar');
+    if (ga) ga.onclick = function () {
+      var er = $('ga-erro'); er.textContent = ''; ga.disabled = true;
+      // entra com o Google numa instância separada, só para pegar a conta; você continua no painel
+      var app2 = F.initializeApp(window.HOMEVAULT_FIREBASE, 'novoAdmin' + Date.now()), A2 = F.getAuth(app2);
+      F.signInWithPopup(A2, provGoogle()).then(function (c) {
+        var uid = c.user.uid, em = c.user.email; F.signOut(A2);
+        return db.ref('admins/' + uid).set(true).then(function () { return em; });
+      }).then(function (em) { toast('✅ ' + em + ' agora é administrador. Toque em Sair e entre com o Google.'); return carregar(); },
+        function (e) { ga.disabled = false; var m = erroGoogle(e); er.textContent = m || ''; if (!m && e && !/popup-closed|cancelled/.test(e.code || '')) er.textContent = msgErro(e); });
+    };
     var nc = $('na-criar');
     if (nc) nc.onclick = function () {
       var em = $('na-email').value.trim(), s1 = $('na-senha').value, s2 = $('na-senha2').value, er = $('na-erro'); er.textContent = '';
