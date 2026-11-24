@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.14';
+var VERSAO = '2.35.15';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -651,7 +651,7 @@ function baseDisponivel() { var lim = +S.cfg.limite || 0; return lim > 0 ? lim :
 
 // ═════════════════════════ telas ═════════════════════════
 function mostrarEntrada(card) {
-  ['card-semconfig', 'card-auth', 'card-casa', 'card-unlock'].forEach(function (id) { $(id).style.display = id === card ? '' : 'none'; });
+  ['card-semconfig', 'card-apres', 'card-auth', 'card-casa', 'card-unlock'].forEach(function (id) { $(id).style.display = id === card ? '' : 'none'; });
   prepararConvite(card);
   $('tela-login').classList.add('ativa');
   $('nav').style.display = 'none';
@@ -2915,13 +2915,18 @@ function somenteLeitura() {
 var _avisoSL = 0;
 function avisarSomenteLeitura() {
   if (Date.now() - _avisoSL < 4000) return; _avisoSL = Date.now();
-  mostrarToast('🔒', S.assin && S.assin.bloqueada ? T('Esta casa está suspensa: o app está só para consulta.') : T('A assinatura venceu: o app está só para consulta até renovar.'), 4500);
+  mostrarToast('🔒', S.assin && S.assin.bloqueada ? T('Esta casa está suspensa: o app está só para consulta.') : (S.assin && S.assin.plano === 'teste' ? T('O teste grátis acabou: o app está só para consulta até assinar.') : T('A assinatura venceu: o app está só para consulta até renovar.')), 4500);
 }
 function diasAte(ts) { return Math.ceil((ts - Date.now()) / 86400000); }
 function atualizarFaixa() { dCont('faixa');
   var el = $('faixa-app'); if (!el) return;
   var h = '', a = S.assin, av = S.aviso;
   if (a && a.bloqueada) h += '<div class="fx fx-ruim">🔒 ' + T('Esta casa está suspensa. Você pode consultar tudo, mas não pode lançar nem alterar.') + '</div>';
+  else if (a && a.plano === 'teste' && typeof a.vence === 'number') { // teste grátis (24/11/2026)
+    var dg = diasAte(a.vence);
+    if (a.vence <= Date.now()) h += '<div class="fx fx-ruim">🔒 ' + T('O teste grátis acabou. Você pode consultar tudo, mas para continuar lançando é preciso assinar o Minha Casa.') + '</div>';
+    else h += '<div class="fx ' + (dg <= 3 ? 'fx-alerta' : 'fx-info') + '">🎁 ' + (dg <= 1 ? T('Teste grátis: último dia.') : T('Teste grátis: faltam {n} dias.', { n: dg })) + '</div>';
+  }
   else if (a && typeof a.vence === 'number') {
     var d = diasAte(a.vence);
     if (a.vence <= Date.now()) h += '<div class="fx fx-ruim">🔒 ' + T('A assinatura venceu em {d}. Você pode consultar tudo, mas não pode lançar nem alterar até renovar.', { d: formatarData((function (d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); })(new Date(a.vence))) }) + '</div>';
@@ -3698,11 +3703,13 @@ function iniciar() {
   if (!cfg || !cfg.apiKey || /COLE_AQUI/.test(cfg.apiKey) || typeof firebase === 'undefined') { mostrarEntrada('card-semconfig'); return; }
   firebase.initializeApp(cfg);
   auth = firebase.auth(); db = firebase.database();
+  lerCadastroAberto();
   try { auth.languageCode = I18N.locale; } catch (e) {} // e-mails do Firebase (redefinir senha) no idioma do app
   auth.onAuthStateChanged(function (u) {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
-    if (!u) { mostrarEntrada('card-auth'); return; }
+    if (!u) { mostrarEntrada(deveApresentar() ? 'card-apres' : 'card-auth'); return; }
+    try { localStorage.setItem('mc_ja_entrou', '1'); } catch (e) {}
     var cr = u.metadata && Date.parse(u.metadata.creationTime); // quando a conta foi criada (para o painel do admin)
     var ct = { email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP, v: VERSAO }; if (cr && cr <= Date.now()) ct.criado = cr;
     db.ref('contas/' + u.uid).update(ct).catch(function () { delete ct.criado; db.ref('contas/' + u.uid).update(ct).catch(function () {}); });
@@ -3726,7 +3733,7 @@ function carregarCasa() {
   carregando();
   db.ref('usuarios/' + S.user.uid + '/casa').once('value').then(function (snap) {
     var casa = snap.val();
-    if (!casa) { mostrarEntrada('card-casa'); return; }
+    if (!casa) { lerCadastroAberto(); mostrarEntrada('card-casa'); return; }
     return db.ref('casas/' + casa).once('value').then(function (cs) {
       var m = cs.val();
       if (!m || !m.salt) throw { code: 'PERMISSION_DENIED' };
@@ -3884,13 +3891,34 @@ function esqueci() {
     function (e) { $('au-erro').textContent = msgAuth(e); });
 }
 function nomeUsuario() { return (S.user && (S.user.displayName || (S.user.email || '').split('@')[0])) || T('Eu'); }
+var DIAS_GRATIS = 14;
+// Lê se o cadastro com teste grátis está liberado (admin/cadastroAberto, leitura pública) e ajusta a apresentação e a tela de criar casa
+// Apresentação: só para quem chega pela primeira vez pelo navegador (não no app instalado, nem com convite ou link de pagamento)
+function deveApresentar() {
+  if (S.apresVista) return false;
+  var inst = false; try { inst = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) {}
+  if (inst || convitePendente() || (location.hash && location.hash.length > 1)) return false;
+  try { if (localStorage.getItem('mc_ja_entrou')) return false; } catch (e) {}
+  return true;
+}
+function sairApresentacao(criar) { S.apresVista = true; mostrarEntrada('card-auth'); setModoCriar(criar); }
+function lerCadastroAberto() {
+  return db.ref('admin/cadastroAberto').once('value').then(function (s) { S.cadastroAberto = s.val() === true; }, function () { S.cadastroAberto = false; })
+    .then(function () {
+      qsa('.so-aberto').forEach(function (e) { e.style.display = S.cadastroAberto ? '' : 'none'; });
+      qsa('.so-fechado').forEach(function (e) { e.style.display = S.cadastroAberto ? 'none' : ''; });
+    });
+}
 function criarCasa() {
   var nome = $('nc-nome').value.trim(), md = $('nc-moeda').value, s1 = $('nc-senha').value, s2 = $('nc-senha2').value, er = $('nc-erro');
   er.textContent = '';
   // Fase de testes (14/11/2026): só cria casa quem tem o código de acesso. A conferência é feita nas regras do Firebase (admin/codigoAcesso).
   var acesso = $('nc-acesso').value.trim().toUpperCase().replace(/\s+/g, '');
-  if (!acesso) { er.textContent = T('Digite o código de acesso. O Minha Casa está em fase de testes.'); return; }
-  if (!/^[A-Z0-9-]{6,40}$/.test(acesso)) { er.textContent = T('Código de acesso inválido. Confira o código que você recebeu.'); return; }
+  // Cadastro aberto (24/11/2026): sem código, a casa começa com 14 dias grátis (só se o painel /admin liberou)
+  var gratis = !acesso && S.cadastroAberto === true;
+  if (!acesso && !gratis) { er.textContent = T('Digite o código de acesso. O Minha Casa está em fase de testes.'); return; }
+  if (gratis) acesso = 'GRATIS-14D';
+  else if (acesso === 'GRATIS-14D' || !/^[A-Z0-9-]{6,40}$/.test(acesso)) { er.textContent = T('Código de acesso inválido. Confira o código que você recebeu.'); return; }
   if (!nome) { er.textContent = T('Dê um nome para a casa.'); return; }
   if (s1.length < 8) { er.textContent = T('A senha da casa precisa ter pelo menos 8 caracteres.'); return; }
   if (s1 !== s2) { er.textContent = T('As senhas da casa não conferem.'); return; }
@@ -3903,6 +3931,11 @@ function criarCasa() {
     var negado = function (e) { return e && /permission/i.test(e.code || e.message || ''); };
     // 1º convite com nome (grava junto quem usou; tudo ou nada) · 2º código geral
     var upd = {}; upd['casas/' + casa] = nova;
+    if (gratis) {
+      upd['assinaturas/' + casa] = { plano: 'teste', vence: Date.now() + DIAS_GRATIS * 86400000, atualizado: firebase.database.ServerValue.TIMESTAMP };
+      upd['testeUsado/' + S.user.uid] = true;
+      return db.ref().update(upd).catch(function (e) { if (negado(e)) throw { gratisNegado: true }; throw e; });
+    }
     upd['convites/' + acesso + '/usadoPor'] = S.user.uid; upd['convites/' + acesso + '/usadoEm'] = firebase.database.ServerValue.TIMESTAMP; upd['convites/' + acesso + '/email'] = S.user.email || '';
     return db.ref().update(upd).catch(function (e) {
       if (!negado(e)) throw e;
@@ -3912,7 +3945,7 @@ function criarCasa() {
     return cifrar(chave, { v: 2, nome: nome, moeda: md, cats: catsPadrao(), limite: 0, alertaPct: 80, periodo: periodoMesAtual(), orcParc: 0 });
   }).then(function (c) { return db.ref('casas/' + casa + '/dados/config').set(c); })
     .then(function () { return entrouNaCasa(casa, chave, true); })
-    .catch(function (e) { er.textContent = e && e.codigoAcesso ? T('Código de acesso inválido. Confira o código que você recebeu.') : T('Não foi possível criar a casa (') + ((e && e.code) || e) + ').'; })
+    .catch(function (e) { er.textContent = e && e.gratisNegado ? T('Não foi possível começar o teste grátis. Cada conta tem direito a um teste grátis. Se você recebeu um código de acesso, digite no campo acima.') : e && e.codigoAcesso ? T('Código de acesso inválido. Confira o código que você recebeu.') : T('Não foi possível criar a casa (') + ((e && e.code) || e) + ').'; })
     .then(function () { btn.disabled = false; btn.textContent = T('Criar casa'); });
 }
 function lerConvite(txt) {
@@ -3982,6 +4015,9 @@ function sair() {
 // ═════════════════════════ eventos ═════════════════════════
 function ligarEventos() {
   ligarBotaoRelatorioCompleto();
+  $('ap-comecar').onclick = function () { sairApresentacao(true); };
+  $('ap-criar').onclick = function () { sairApresentacao(true); };
+  $('ap-entrar').onclick = function () { sairApresentacao(false); };
   $('tab-entrar').onclick = function () { setModoCriar(false); };
   $('tab-criar').onclick = function () { setModoCriar(true); };
   $('au-btn').onclick = enviarAuth;
@@ -4085,6 +4121,6 @@ function ligarEventos() {
   $('aj-bloquear').onclick = bloquear;
 }
 
-if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto, mostrarNovidades: mostrarNovidades, aplicarPagamento: aplicarPagamento };
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__HV = { gravarLanc: gravarLanc, analisarSemana: analisarSemana, S: S, lerValor: lerValor, formatar: formatar, lancamentos: lancamentos, totaisPeriodo: totaisPeriodo, abrirCasa: abrirCasa, irPara: irPara, abrirRelatorioCompleto: abrirRelatorioCompleto, mostrarNovidades: mostrarNovidades, aplicarPagamento: aplicarPagamento, atualizarFaixa: atualizarFaixa };
 iniciar();
 })();

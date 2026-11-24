@@ -15,6 +15,11 @@
       "casaAdmin": {
         ".validate": "newData.isString() && newData.val().length <= 64"
       },
+      "cadastroAberto": {
+        ".read": "true",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com'))",
+        ".validate": "newData.isBoolean()"
+      },
       "$outro": {
         ".validate": false
       }
@@ -85,7 +90,7 @@
       ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
       "$casa": {
         ".read": "auth != null && root.child('casas').child($casa).child('membros').child(auth.uid).exists()",
-        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid)))) || (auth != null && !data.exists() && root.child('admin').child('cadastroAberto').val() === true && !root.child('casas').child($casa).exists() && newData.parent().parent().child('casas').child($casa).child('dono').val() === auth.uid && newData.parent().parent().child('casas').child($casa).child('acesso').val() === 'GRATIS-14D' && newData.child('plano').val() === 'teste' && newData.child('vence').val() > now && newData.child('vence').val() <= now + 1296000000 && !newData.child('bloqueada').exists() && !newData.child('obs').exists())",
         ".validate": "newData.hasChildren(['plano', 'atualizado'])",
         "plano": {
           ".validate": "newData.isString() && newData.val().matches(/^(teste|mensal|anual|cortesia)$/)"
@@ -140,7 +145,7 @@
     "casas": {
       "$casa": {
         ".read": "auth != null && data.child('membros').child(auth.uid).exists()",
-        ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && newData.child('acesso').isString() && newData.child('acesso').val().matches(/^[A-Z0-9-]{6,40}$/) && ((root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()) || (root.child('convites').child(newData.child('acesso').val()).child('nome').exists() && !root.child('convites').child(newData.child('acesso').val()).child('usadoPor').exists() && root.child('convites').child(newData.child('acesso').val()).child('cancelado').val() !== true && newData.parent().parent().child('convites').child(newData.child('acesso').val()).child('usadoPor').val() === auth.uid))",
+        ".write": "auth != null && !data.exists() && newData.child('dono').val() === auth.uid && newData.child('membros').child(auth.uid).val() === newData.child('convite').val() && newData.child('acesso').isString() && newData.child('acesso').val().matches(/^[A-Z0-9-]{6,40}$/) && ((newData.child('acesso').val() === 'GRATIS-14D' && root.child('admin').child('cadastroAberto').val() === true && !root.child('testeUsado').child(auth.uid).exists() && newData.parent().parent().child('testeUsado').child(auth.uid).val() === true && newData.parent().parent().child('assinaturas').child($casa).child('plano').val() === 'teste' && newData.parent().parent().child('assinaturas').child($casa).child('vence').val() <= now + 1296000000) || ((root.child('admin').child('codigoAcesso').exists() && newData.child('acesso').val() === root.child('admin').child('codigoAcesso').val()) || (root.child('convites').child(newData.child('acesso').val()).child('nome').exists() && !root.child('convites').child(newData.child('acesso').val()).child('usadoPor').exists() && root.child('convites').child(newData.child('acesso').val()).child('cancelado').val() !== true && newData.parent().parent().child('convites').child(newData.child('acesso').val()).child('usadoPor').val() === auth.uid)))",
         "dono": {
           ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
           ".validate": "newData.isString()"
@@ -230,6 +235,13 @@
         "$outro": {
           ".validate": false
         }
+      }
+    },
+    "testeUsado": {
+      ".read": "auth != null && ((root.child('admins').child(auth.uid).val() === true && (auth.provider === 'google' || auth.token.firebase.sign_in_provider === 'google.com')) || (root.child('admin').child('legadoOff').val() !== true && (root.child('casas').child('rq5rebb3st67qyz4wuz9').child('dono').val() === auth.uid || (root.child('admin').child('casaAdmin').isString() && root.child('casas').child(root.child('admin').child('casaAdmin').val()).child('dono').val() === auth.uid))))",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && !data.exists()",
+        ".validate": "newData.val() === true"
       }
     }
   }

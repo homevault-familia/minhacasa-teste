@@ -165,7 +165,7 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
   var qsa = function (s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var DIA = 86400000;
-  var PLANOS = { teste: 'Período de teste', mensal: 'Mensal', anual: 'Anual', cortesia: 'Cortesia' };
+  var PLANOS = { teste: 'Teste grátis', mensal: 'Mensal', anual: 'Anual', cortesia: 'Cortesia' };
 
   var F = window.__FB;
   var app = F.initializeApp(window.HOMEVAULT_FIREBASE), A = F.getAuth(app), DB = F.getDatabase(app);
@@ -321,7 +321,8 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
   function ler(ref) { return db.ref(ref).once().then(function (s) { return s.val() || {}; }, function (e) { console.warn(ref, e); return null; }); }
   function carregar() {
     $('conteudo').innerHTML = '<div class="carregando">Carregando…</div>';
-    return Promise.all([ler('convites'), ler('contas'), ler('usuarios'), ler('assinaturas'), ler('aviso'), ler('admin/codigoAcesso'), ler('admins'), db.ref('admin/legadoOff').once().then(function (s) { return s.val(); }, function () { return null; })]).then(function (r) {
+    return Promise.all([ler('convites'), ler('contas'), ler('usuarios'), ler('assinaturas'), ler('aviso'), ler('admin/codigoAcesso'), ler('admins'), db.ref('admin/legadoOff').once().then(function (s) { return s.val(); }, function () { return null; }), db.ref('admin/cadastroAberto').once().then(function (s) { return s.val() === true; }, function () { return null; })]).then(function (r) {
+      D.cadAberto = r[8];
       D.admins = r[6]; D.legadoOff = r[7] === true;
       D.convites = r[0] || {}; D.contas = r[1] || {}; D.usuarios = r[2]; D.assin = r[3] || {}; D.aviso = r[4] && r[4].texto ? r[4] : null;
       D.semRegras = r[2] === null || r[3] === null;
@@ -383,10 +384,14 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
     var vers = {}; uids.forEach(function (u) { var v = D.contas[u].v || 'antiga'; vers[v] = (vers[v] || 0) + 1; });
     var maxV = Math.max.apply(null, Object.keys(vers).map(function (k) { return vers[k]; }).concat([1]));
     var k = function (n, t, c) { return '<div class="kpi ' + (c || '') + '"><b>' + n + '</b><span>' + t + '</span></div>'; };
-    return '<div class="kpis" style="margin-bottom:14px">' +
+    var cad = '<div class="card"><h2>🎁 Cadastro aberto · 14 dias grátis</h2>' + (D.cadAberto === null
+        ? '<p class="nota" style="color:#b45309">⚠️ Para usar, cole as regras novas do Firebase (regras-firebase-v2.38.json).</p>'
+        : D.cadAberto ? '<p class="nota">✅ <b>Ligado.</b> Qualquer pessoa pode criar conta e casa sem código. A casa começa com <b>14 dias grátis</b>; depois fica só para consulta até você ativar um plano. Cada conta tem direito a um teste.</p><button class="btn perigo cheio' + (UI.confirmar === '_cad' ? ' on' : '') + '" id="cad-desligar">' + (UI.confirmar === '_cad' ? 'Toque de novo para confirmar' : 'Desligar (volta a exigir código ou convite)') + '</button>'
+        : '<p class="nota">Desligado: só cria casa quem tem código de acesso ou convite. Ligado: qualquer pessoa que chegar pela divulgação cria a casa sozinha, com <b>14 dias grátis</b>.</p><button class="btn pri cheio' + (UI.confirmar === '_cad' ? ' on' : '') + '" id="cad-ligar">' + (UI.confirmar === '_cad' ? 'Toque de novo para confirmar' : 'Ligar o cadastro aberto') + '</button>') + '</div>';
+    return cad + '<div class="kpis" style="margin-bottom:14px">' +
       k(ids.length, 'Casas') + k(uids.length, 'Contas') + k(ativos7, 'Ativas nos últimos 7 dias', 'azul') + k(ativos30, 'Ativas em 30 dias') + k(novas30, 'Casas novas em 30 dias', 'verde') + k(pend, 'Convites não usados', pend ? 'amarelo' : '') +
       '</div><div class="card"><h2>Assinaturas</h2><div class="kpis">' +
-      k(cont.pago, 'Pagantes (mensal/anual)', 'verde') + k(cont.teste, 'Em teste') + k(cont.cortesia, 'Cortesia') + k(cont.livre, 'Fase de testes (livre)') +
+      k(cont.pago, 'Pagantes (mensal/anual)', 'verde') + k(cont.teste, 'Em teste grátis') + k(cont.cortesia, 'Cortesia') + k(cont.livre, 'Fase de testes (livre)') +
       k(cont.vencendo, 'Vencem em 7 dias', cont.vencendo ? 'amarelo' : '') + k(cont.vencida, 'Vencidas', cont.vencida ? 'vermelho' : '') + k(cont.suspensa, 'Suspensas', cont.suspensa ? 'vermelho' : '') +
       '</div>' + (cont.vencendo + cont.vencida ? '<button class="btn" style="margin-top:12px" data-ir="casas" data-filtro="atencao">Ver as que precisam de atenção</button>' : '') + '</div>' +
       '<div class="card"><h2>Versão do app em uso</h2><p class="nota">Conta cada pessoa pela última vez que abriu o app. "antiga" = ainda não abriu a versão que informa isso.</p>' +
@@ -401,14 +406,18 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       if (UI.filtro === 'atencao' && ['vencendo', 'vencida', 'suspensa'].indexOf(c.s.k) < 0) return false;
       if (UI.filtro === 'pagas' && ['mensal', 'anual'].indexOf(c.s.k) < 0) return false;
       if (UI.filtro === 'livres' && c.s.k !== 'livre') return false;
+      if (UI.filtro === 'teste' && !(D.assin[c.id] && D.assin[c.id].plano === 'teste')) return false;
       if (q && (c.dono + ' ' + c.emails.join(' ') + ' ' + c.id + ' ' + c.x.membros.map(nomeDe).join(' ')).toLowerCase().indexOf(q) < 0) return false;
       return true;
-    }).sort(function (a, b) { return b.ult - a.ult; });
+    }).sort(function (a, b) {
+      if (UI.filtro === 'atencao' || UI.filtro === 'teste') { var va = (D.assin[a.id] || {}).vence || 0, vb = (D.assin[b.id] || {}).vence || 0; return va - vb; } // quem vence primeiro, primeiro
+      return b.ult - a.ult;
+    });
     var f = function (k, t) { return '<button data-filtro="' + k + '" class="' + (UI.filtro === k ? 'on' : '') + '">' + t + '</button>'; };
     return '<div class="card"><h2>🏠 Casas e assinaturas</h2>' +
       '<p class="nota">Toque numa casa para definir o plano, o vencimento ou suspender. Casa <b>vencida</b> ou <b>suspensa</b> fica <b>só para consulta</b>: a família vê tudo, mas não lança nem altera. Casa sem assinatura definida está na <b>fase de testes (livre)</b>.</p>' +
       '<input class="in busca" id="busca" placeholder="Buscar por e-mail, nome ou código da casa" value="' + esc(UI.busca) + '">' +
-      '<div class="filtros">' + f('todas', 'Todas') + f('atencao', '⚠️ Atenção') + f('pagas', 'Pagantes') + f('livres', 'Livres') + '</div>' +
+      '<div class="filtros">' + f('todas', 'Todas') + f('atencao', '⚠️ Vence em 7 dias ou vencidas') + f('teste', '🎁 Em teste grátis') + f('pagas', 'Pagantes') + f('livres', 'Livres') + '</div>' +
       (lista.length ? lista.map(function (c) {
         var nomes = c.x.membros.map(function (u) { var n = nomeDe(u), e = emailDe(u); return esc(n ? n + ' (' + e + ')' : e || u.slice(0, 8)); });
         return '<div class="linha" data-casa="' + esc(c.id) + '" style="cursor:pointer"><div class="info"><div class="t">' + esc(c.dono || nomes[0] || c.id) + '</div><span class="selo ' + c.s.cls + '">' + esc(c.s.txt) + '</span>' +
@@ -634,6 +643,9 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
   }
   function ligar() {
     if (UI.aba === 'seg') ligarSeg();
+    var cl = $('cad-ligar'), cd = $('cad-desligar');
+    if (cl) cl.onclick = function () { confirmarDepois('_cad', function () { return db.ref('admin/cadastroAberto').set(true).then(function () { toast('🎁 Cadastro aberto ligado: casas novas ganham 14 dias grátis.'); }); }); };
+    if (cd) cd.onclick = function () { confirmarDepois('_cad', function () { return db.ref('admin/cadastroAberto').set(false).then(function () { toast('Cadastro aberto desligado.'); }); }); };
     var b = $('busca'); if (b) b.oninput = function () { UI.busca = b.value; var p = b.selectionStart; render(); var n = $('busca'); n.focus(); n.setSelectionRange(p, p); };
     qsa('[data-filtro]').forEach(function (x) { x.onclick = function () { UI.filtro = x.dataset.filtro; if (x.dataset.ir) { UI.aba = x.dataset.ir; qsa('#abas button').forEach(function (z) { z.classList.toggle('on', z.dataset.aba === UI.aba); }); } render(); }; });
     qsa('[data-casa]').forEach(function (x) { x.onclick = function () { abrirCasa(x.dataset.casa); }; });
@@ -685,6 +697,10 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       '<div class="s" style="font-size:12.5px;color:#64748b">Código interno <span class="mono">' + esc(id) + '</span> · criada ' + dataBR(x.criada) + '</div>' +
       '<div style="margin:10px 0">' + pessoas + '</div>' +
       '<div><span class="selo ' + s.cls + '">' + esc(s.txt) + '</span></div>' +
+      '<div class="pago-rap"><div class="lb" style="margin-top:12px">Recebeu o pagamento? Um toque já salva:</div>' +
+      '<div class="grupo-btn"><button class="btn pri" data-pagou="mensal" style="flex:1">✅ Recebi o mensal<br><small>+1 mês</small></button><button class="btn pri" data-pagou="anual" style="flex:1">✅ Recebi o anual<br><small>+1 ano</small></button></div>' +
+      '<p class="nota" style="margin-top:6px">Soma a partir do vencimento atual. Se já venceu, está em teste ou é nova, conta de hoje e dá <b>3 dias de folga</b>.</p></div>' +
+      '<details style="margin-top:6px"><summary class="lb" style="cursor:pointer">Ajustar à mão</summary>' +
       '<label class="lb" for="as-plano">Plano</label><select class="in" id="as-plano">' +
       Object.keys(PLANOS).map(function (k) { return '<option value="' + k + '"' + (a.plano === k ? ' selected' : '') + '>' + PLANOS[k] + '</option>'; }).join('') + '</select>' +
       '<label class="lb" for="as-vence">Vence em</label><input class="in" type="date" id="as-vence" value="' + (typeof a.vence === 'number' ? isoDe(a.vence) : '') + '">' +
@@ -692,8 +708,8 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       '<p class="nota" style="margin-top:8px">Os botões somam a partir do vencimento atual (ou de hoje, se já venceu). Vence no fim do dia escolhido.</p>' +
       '<label class="lb"><input type="checkbox" id="as-bloq"' + (a.bloqueada ? ' checked' : '') + ' style="width:18px;height:18px;vertical-align:middle;margin-right:6px">Suspender (só consulta)</label>' +
       '<label class="lb" for="as-obs">Observação (só você vê)</label><input class="in" id="as-obs" maxlength="300" value="' + esc(a.obs || '') + '" placeholder="Ex.: pagou por PIX em 23/11">' +
-      '<div class="erro" id="as-erro"></div>' +
-      '<div class="grupo-btn"><button class="btn pri" id="as-salvar" style="flex:1">Salvar</button><button class="btn" id="as-fechar">Fechar</button></div>' +
+      '<button class="btn pri cheio" id="as-salvar" style="margin-top:10px">Salvar ajuste</button></details><div class="erro" id="as-erro"></div>' +
+      '<button class="btn cheio" id="as-fechar" style="margin-top:10px">Fechar</button>' +
       (D.assin[id] ? '<button class="btn perigo cheio" id="as-remover" style="margin-top:10px">Tirar assinatura (volta para fase de testes livre)</button>' : '');
     $('fundo').classList.add('on');
     $('as-fechar').onclick = fecharFolha;
@@ -702,6 +718,17 @@ window.__FB = { initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPa
       if (!n) { v.value = ''; return; }
       var base = v.value ? fimDoDia(v.value) : 0; if (base < Date.now()) base = Date.now();
       v.value = isoDe(base + n * DIA);
+    }; });
+    qsa('[data-pagou]').forEach(function (b) { b.onclick = function () {
+      var plano = b.dataset.pagou, agora = Date.now(), base, folga = 0;
+      if (typeof a.vence === 'number' && a.vence > agora && (a.plano === 'mensal' || a.plano === 'anual')) base = a.vence; // renovação em dia: soma no vencimento
+      else { base = agora; folga = 3 * DIA; } // nova, em teste ou vencida: conta de hoje, com folga
+      var d = new Date(base); if (plano === 'anual') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+      var reg = { plano: plano, vence: fimDoDia(isoDe(d.getTime() + folga)), atualizado: TS };
+      if (a.obs) reg.obs = a.obs;
+      qsa('[data-pagou]').forEach(function (z) { z.disabled = true; });
+      db.ref('assinaturas/' + id).set(reg).then(function () { fecharFolha(); toast('✅ ' + (plano === 'anual' ? 'Anual' : 'Mensal') + ' ativado até ' + dataBR(reg.vence) + '.'); return carregar(); },
+        function (e) { $('as-erro').textContent = 'Não foi possível salvar: ' + erroTxt(e); qsa('[data-pagou]').forEach(function (z) { z.disabled = false; }); });
     }; });
     $('as-salvar').onclick = function () {
       var er = $('as-erro'), plano = $('as-plano').value, ven = $('as-vence').value, obs = $('as-obs').value.trim(); er.textContent = '';
