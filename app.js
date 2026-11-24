@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.16';
+var VERSAO = '2.35.17';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -808,26 +808,58 @@ function renderizarBarras(TT, p) {
   function st(rot, val, cor) { return '<div class="gd-st"><div class="gd-st-rot">' + rot + '</div><div class="gd-st-val"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + val + '</div></div>'; }
   var st1 = dentro ? st(T('Hoje'), fmtY(Math.max(0, pd[hj] || 0))) : st(T('Maior dia'), iMaior >= 0 ? fmtY(maior) : '—');
   var st3 = lim > 0 ? (dentro ? st(T('Pode gastar/dia'), fmtY(Math.max(0, pode)), pode > 0 ? '#16a34a' : '#dc2626') : st(T('Orçamento/dia'), fmtY(porDiaOrc))) : st(T('Dias c/ gasto'), pass.filter(function (x) { return (pd[x] || 0) > 0; }).length);
-  var W = 320, BASE = 112, TOPO = 16, n = dias.length, bw = W / n, gap = Math.min(3, bw * 0.28);
-  var mx = Math.max(maior, ref) * 1.08 || 1;
-  var yRef = BASE - ref / mx * (BASE - TOPO);
+  // Barras empilhadas por categoria (24/11/2026): as 5 categorias que mais gastaram no período ganham a cor delas; o resto vira "Outras"
+  var somaCat = {}, OUTRAS = '_outras';
+  Object.keys(pdc).forEach(function (k) { if (k === PARC) return; var t = 0; dias.forEach(function (x) { if (x <= hj) t += Math.max(0, pdc[k][x] || 0); }); if (t > 0) somaCat[k] = t; });
+  var ordem = Object.keys(somaCat).sort(function (a, b) { return somaCat[b] - somaCat[a]; });
+  var top = ordem.slice(0, 5), temOutras = ordem.length > 5;
+  function corDe(k, i) { if (k === OUTRAS) return '#94a3b8'; var c = catPorId(k); return (c && c.cor) || PALETA[i % PALETA.length]; }
+  function nomeDe(k) { if (k === OUTRAS) return T('Outras'); var c = catPorId(k); return c ? nomeVis(c) : k; }
+  var series = top.concat(temOutras ? [OUTRAS] : []), cores = {};
+  series.forEach(function (k, i) { cores[k] = corDe(k, i); });
+  function partes(x) {
+    var r = [], outras = 0;
+    ordem.forEach(function (k) { var v = Math.max(0, pdc[k][x] || 0); if (!v) return; if (top.indexOf(k) >= 0) r.push({ k: k, v: v }); else outras += v; });
+    r.sort(function (a, b) { return top.indexOf(a.k) - top.indexOf(b.k); });
+    if (outras > 0) r.push({ k: OUTRAS, v: outras });
+    return r;
+  }
+  var W = 320, L = 26, BASE = 118, TOPO = 18, n = dias.length, bw = (W - L) / n, gap = Math.min(3, bw * 0.3);
+  var alturas = dias.map(function (x) { return x > hj ? 0 : partes(x).reduce(function (s, p) { return s + p.v; }, 0); });
+  var mxDado = Math.max.apply(null, alturas.concat([ref, 1]));
+  function passo(v) { var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+  var pso = passo(mxDado / 3), mx = Math.ceil(mxDado * 1.05 / pso) * pso;
+  function yv(v) { return BASE - v / mx * (BASE - TOPO); }
+  var grade = '';
+  for (var gv = pso; gv <= mx + 0.001; gv += pso) grade += '<line x1="' + L + '" y1="' + yv(gv).toFixed(1) + '" x2="' + W + '" y2="' + yv(gv).toFixed(1) + '" stroke="#eef0f3" stroke-width="1"/><text x="' + (L - 4) + '" y="' + (yv(gv) + 3).toFixed(1) + '" text-anchor="end" class="gd-y">' + (gv >= 1000 ? (+(gv / 1000).toFixed(1)) + 'k' : Math.round(gv)) + '</text>';
+  var yRef = yv(ref);
+  var iMx = alturas.indexOf(Math.max.apply(null, alturas)), iH = dentro ? dias.indexOf(hj) : -1;
+  var rotulos = {}; if (alturas[iMx] > 0) rotulos[iMx] = 1; if (iH >= 0 && alturas[iH] > 0 && Math.abs(iH - iMx) > 3) rotulos[iH] = 1;
   var barras = dias.map(function (x, i) {
-    var xx = (i * bw + gap / 2).toFixed(1), ww = Math.max(1, bw - gap).toFixed(1), v = vals[i], h, cor;
-    if (x > hj || v <= 0) { h = 2; cor = x > hj ? '#e5e7eb' : x === hj ? '#1d4ed8' : '#cbd5e1'; }
-    else { h = Math.max(3, v / mx * (BASE - TOPO)); cor = x === hj ? '#1d4ed8' : ref > 0 && v > ref ? '#f59e0b' : '#93c5fd'; }
-    return '<rect class="gd-b" data-i="' + i + '" x="' + xx + '" y="' + (BASE - h).toFixed(1) + '" width="' + ww + '" height="' + h.toFixed(1) + '" rx="' + Math.min(3, ww / 3).toFixed(1) + '" fill="' + cor + '"/>';
+    var x0 = L + i * bw + gap / 2, ww = Math.max(1, bw - gap), xs = x0.toFixed(1), ws = ww.toFixed(1);
+    if (x > hj || alturas[i] <= 0) return '<rect class="gd-b" data-i="' + i + '" x="' + xs + '" y="' + (BASE - 2) + '" width="' + ws + '" height="2" rx="1" fill="' + (x > hj ? '#eceef1' : '#cbd5e1') + '"/>';
+    var y = BASE, h = '', ps = partes(x), sep = ww >= 5 ? 1.2 : 0.8;
+    ps.forEach(function (p, j) {
+      var hh = Math.max(1, p.v / mx * (BASE - TOPO)), topoSeg = j === ps.length - 1;
+      var hDesenho = Math.max(0.8, hh - (topoSeg ? 0 : sep));
+      h += '<rect x="' + xs + '" y="' + (y - hh).toFixed(1) + '" width="' + ws + '" height="' + hDesenho.toFixed(1) + '"' + (topoSeg ? ' rx="' + Math.min(2.5, ww / 3).toFixed(1) + '"' : '') + ' fill="' + cores[p.k] + '"/>';
+      y -= hh;
+    });
+    if (rotulos[i]) h += '<text x="' + (x0 + ww / 2).toFixed(1) + '" y="' + Math.max(9, y - 4).toFixed(1) + '" text-anchor="' + (i < 2 ? 'start' : i > n - 3 ? 'end' : 'middle') + '" class="gd-tot' + (i === iH ? ' gd-tot-hoje' : '') + '">' + fmtY(alturas[i]) + '</text>';
+    return '<g class="gd-b" data-i="' + i + '">' + h + '</g>';
   }).join('');
-  var toque = dias.map(function (x, i) { return x > hj ? '' : '<rect data-i="' + i + '" x="' + (i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (BASE + 4) + '" fill="transparent"/>'; }).join('');
-  function rotX(i, anc, cls) { return '<text x="' + (anc === 'start' ? 0 : anc === 'end' ? W : (i + 0.5) * bw).toFixed(1) + '" y="128" text-anchor="' + anc + '" class="gd-x' + (cls || '') + '">' + (+dias[i].slice(8, 10)) + '</text>'; }
-  var iH = dentro ? dias.indexOf(hj) : -1, perto = Math.max(3, Math.round(n / 10));
+  var toque = dias.map(function (x, i) { return x > hj ? '' : '<rect data-i="' + i + '" x="' + (L + i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (BASE + 4) + '" fill="transparent"/>'; }).join('');
+  function rotX(i, anc, cls) { return '<text x="' + (anc === 'start' ? L : anc === 'end' ? W : L + (i + 0.5) * bw).toFixed(1) + '" y="132" text-anchor="' + anc + '" class="gd-x' + (cls || '') + '">' + (+dias[i].slice(8, 10)) + '</text>'; }
+  var perto = Math.max(3, Math.round(n / 10));
   var eixo = (iH < 0 || iH > perto ? rotX(0, 'start') : '') + (iH < 0 || n - 1 - iH > perto ? rotX(n - 1, 'end') : '') + (iH >= 0 ? rotX(iH, iH === 0 ? 'start' : iH === n - 1 ? 'end' : 'middle', ' gd-x-hoje') : '');
-  var linha = ref > 0 ? '<line x1="0" y1="' + yRef.toFixed(1) + '" x2="' + W + '" y2="' + yRef.toFixed(1) + '" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+  var linha = ref > 0 ? '<line x1="' + L + '" y1="' + yRef.toFixed(1) + '" x2="' + W + '" y2="' + yRef.toFixed(1) + '" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4 3"/>' +
     '<text x="' + W + '" y="' + Math.max(10, yRef - 4).toFixed(1) + '" text-anchor="end" class="gd-ref">' + fmtY(ref) + T('/dia') + '</text>' : '';
+  var legenda = series.length ? '<div class="gd-leg">' + series.map(function (k) { return '<span><i style="background:' + cores[k] + '"></i>' + esc(nomeDe(k)) + '</span>'; }).join('') + '</div>' : '';
   if ($('gd-tit')) $('gd-tit').innerHTML = T('Gastos por Dia no Período') + aj('gastos-dia');
-  el.innerHTML = '<div class="gd-sts">' + st1 + st(T('Média por dia'), fmtY(media)) + st3 + '</div>' +
+  el.innerHTML = '<div class="gd-sts">' + st1 + st(T('Média por dia'), fmtY(media)) + st3 + '</div>' + legenda +
     '<div class="gd-tip" id="gd-tip">' + T('Toque numa barra para ver o dia') + '</div>' +
-    '<svg class="gd-svg" viewBox="0 0 ' + W + ' 134" width="100%" role="img" aria-label="' + T('Gastos por Dia no Período') + '">' +
-    '<line x1="0" y1="' + BASE + '" x2="' + W + '" y2="' + BASE + '" stroke="#e5e7eb" stroke-width="1"/>' + barras + linha + eixo + toque + '</svg>';
+    '<svg class="gd-svg" viewBox="0 0 ' + W + ' 138" width="100%" role="img" aria-label="' + T('Gastos por Dia no Período') + '">' + grade +
+    '<line x1="' + L + '" y1="' + BASE + '" x2="' + W + '" y2="' + BASE + '" stroke="#d1d5db" stroke-width="1"/>' + barras + linha + eixo + toque + '</svg>';
   var dica = T('Toque numa barra para ver o dia'), sel = -1;
   function normal() {
     sel = -1; el.querySelectorAll('.gd-b').forEach(function (b) { b.style.opacity = ''; });
@@ -841,8 +873,8 @@ function renderizarBarras(TT, p) {
     if (i === null || +i === sel) { normal(); return; } // fora das barras ou a mesma barra de novo: volta ao gráfico completo
     i = +i; sel = i; var x = dias[i], v = Math.max(0, pd[x] || 0);
     el.querySelectorAll('.gd-b').forEach(function (b) { b.style.opacity = +b.getAttribute('data-i') === i ? '1' : '.35'; });
-    var cs = Object.keys(pdc).map(function (k) { return { k: k, v: pdc[k][x] || 0 }; }).filter(function (c) { return c.v > 0; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 3);
-    var txt = '<b>' + diaMes(x) + ' · ' + formatar(v) + '</b>' + (v > 0 ? cs.map(function (c) { var cat = catPorId(c.k); return ' · ' + esc(cat ? nomeVis(cat) : c.k) + ' ' + formatar(c.v); }).join('') : ' · ' + T('sem gastos'));
+    var ps = partes(x).slice().reverse();
+    var txt = '<b>' + diaMes(x) + ' · ' + formatar(v) + '</b>' + (v > 0 ? ps.map(function (p) { return '<br><i class="gd-pt" style="background:' + cores[p.k] + '"></i>' + esc(nomeDe(p.k)) + ' ' + formatar(p.v); }).join('') : ' · ' + T('sem gastos'));
     $('gd-tip').innerHTML = '<span>' + txt + '</span><button type="button" class="gd-fechar" aria-label="' + esc(T('Ver o período todo')) + '">✕</button>'; $('gd-tip').classList.add('ativo');
   };
 }
@@ -3302,7 +3334,7 @@ function mostrarConferencia() {
 // ═════════════════ AJUDA (?) E NOVIDADES (20/11/2026) ═════════════════
 var AJUDA = {
   'proj-padrao': [T('Padrão/dia'), T('Quanto você ainda pode gastar <b>por dia</b>, de hoje até o fim do período, para fechar dentro do limite.<br><br>Conta: (limite − o que já gastou) ÷ dias que faltam.<br><br>Se já passou do limite, fica em zero.')],
-  'gastos-dia': [T('Gastos por dia'), T('Cada barra é o quanto a casa gastou <b>naquele dia</b>.<br><br><b style="color:#1d4ed8">Azul forte</b>: hoje.<br><b style="color:#d97706">Laranja</b>: dia em que o gasto passou da linha verde.<br><b style="color:#6b7280">Cinza</b>: dia sem gastos ou que ainda vai chegar.<br><br><b style="color:#16a34a">Linha verde</b>: quanto você ainda <b>pode gastar por dia</b> para fechar o período dentro do valor para gastar.<br>Conta: (valor para gastar − o que já gastou antes de hoje) ÷ dias que faltam, contando hoje.<br>Sem valor para gastar definido, a linha mostra a sua média por dia. Num período que já acabou, mostra o valor para gastar ÷ dias do período.<br><br><b>Média por dia</b>: o que já gastou ÷ dias já passados (contando hoje).<br><br><b>Toque numa barra</b> para ver o valor e as categorias daquele dia. Para voltar ao gráfico completo, toque na mesma barra de novo, fora das barras ou no ✕.<br><br>Parcelas de parcelados não entram neste gráfico.')],
+  'gastos-dia': [T('Gastos por dia'), T('Cada barra é o quanto a casa gastou <b>naquele dia</b>, dividida por categoria.<br><br><b>Cores</b>: as 5 categorias que mais gastaram no período aparecem com a cor delas (veja a legenda em cima do gráfico). As demais aparecem somadas em <b style="color:#64748b">Outras</b>.<br>O valor em cima da barra aparece no dia de maior gasto e hoje.<br><b style="color:#9ca3af">Tracinho cinza</b>: dia sem gastos ou que ainda vai chegar.<br><br><b style="color:#16a34a">Linha verde</b>: quanto você ainda <b>pode gastar por dia</b> para fechar o período dentro do valor para gastar.<br>Conta: (valor para gastar − o que já gastou antes de hoje) ÷ dias que faltam, contando hoje.<br>Sem valor para gastar definido, a linha mostra a sua média por dia. Num período que já acabou, mostra o valor para gastar ÷ dias do período.<br><br><b>Média por dia</b>: o que já gastou ÷ dias já passados (contando hoje).<br><br><b>Toque numa barra</b> para ver o valor de cada categoria naquele dia. Para voltar ao gráfico completo, toque na mesma barra de novo, fora das barras ou no ✕.<br><br>Parcelas de parcelados não entram neste gráfico.')],
   'proj-real': [T('Real/dia'), T('Quanto você gastou <b>em média por dia</b> até agora neste período.<br><br>Conta: o que já gastou ÷ dias já passados (contando hoje).')],
   'proj-desvio': [T('Desvio'), T('A diferença entre o <b>Real/dia</b> e o <b>Padrão/dia</b>.<br><br><span style="color:#dc2626">Vermelho</span>: você está gastando mais por dia do que o limite permite.<br><span style="color:#16a34a">Verde</span>: está gastando menos, sobra folga.')],
   'proj-barras': [T('Tempo × Gasto'), T('<b>Tempo</b>: quanto do período já passou.<br><b>Gasto</b>: quanto do limite você já gastou.<br><br>Se a barra do Gasto está <b>na frente</b> da do Tempo, você está gastando mais rápido do que o período anda. Exemplo: metade do mês passou (50%) e já gastou 70% do limite.')],
