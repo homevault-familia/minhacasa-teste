@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.29">
+<meta name="app-version" content="2.35.30">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1138,6 +1138,16 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
 .aj-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .rel-tile b { display: flex; align-items: center; gap: 7px; }
 .rel-tile b .ic { color: #1d4ed8; }
+/* Relatórios com cor (24/11/2026): cada atalho com a sua cor, degradê suave e ícone num quadradinho */
+.rel-tile { position: relative; overflow: hidden; border: 1.5px solid var(--rt-b); background: linear-gradient(150deg, var(--rt-0) 0%, var(--rt-1) 100%); box-shadow: 0 2px 8px var(--rt-s); }
+.rel-tile b { color: var(--rt-t); }
+.rel-tile b .ic { width: 30px; height: 30px; padding: 6px; box-sizing: border-box; border-radius: 9px; background: var(--rt-c); color: #fff; stroke: #fff; flex-shrink: 0; }
+.rel-tile span { color: #374151; }
+.rel-tile:active { background: linear-gradient(150deg, var(--rt-1) 0%, var(--rt-1) 100%); }
+.rt-roxo    { --rt-0: #faf5ff; --rt-1: #ede4ff; --rt-b: #ddd0fb; --rt-c: #7c3aed; --rt-t: #4c1d95; --rt-s: rgba(124,58,237,.12); }
+.rt-azul    { --rt-0: #f3f8ff; --rt-1: #dce9ff; --rt-b: #c7dafc; --rt-c: #1d4ed8; --rt-t: #1e3a8a; --rt-s: rgba(29,78,216,.12); }
+.rt-verde   { --rt-0: #f1fcf5; --rt-1: #d6f5e2; --rt-b: #bfe9cf; --rt-c: #16a34a; --rt-t: #14532d; --rt-s: rgba(22,163,74,.12); }
+.rt-laranja { --rt-0: #fff8f1; --rt-1: #ffe6cf; --rt-b: #fcd5b0; --rt-c: #ea580c; --rt-t: #7c2d12; --rt-s: rgba(234,88,12,.12); }
 .lanc-edit, .lanc-del { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; color: #9ca3af; font-size: 17px; }
 .lanc-edit:active, .lanc-del:active { background: #f3f4f6; }
 </style>
@@ -1438,10 +1448,10 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
   <div class="topo-add"><h2>Relatórios</h2></div>
   <div class="conteudo">
     <div class="rel-hub">
-      <button type="button" class="rel-tile" data-ir="semana"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Semanal</b><span>Onde vazou e o que fazer</span></button>
-      <button type="button" class="rel-tile" data-ir="relcat"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>Por categoria</b><span>Gasto e orçamento de cada uma</span></button>
-      <button type="button" class="rel-tile" data-ir="projecao"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção</b><span>Como o período vai fechar</span></button>
-      <button type="button" class="rel-tile" id="btn-rel-completo"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Completo</b><span>Vários ciclos, filtros e PDF</span></button>
+      <button type="button" class="rel-tile rt-roxo" data-ir="semana"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Semanal</b><span>Onde vazou e o que fazer</span></button>
+      <button type="button" class="rel-tile rt-azul" data-ir="relcat"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>Por categoria</b><span>Gasto e orçamento de cada uma</span></button>
+      <button type="button" class="rel-tile rt-verde" data-ir="projecao"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção</b><span>Como o período vai fechar</span></button>
+      <button type="button" class="rel-tile rt-laranja" id="btn-rel-completo"><b><svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Completo</b><span>Vários ciclos, filtros e PDF</span></button>
     </div>
     <div class="rel-sec-tit">Resumo do período</div>
     <div class="card rel-periodo-card">
