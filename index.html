@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.30">
+<meta name="app-version" content="2.35.31">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -600,7 +600,14 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
   justify-content: center; flex-shrink: 0; }
 
 .cat-grid-pro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.sub-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sub-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#add-cats.cat-grid-pro { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ic-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-height: 78px; padding: 10px 4px 8px; border-radius: 14px; border: 1.5px solid transparent; background: #f3f4f6; font: inherit; color: #374151; cursor: pointer; transition: background .15s, border-color .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
+.ic-tile:active { transform: scale(.96); }
+.ic-tile span { font-size: 12px; font-weight: 600; line-height: 1.2; text-align: center; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.ic-cat { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.ic-tile.on { background: var(--tb); border-color: var(--tc); color: var(--tc); }
+.ic-tile.on span { font-weight: 700; letter-spacing: -.01em; }
 .sub-chip { font: inherit; font-size: 14px; font-weight: 700; color: #1f2937; padding: 10px 14px; min-height: 42px; border-radius: 21px; border: 1.5px solid #e5e7eb; background: #fff; cursor: pointer; transition: background .15s, color .15s; }
 .sub-chip.on { box-shadow: 0 2px 6px rgba(15,23,42,.15); }
 .cat-tile { border: 2px solid #e5e7eb; border-radius: 14px; padding: 18px 8px;

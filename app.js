@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.30';
+var VERSAO = '2.35.31';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1232,14 +1232,112 @@ function atualizarAvisoValor() {
   if (d) d.textContent = !u ? '' : !u.v ? T('Informe o valor da compra.') :
     formatar(u.usa) + T(' sai do crédito da loja') + (u.v > u.usa + 0.005 ? T('; o resto (') + formatar(u.v - u.usa) + T(') no cartão ou em dinheiro') : '') + T('. Sobra ') + formatar(Math.max(0, u.c.saldo - u.usa)) + T(' de crédito.');
 }
+// ── Ícones de traço para categorias e subcategorias (24/11/2026) ──
+// Escolhe pelo nome (pt/en/fr) e, se não achar, pelo emoji da categoria. Sem acerto: etiqueta.
+var ICS = {
+  carro: '<path d="M5 11l1.6-4.3A2 2 0 0 1 8.5 5.4h7a2 2 0 0 1 1.9 1.3L19 11"/><path d="M5.5 17H4a1 1 0 0 1-1-1v-3.5A1.5 1.5 0 0 1 4.5 11h15a1.5 1.5 0 0 1 1.5 1.5V16a1 1 0 0 1-1 1h-1.5M9.5 17h5"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/>',
+  mercado: '<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M3 4h2l2.4 11h10.8l2-8H6.2"/>',
+  casa: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  saude: '<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
+  farmacia: '<rect x="2.5" y="8.5" width="19" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="m9.5 9.5 5 5"/>',
+  compras: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  utilidade: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  conta: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5h.01M17.5 14.5h.01"/>',
+  pessoal: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  presente: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zm0 0s1.5-4.5 4-3.5S15 8 12 8z"/>',
+  caridade: '<path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9z"/>',
+  restaurante: '<path d="M7 3v18M5 3v5a2 2 0 0 0 4 0V3"/><path d="M17 21V3c-2 1.5-3 4-3 7v3h3"/>',
+  outros: '<circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>',
+  pet: '<circle cx="6.5" cy="10" r="1.7"/><circle cx="10" cy="6" r="1.7"/><circle cx="14" cy="6" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/><path d="M12 12c-2.5 0-5 3-5 5.5 0 1.5 1.2 2.5 2.7 2.2l1.6-.4a3 3 0 0 1 1.4 0l1.6.4c1.5.3 2.7-.7 2.7-2.2 0-2.5-2.5-5.5-5-5.5z"/>',
+  academia: '<path d="M6 7v10M3 9.5v5M18 7v10M21 9.5v5M6 12h12"/>',
+  viagem: '<path d="M21 4 3 11l7 2.5L12.5 21z"/><path d="m10 13.5 4.5-4.5"/>',
+  cartao: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+  assinatura: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10.5 8.5 4 2.5-4 2.5z"/>',
+  educacao: '<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  livro: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/>',
+  combustivel: '<path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M4 10h10"/><path d="M14 8h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3"/>',
+  estacionamento: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M10 17V7h3.5a3 3 0 0 1 0 6H10"/>',
+  seguro: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
+  manutencao: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8 6.2 21l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  padaria: '<path d="M5 10a4 4 0 0 1 1-7.9h12a4 4 0 0 1 1 7.9V20H5z"/>',
+  feira: '<path d="M3 10h18l-2 10H5z"/><path d="m8 10 3-6M16 10l-3-6M9 14v3M12 14v3M15 14v3"/>',
+  cafe: '<path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2"/>',
+  celular: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  internet: '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/>',
+  agua: '<path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12z"/>',
+  gas: '<path d="M12 3s5 4.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 0 2 1 3 2 3 0-3 .5-5.5.5-8z"/>',
+  energia: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  roupa: '<path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3c0 1.7-1.8 3-4 3S8 4.7 8 3z"/>',
+  crianca: '<circle cx="12" cy="7" r="4"/><path d="M6 21v-2a6 6 0 0 1 12 0v2M10.5 7h.01M13.5 7h.01"/>',
+  transporte: '<rect x="4" y="3" width="16" height="15" rx="2"/><path d="M4 11h16M8 21v-3M16 21v-3M8 15h.01M16 15h.01"/>',
+  lazer: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+  musica: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  beleza: '<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5 20 19M8.5 15.5 20 5"/>',
+  caixa: '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>',
+  imposto: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  etiqueta: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.3"/>'
+};
+// palavras-chave (sem acento, minúsculas) → ícone; a ordem importa (combustível antes de gás, farmácia antes de saúde)
+var ICS_PAL = [
+  ['combustivel', 'combustivel gasolina etanol diesel fuel essence posto'],
+  ['estacionamento', 'estacionamento parking stationnement'],
+  ['seguro', 'seguro insurance assurance'],
+  ['manutencao', 'manutencao maintenance entretien conserto reparo mecanic oficina pneu'],
+  ['farmacia', 'farmacia remedio pharmacy pharmacie drugstore'],
+  ['padaria', 'padaria bakery boulangerie pao'],
+  ['feira', 'feira hortifruti market marche frutas'],
+  ['cafe', 'cafe coffee'],
+  ['restaurante', 'restaurante dining comida lanche ifood delivery fast food refeic almoco jantar resto'],
+  ['mercado', 'mercado supermercado grocer epicerie supermarche costco walmart sobeys superstore'],
+  ['carro', 'carro auto veiculo voiture car moto'],
+  ['transporte', 'transporte onibus uber taxi metro transport bus'],
+  ['viagem', 'viage travel voyage ferias hotel passage'],
+  ['pet', 'pet animal animaux veterin racao'],
+  ['academia', 'academia gym ginastica esporte fitness ymca sport'],
+  ['assinatura', 'assinatura streaming netflix subscription abonnement spotify'],
+  ['cartao', 'parcel cartao credit installment versement'],
+  ['casa', 'casa moradia aluguel rent home house maison loyer hipoteca mortgage condominio'],
+  ['saude', 'saude health sante medic hospital clinica dentista doctor'],
+  ['energia', 'luz energia eletric hydro electric'],
+  ['agua', 'agua water eau'],
+  ['gas', 'gas'],
+  ['internet', 'internet wifi'],
+  ['celular', 'celular telefone phone mobile'],
+  ['imposto', 'imposto taxa tax impot iptu ipva'],
+  ['conta', 'conta bill boleto facture'],
+  ['utilidade', 'utilidade utility servico'],
+  ['educacao', 'educacao escola curso faculdade education ecole school'],
+  ['livro', 'livro book livre'],
+  ['roupa', 'roupa vestuario clothes vetement calcado sapato'],
+  ['crianca', 'crianca bebe filho kids enfant baby'],
+  ['beleza', 'beleza cabelo salao barbear hair beaute manicure'],
+  ['lazer', 'lazer cinema entretenimento movie loisir passeio'],
+  ['musica', 'musica music musique show'],
+  ['presente', 'presente gift cadeau aniversario'],
+  ['caridade', 'caridade doacao charity igreja dizimo don'],
+  ['pessoal', 'pessoal personal personnel'],
+  ['compras', 'diversos compras shopping loja misc divers achats'],
+  ['outros', 'outro other autre']
+];
+var ICS_EMO = { '🚗': 'carro', '🚙': 'carro', '🛒': 'mercado', '🏠': 'casa', '🏡': 'casa', '🐾': 'pet', '🐶': 'pet', '🐱': 'pet', '🍽️': 'restaurante', '🍔': 'restaurante', '🛍️': 'compras', '📺': 'assinatura', '🏋️': 'academia', '🏋': 'academia', '✈️': 'viagem', '💳': 'cartao', '📦': 'caixa', '💊': 'farmacia', '🏥': 'saude', '⛽': 'combustivel', '🎁': 'presente', '❤️': 'caridade', '💡': 'utilidade', '📚': 'livro', '🎓': 'educacao', '👕': 'roupa', '👶': 'crianca', '🎬': 'lazer', '☕': 'cafe', '📱': 'celular', '💧': 'agua', '⚡': 'energia', '🧾': 'conta', '💵': 'conta' };
+function semAcentoIc(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function chaveIcone(nome, emoji) {
+  var n = ' ' + semAcentoIc(nome).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  for (var i = 0; i < ICS_PAL.length; i++) {
+    var ps = ICS_PAL[i][1].split(' ');
+    for (var j = 0; j < ps.length; j++) if (n.indexOf(' ' + ps[j]) >= 0) return ICS_PAL[i][0];
+  }
+  return (emoji && ICS_EMO[emoji]) || (emoji && ICS_EMO[String(emoji).replace(/️/g, '')]) || 'etiqueta';
+}
+function icoCat(nome, emoji, cls) { return '<svg class="' + (cls || 'ic-cat') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICS[chaveIcone(nome, emoji)] + '</svg>'; }
 function renderAdd() {
   var a = S.add, editParc = a.editId && a.cat === PARC;
   var tiles = (editParc ? [catParc()] : catsComuns());
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
-    // fundo suave na cor da categoria (24/11/2026); a escolhida fica mais forte, com borda e anel
-    return '<div class="cat-tile" data-addcat="' + c.id + '" style="border-color:' + (on ? c.cor : alfa(c.cor, '38')) + ';background:linear-gradient(150deg,' + alfa(c.cor, on ? '1a' : '06') + ' 0%,' + alfa(c.cor, on ? '4d' : '2e') + ' 100%)' + (on ? ';box-shadow:0 0 0 3px ' + alfa(c.cor, '30') : '') + '">' +
-      '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm" style="color:' + (on ? c.cor : '#374151') + '">' + esc(nomeVis(c)) + '</div></div>';
+    // grade de ícones de traço (24/11/2026): neutra; a escolhida fica na cor da categoria
+    return '<button type="button" class="ic-tile' + (on ? ' on' : '') + '" data-addcat="' + c.id + '"' + (on ? ' style="--tc:' + c.cor + ';--tb:' + alfa(c.cor, '1c') + '"' : '') + '>' +
+      icoCat(nomeVis(c) + ' ' + c.nome, c.emoji) + '<span>' + esc(nomeVis(c)) + '</span></button>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
   var hdr = $('add-header');
@@ -1262,8 +1360,10 @@ function renderAdd() {
     }).join('');
     // subcategorias como botões, já abertos (24/11/2026): um toque escolhe; tocar de novo desmarca
     $('sub-chips').innerHTML = ordenarVis(cat.subs).map(function (s) {
-      var on = s.id === a.sub;
-      return '<button type="button" class="sub-chip' + (on ? ' on' : '') + '" data-addsub="' + s.id + '" style="' + (on ? 'background:' + cat.cor + ';border-color:' + cat.cor + ';color:#fff' : 'border-color:' + alfa(cat.cor, '55') + ';background:' + alfa(cat.cor, '10')) + '">' + esc(nomeVis(s)) + '</button>';
+      var on = s.id === a.sub, k = chaveIcone(nomeVis(s) + ' ' + s.nome, '');
+      if (k === 'etiqueta' || k === 'outros' && !/outr|other|autre/i.test(semAcentoIc(s.nome))) k = chaveIcone(nomeVis(cat) + ' ' + cat.nome, cat.emoji); // sem ícone próprio: usa o da categoria
+      return '<button type="button" class="ic-tile' + (on ? ' on' : '') + '" data-addsub="' + s.id + '"' + (on ? ' style="--tc:' + cat.cor + ';--tb:' + alfa(cat.cor, '1c') + '"' : '') + '>' +
+        '<svg class="ic-cat" viewBox="0 0 24 24" aria-hidden="true">' + ICS[k] + '</svg><span>' + esc(nomeVis(s)) + '</span></button>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
 }
