@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.25';
+var VERSAO = '2.35.26';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1238,7 +1238,7 @@ function renderAdd() {
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
     // fundo suave na cor da categoria (24/11/2026); a escolhida fica mais forte, com borda e anel
-    return '<div class="cat-tile" data-addcat="' + c.id + '" style="border-color:' + (on ? c.cor : alfa(c.cor, '38')) + ';background:' + alfa(c.cor, on ? '2e' : '17') + (on ? ';box-shadow:0 0 0 3px ' + alfa(c.cor, '30') : '') + '">' +
+    return '<div class="cat-tile" data-addcat="' + c.id + '" style="border-color:' + (on ? c.cor : alfa(c.cor, '38')) + ';background:linear-gradient(150deg,' + alfa(c.cor, on ? '1a' : '06') + ' 0%,' + alfa(c.cor, on ? '4d' : '2e') + ' 100%)' + (on ? ';box-shadow:0 0 0 3px ' + alfa(c.cor, '30') : '') + '">' +
       '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm" style="color:' + (on ? c.cor : '#374151') + '">' + esc(nomeVis(c)) + '</div></div>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
