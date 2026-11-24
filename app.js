@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.23';
+var VERSAO = '2.35.24';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -785,7 +785,7 @@ function renderizarPizza(TT, p) {
   var linhas = todasCats().map(function (c) {
     var v = tots[c.id] || 0, orc = +c.orc || 0;
     return { c: c, v: v, orc: orc, pct: orc > 0 ? v / orc * 100 : -1 };
-  }).sort(function (a, b) { return a.pct !== b.pct ? b.pct - a.pct : b.v - a.v; }); // mais perto de estourar primeiro; sem orçamento no fim
+  }).sort(function (a, b) { return b.v - a.v || (nomeVis(a.c) < nomeVis(b.c) ? -1 : 1); }); // maiores gastos primeiro (24/11/2026); empate: ordem alfabética
   var maxSem = Math.max.apply(null, linhas.map(function (l) { return l.orc > 0 ? 0 : l.v; }).concat([1]));
   el.innerHTML = '<div class="dc-lista">' + linhas.map(function (L) {
     var c = L.c, v = L.v, cor, larg, rot;
