@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.22">
+<meta name="app-version" content="2.35.23">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -658,7 +658,7 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
 .cc.claro { color: #111827; }
 .cc-sem { background: #fff; color: #475569; border: 1.5px dashed #cbd5e1; box-shadow: none; }
 .cc-sem::after { display: none; }
-.cc-fila:has(.cc.on) .cc:not(.on) { opacity: .55; }
+.cc-fila:has(.cc.on:not(.cc-todos)) .cc:not(.on) { opacity: .55; }
 .cc.on { transform: translateY(-2px); box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px #1d4ed8, 0 6px 14px rgba(15,23,42,.25); opacity: 1; }
 .cc-topo { display: flex; justify-content: space-between; align-items: center; gap: 4px; min-height: 14px; }
 .cc-banco { font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -745,15 +745,17 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
 
 /* ── RELATÓRIO ── */
 .rel-periodo-card { margin-bottom: 12px; }
-.rel-periodo-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Seletor de período em controle segmentado (24/11/2026) */
+.rel-periodo-btns { display: flex; gap: 2px; padding: 3px; background: #eef1f5; border-radius: 12px; }
 .rel-per-btn {
-  flex: 1; min-width: 80px; padding: 9px 6px;
-  border: 1.5px solid #e5e7eb; border-radius: 10px;
-  background: white; font-size: 12px; font-weight: 700;
-  color: #6b7280; cursor: pointer; font-family: inherit;
-  transition: all .15s;
+  flex: 1; min-width: 0; min-height: 38px; padding: 8px 6px;
+  border: 0; border-radius: 9px; background: transparent;
+  font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; font-family: inherit;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .18s, color .18s, box-shadow .18s;
 }
-.rel-per-btn.ativo { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+.rel-per-btn:not(.ativo):active { background: rgba(255,255,255,.55); }
+.rel-per-btn.ativo { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.08); }
 .rel-metricas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .rel-met-card { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
 .rel-met-val { font-size: 20px; font-weight: 900; margin-bottom: 2px; letter-spacing: -.5px; }
