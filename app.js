@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.33';
+var VERSAO = '2.35.34';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1344,10 +1344,14 @@ function estiloRegistrar() {
     '.ic-cat{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}' +
     '.ic-tile.on{background:var(--tb);border-color:var(--tc);color:var(--tc)}' +
     '.ic-tile.on span{font-weight:700}' +
-    '.sub-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}' +
-    '.sub-bt{min-width:0;min-height:40px;padding:6px 8px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent}' +
+    // subcategorias: painel na cor da categoria, com pílulas de tamanho livre (bem diferentes das caixas das categorias)
+    '.sub-chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-radius:16px;background:var(--sp)}' +
+    '.sub-bt{display:inline-flex;align-items:center;gap:7px;max-width:100%;min-height:38px;padding:4px 14px 4px 5px;border-radius:999px;border:1.5px solid var(--sb);background:#fff;font:inherit;font-size:13.5px;font-weight:600;color:#1f2937;cursor:pointer;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.06)}' +
+    '.sub-bt i{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--sp);color:var(--tc);font-style:normal;font-size:12px;font-weight:800;flex-shrink:0}' +
+    '.sub-bt b{font-weight:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.sub-bt:active{transform:scale(.97)}' +
-    '.sub-bt.on{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:700}';
+    '.sub-bt.on{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:700;box-shadow:0 3px 8px var(--sb)}' +
+    '.sub-bt.on i{background:rgba(255,255,255,.25);color:#fff}';
   document.head.appendChild(st);
 }
 function renderAdd() {
@@ -1382,8 +1386,10 @@ function renderAdd() {
     // subcategorias como botões, já abertos (24/11/2026): um toque escolhe; tocar de novo desmarca
     $('sub-chips').innerHTML = ordenarVis(cat.subs).map(function (s) {
       var on = s.id === a.sub;
-      return '<button type="button" class="sub-bt' + (on ? ' on' : '') + '" data-addsub="' + s.id + '" style="--tc:' + cat.cor + '">' + esc(nomeVis(s)) + '</button>';
+      var ini = (nomeVis(s).match(/[A-Za-zÀ-ÿ0-9]/) || ['•'])[0].toUpperCase();
+      return '<button type="button" class="sub-bt' + (on ? ' on' : '') + '" data-addsub="' + s.id + '"><i aria-hidden="true">' + (on ? '✓' : esc(ini)) + '</i><b>' + esc(nomeVis(s)) + '</b></button>';
     }).join('');
+    $('sub-chips').style.cssText = '--tc:' + cat.cor + ';--sp:' + alfa(cat.cor, '14') + ';--sb:' + alfa(cat.cor, '40');
   } else $('grupo-sub').style.display = 'none';
 }
 function atualizarParcUI() {
