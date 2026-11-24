@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.11">
+<meta name="app-version" content="2.35.12">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -884,6 +884,9 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
 .cfg-action-btn { min-width: calc(33% - 6px); }
 .lanc-autor { font-size:10px; color:#6b7280; }
 /* Ajustes */
+.aj-dobra > summary { list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:#fff; border-radius:14px; padding:14px 16px; margin:12px 0 8px; box-shadow:0 1px 3px rgba(0,0,0,.06); -webkit-tap-highlight-color:transparent; }
+.aj-dobra > summary::-webkit-details-marker { display:none; }
+.aj-dobra[open] > summary { margin-bottom:8px; }
 .aj-sec { font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:1px; margin:16px 2px 8px; }
 .aj-linha { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f3f4f6; }
 .aj-linha:last-child { border-bottom:0; }
@@ -1447,23 +1450,26 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
       <div style="font-size:12.5px;color:#6b7280;margin-top:8px">O idioma vale só para você. Cada pessoa da casa escolhe o seu.</div>
     </div>
 
-    <div class="aj-sec">Categorias e orçamentos</div>
+    <details class="aj-dobra" id="ajd-cats"><summary class="aj-sec">Categorias e orçamentos<span class="dobra-chev" aria-hidden="true"></span></summary>
     <div class="card" id="aj-cats"></div>
     <button class="aj-btn aj-full" id="aj-novacat" style="margin-top:0">+ Nova categoria</button>
+    </details>
 
-    <div class="aj-sec">Convidar alguém da casa</div>
+    <details class="aj-dobra" id="ajd-convidar"><summary class="aj-sec">Convidar alguém da casa<span class="dobra-chev" aria-hidden="true"></span></summary>
     <div class="card">
       <div style="font-size:12.5px;color:#6b7280;margin-bottom:10px">Envie o código abaixo e, <b>separadamente</b> (de preferência pessoalmente ou por ligação), a senha da casa.</div>
       <div class="codigo" id="aj-codigo"></div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="aj-btn" style="flex:1" id="aj-copiar">Copiar código</button><button class="aj-btn" style="flex:1" id="aj-compart">Compartilhar</button></div>
       <button class="aj-btn aj-full" id="aj-novocod" style="display:none">Gerar novo código (o anterior deixa de valer)</button>
     </div>
+    </details>
 
     <div class="aj-sec">Membros</div>
     <div class="card" id="aj-membros"></div>
 
-    <div class="aj-sec">💳 Cartões</div>
+    <details class="aj-dobra" id="ajd-cartoes"><summary class="aj-sec">💳 Cartões<span class="dobra-chev" aria-hidden="true"></span></summary>
     <div class="card" id="aj-cartoes"></div>
+    </details>
 
     <div class="aj-sec">🏦 Conferir com o banco</div>
     <div class="card">
