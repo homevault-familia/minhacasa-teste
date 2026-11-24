@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.15';
+var VERSAO = '2.35.16';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3896,6 +3896,7 @@ var DIAS_GRATIS = 14;
 // Apresentação: só para quem chega pela primeira vez pelo navegador (não no app instalado, nem com convite ou link de pagamento)
 function deveApresentar() {
   if (S.apresVista) return false;
+  if (/[?&]conheca\b/.test(location.search)) return true; // link para ver a apresentação sempre (divulgação e conferência)
   var inst = false; try { inst = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) {}
   if (inst || convitePendente() || (location.hash && location.hash.length > 1)) return false;
   try { if (localStorage.getItem('mc_ja_entrou')) return false; } catch (e) {}
