@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.10';
+var VERSAO = '2.35.11';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1416,11 +1416,11 @@ function renderizarRelatorio() {
     }).join('') + '</details>';
 
   var top5 = TT.lista.filter(function (l) { return l.cat !== PARC; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, 5);
-  var top = top5.length ? T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>') + top5.map(function (l, i) {
+  var top = top5.length ? '<details class="dobra-rel" id="rel-top"' + (S.relTopAberto ? ' open' : '') + '><summary>' + T('Top 5 Maiores Gastos') + '<span class="dobra-chev" aria-hidden="true"></span></summary>' + top5.map(function (l, i) {
     return '<div class="rel-top-item"><div class="rel-top-num">' + (i + 1) + '</div><div class="lanc-ponto" style="background:' + COR(l.cat) + ';flex-shrink:0;width:8px;height:8px;border-radius:50%"></div>' +
       '<div class="rel-top-info"><div class="rel-top-desc">' + esc(descLanc(l)) + '</div><div class="rel-top-meta">' + formatarData(l.data) + ' · ' + esc(NOME(l.cat)) + '</div></div>' +
       '<div class="rel-top-val" style="color:' + COR(l.cat) + '">' + formatar(l.valor) + '</div></div>';
-  }).join('') + '</div>' : '';
+  }).join('') + '</details>' : '';
 
   // "Dias até o limite por categoria" removido a pedido (14/11/2026).
 
@@ -1440,20 +1440,22 @@ function renderizarRelatorio() {
   var semanas = [], st = 0, sd = 0;
   heatDays.forEach(function (h, i) { st += h.val; sd++; if ((i + 1) % 7 === 0 || i === heatDays.length - 1) { semanas.push({ lbl: T('Sem ') + (semanas.length + 1), total: st, dias: sd }); st = 0; sd = 0; } });
   var maxSem = semanas.reduce(function (m, s) { return Math.max(m, s.total); }, 0), orcDia = lim > 0 && heatDays.length ? lim / heatDays.length : 0;
-  var sem = T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">📅 Semana a Semana</div>') + semanas.map(function (s) {
+  var sem = '<details class="dobra-rel" id="rel-sem"' + (S.relSemAberto ? ' open' : '') + '><summary>' + T('📅 Semana a Semana') + '<span class="dobra-chev" aria-hidden="true"></span></summary>' + semanas.map(function (s) {
     var pct = maxSem > 0 ? (s.total / maxSem * 100).toFixed(1) : 0, orcSem = orcDia * s.dias, op = orcSem > 0 ? Math.round(s.total / orcSem * 100) : null;
     var cor = op === null ? '#1d4ed8' : op <= 50 ? '#22c55e' : op <= 85 ? '#f59e0b' : '#ef4444';
     return '<div class="semana-row"><div class="semana-lbl">' + s.lbl + (s.dias < 7 ? ' <span style="font-size:10px;color:#6b7280">(' + s.dias + 'd)</span>' : '') + '</div>' +
       '<div class="semana-barra-bg"><div class="semana-barra-fill" style="width:' + pct + '%;background:' + cor + '"></div></div><div class="semana-val" style="color:' + cor + '">' + formatar(s.total) + '</div>' +
       (op !== null ? '<span style="font-size:11px;font-weight:700;color:' + cor + ';min-width:38px;text-align:right">' + op + '%</span>' : '') + '</div>';
-  }).join('') + (orcDia > 0 ? T('<div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">Limite: ') + formatar(lim) + ' ÷ ' + heatDays.length + T(' dias</div>') : '') + '</div>';
+  }).join('') + (orcDia > 0 ? T('<div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">Limite: ') + formatar(lim) + ' ÷ ' + heatDays.length + T(' dias</div>') : '') + '</details>';
 
   el.innerHTML = '<div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:10px;text-align:center">📅 ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '</div>' +
-    met + cats + blocoPorCartao(TT.lista) + top + heat + sem +
+    met + cats + blocoPorCartao(TT.lista) + top + sem + heat +
     T('<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>');
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
   if ($('rel-cats')) $('rel-cats').addEventListener('toggle', function () { S.relCatsAberto = $('rel-cats').open; });
   if ($('rel-cartoes')) $('rel-cartoes').addEventListener('toggle', function () { S.relCtAberto = $('rel-cartoes').open; });
+  if ($('rel-top')) $('rel-top').addEventListener('toggle', function () { S.relTopAberto = $('rel-top').open; });
+  if ($('rel-sem')) $('rel-sem').addEventListener('toggle', function () { S.relSemAberto = $('rel-sem').open; });
   $('rel-wa').onclick = function () {
     var msg = T('📊 *RELATÓRIO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
     todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + nomeVis(c) + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
