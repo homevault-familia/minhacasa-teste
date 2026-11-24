@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.20">
+<meta name="app-version" content="2.35.21">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -390,7 +390,10 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
 .dc-val.ruim { color: #dc2626; }
 .dc-barra { display: block; height: 6px; border-radius: 4px; background: #eef1f5; overflow: hidden; }
 .dc-barra span { display: block; height: 6px; border-radius: 4px; }
-.dc-l2 { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #6b7280; }
+.dc-l2 { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; font-weight: 600; color: #6b7280; }
+.dc-disp { color: #15803d; font-weight: 800; white-space: nowrap; }
+.dc-pct { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-disp.ruim { color: #dc2626; }
 .dc-det { margin: 0 0 12px 42px; padding: 10px 12px; background: #f8fafc; border-radius: 12px; font-size: 13px; }
 .dc-sobra { font-weight: 700; color: #15803d; margin-bottom: 4px; }
 .dc-sobra.ruim { color: #dc2626; }
@@ -1283,8 +1286,8 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
         <div><div class="btn-acao-text">Semana</div><div class="btn-acao-sub">Desvios e ações</div></div>
       </button>
     </div>
-    <div class="grid-cat" id="grid-cat"></div>
-    <div class="card"><div class="card-titulo">Distribuição por Categoria</div><div class="pizza-wrap" id="pizza-wrap"></div></div>
+    <div class="grid-cat" id="grid-cat" style="display:none"></div>
+    <div class="card" id="card-dc"><div class="card-titulo">Distribuição por Categoria</div><div class="pizza-wrap" id="pizza-wrap"></div></div>
     <div class="card"><div class="card-titulo" id="gd-tit">Gastos por Dia no Período</div><div class="barras" id="barras-div"></div></div>
     <details class="card dobra" id="ult-lanc"><summary class="card-titulo">Últimos Lançamentos<span class="dobra-chev" aria-hidden="true"></span></summary><div id="lista-recentes"></div></details>
   </div>

@@ -1363,5 +1363,9 @@ MCI18N.add('en', {
  "Passou {v} do orçamento": "{v} over budget",
  "Sobram {v}": "{v} left",
  "{v} por dia nos {n} dias que faltam": "{v} per day for the {n} days left",
- "Ver todos da categoria": "See all in this category"
+ "Ver todos da categoria": "See all in this category",
+ "Passou {v}": "{v} over",
+ "1 no período": "1 in this period",
+ "{n} no período": "{n} in this period",
+ "{p}% de {v}": "{p}% of {v}"
 });
