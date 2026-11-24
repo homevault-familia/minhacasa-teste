@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.35';
+var VERSAO = '2.35.36';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -4347,7 +4347,14 @@ function ligarEventos() {
   // Registrar
   $('sel-sub').onchange = function () { S.add.sub = this.value || null; };
   $('btn-hoje').onclick = function () { $('inp-data').value = hoje(); };
-  $('inp-valor').oninput = function () { atualizarPreviewParcela(); atualizarAvisoValor(); };
+  // Valor com as duas casas decimais já prontas (24/11/2026): os números entram pela direita, como no caixa eletrônico.
+  // 7 → 0.07, 75 → 0.75, 7500 → 75.00. Não tem como digitar 75 e sair 7500.
+  $('inp-valor').oninput = function () {
+    var d = this.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 9);
+    this.value = d ? numTxt((parseInt(d, 10) / 100).toFixed(2)) : '';
+    try { this.setSelectionRange(this.value.length, this.value.length); } catch (e) {}
+    atualizarPreviewParcela(); atualizarAvisoValor();
+  };
   $('orig-busca').oninput = renderOrig;
   $('inp-desc').addEventListener('input', atualizarSugDesc);
   $('inp-data').addEventListener('change', renderOrig);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.35">
+<meta name="app-version" content="2.35.36">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1366,7 +1366,7 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     </div>
     <div class="add-card">
       <div class="add-card-title"><span class="add-step-n">2</span><span id="lbl-valor">Valor Gasto</span></div>
-      <div class="valor-big-wrap"><span class="valor-big-pre" id="valor-pre">CA$</span><input type="text" id="inp-valor" class="valor-big-input" placeholder="0.00" inputmode="decimal" autocomplete="off"></div>
+      <div class="valor-big-wrap"><span class="valor-big-pre" id="valor-pre">CA$</span><input type="text" id="inp-valor" class="valor-big-input" placeholder="0.00" inputmode="numeric" pattern="[0-9]*" autocomplete="off"></div>
       <div id="valor-aviso" class="valor-aviso"></div>
     </div>
     <div class="add-card" id="card-forma" style="display:none">
