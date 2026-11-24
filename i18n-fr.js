@@ -85,7 +85,7 @@ MCI18N.add('fr', {
  "💳 No cartão ou na conta": "💳 Sur la carte ou le compte",
  "🎟️ Crédito na loja": "🎟️ Crédit en magasin",
  "Data do Gasto": "Date de la dépense",
- "Hoje": "Aujourd’hui",
+ "Hoje": "Aujourd'hui",
  "💳 À vista": "💳 Paiement unique",
  "De qual parcela começa?": "À partir de quel versement?",
  "Ex: Gasolina no posto, compras da semana…": "Ex. : Essence, épicerie de la semaine…",
@@ -1318,5 +1318,13 @@ MCI18N.add('fr', {
  "Por Categoria": "Par catégorie",
  "💳 Por cartão": "💳 Par carte",
  "Top 5 Maiores Gastos": "Les 5 plus grosses dépenses",
- "📅 Semana a Semana": "📅 Semaine par semaine"
+ "📅 Semana a Semana": "📅 Semaine par semaine",
+ "Maior dia": "Plus grosse journée",
+ "Pode gastar/dia": "Peut dépenser/jour",
+ "Orçamento/dia": "Budget/jour",
+ "Dias c/ gasto": "Jours avec dépenses",
+ "Média por dia": "Moyenne par jour",
+ "/dia": "/jour",
+ "Toque numa barra para ver o dia": "Touchez une barre pour voir la journée",
+ "sem gastos": "aucune dépense"
 });

@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.12';
+var VERSAO = '2.35.13';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -772,7 +772,7 @@ function renderizar() {
   }).join('');
 
   renderizarPizza(TT.tots, TT.comum);
-  renderizarBarras(TT.lista, p);
+  renderizarBarras(TT, p);
   renderizarRecentes(TT.todos);
   pintarCartaoSemana();
   if (!$('topo-config').classList.contains('editando')) preencherConfig();
@@ -789,60 +789,52 @@ function renderizarPizza(tots, total) {
   }).join('') + '</div>';
 }
 
-function renderizarBarras(lista, p) {
-  var el = $('barras-div'), porDia = {}, hj = hoje();
-  lista.forEach(function (l) {
-    if (!porDia[l.data]) porDia[l.data] = { total: 0 };
-    porDia[l.data][l.cat] = (porDia[l.data][l.cat] || 0) + l.valor;
-    porDia[l.data].total += l.valor;
-  });
+function renderizarBarras(TT, p) {
+  // Gastos por dia, visual limpo (24/11/2026): uma cor, período inteiro, linha "pode gastar por dia", toque mostra o dia
+  var el = $('barras-div'), hj = hoje(), pd = TT.porDia || {}, pdc = TT.porDiaCat || {};
   var dias = [];
-  for (var d = p.inicio; d <= p.fim && d <= hj; d = proxDia(d)) { dias.push(d); if (dias.length > 400) break; }
-  if (!dias.length) { el.innerHTML = T('<div class="vazio">Nenhum dado no período</div>'); return; }
-  var maxVal = 0;
-  dias.forEach(function (d) { if ((porDia[d] || {}).total > maxVal) maxVal = porDia[d].total; });
-  if (maxVal === 0) maxVal = 1;
-  var diasCom = dias.filter(function (d) { return porDia[d] && porDia[d].total > 0; });
-  var totalGeral = diasCom.reduce(function (s, d) { return s + porDia[d].total; }, 0);
-  var media = diasCom.length ? totalGeral / diasCom.length : 0;
+  for (var d = p.inicio; d <= p.fim; d = proxDia(d)) { dias.push(d); if (dias.length > 400) break; }
+  var pass = dias.filter(function (x) { return x <= hj; });
+  if (!dias.length || !pass.length) { el.innerHTML = T('<div class="vazio">Nenhum dado no período</div>'); el.onclick = null; return; }
+  var vals = dias.map(function (x) { return x <= hj ? Math.max(0, pd[x] || 0) : 0; });
+  var gasto = pass.reduce(function (s, x) { return s + (pd[x] || 0); }, 0);
+  var media = gasto / pass.length, lim = baseDisponivel(), dentro = hj >= p.inicio && hj <= p.fim;
+  var antes = dias.reduce(function (s, x) { return x < hj ? s + (pd[x] || 0) : s; }, 0);
+  var restam = dias.filter(function (x) { return x >= hj; }).length;
+  var pode = lim > 0 && dentro ? (lim - antes) / restam : 0, porDiaOrc = lim > 0 ? lim / dias.length : 0;
+  var ref = lim > 0 ? (dentro && pode > 0 ? pode : porDiaOrc) : media;
+  var maior = 0, iMaior = -1; vals.forEach(function (v, i) { if (v > maior) { maior = v; iMaior = i; } });
   function fmtY(v) { return v >= 1000 ? SIMB[moeda()] + (v / 1000).toFixed(1) + 'k' : SIMB[moeda()] + Math.round(v); }
-  var melhorDia = '', melhorVal = 0;
-  dias.forEach(function (d) { if ((porDia[d] || {}).total > melhorVal) { melhorVal = porDia[d].total; melhorDia = d; } });
-  var stats = '<div class="chart-stats">' +
-    '<div class="chart-stat"><div class="chart-stat-val">' + fmtY(media) + T('</div><div class="chart-stat-label">Média por dia c/ gasto</div></div>') +
-    '<div class="chart-stat"><div class="chart-stat-val">' + diasCom.length + T('</div><div class="chart-stat-label">Dias c/ gasto</div></div>') +
-    '<div class="chart-stat"><div class="chart-stat-val">' + (melhorDia ? (+melhorDia.slice(8, 10)) + '/' + (+melhorDia.slice(5, 7)) : '—') + T('</div><div class="chart-stat-label">Maior gasto</div></div></div>');
-  var CHART_H = 160, barW = Math.max(12, Math.floor((300 - 38 - 3 * dias.length) / dias.length));
-  var cats = todasCats();
-  var bars = dias.map(function (d) {
-    var data = porDia[d] || { total: 0 }, total = data.total;
-    var totalH = total > 0 ? Math.max(6, Math.round(total / maxVal * CHART_H)) : 0;
-    var segs = '';
-    if (total > 0) {
-      var usado = 0, partes = [];
-      cats.concat([{ id: '_x', cor: '#9ca3af' }]).forEach(function (c) {
-        var v = c.id === '_x' ? Object.keys(data).filter(function (k) { return k !== 'total' && !catPorId(k); }).reduce(function (s, k) { return s + data[k]; }, 0) : (data[c.id] || 0);
-        if (v > 0) partes.push({ v: v, cor: c.cor });
-      });
-      var pos = partes.reduce(function (s2, pt) { return s2 + pt.v; }, 0) || 1; // devolução no mesmo dia: barra mostra o líquido
-      partes.forEach(function (pt) { pt.h = Math.round(pt.v / pos * totalH); });
-      partes.forEach(function (pt) { usado += pt.h; });
-      if (partes.length) partes[0].h += totalH - usado;
-      segs = partes.reverse().map(function (pt) { return pt.h > 0 ? '<div class="bar-seg" style="height:' + pt.h + 'px;background:' + pt.cor + '"></div>' : ''; }).join('');
-    } else segs = '<div class="bar-empty"></div>';
-    var lbl = (total > 0 && totalH > 20 && barW >= 14) ? (total >= 1000 ? (total / 1000).toFixed(1) + 'k' : Math.round(total) + '') : '';
-    return '<div class="bar-col' + (d === hj ? ' bar-hoje' : '') + '" style="width:' + barW + 'px"><div class="bar-val">' + lbl + '</div>' +
-      '<div class="bar-stack" style="height:' + CHART_H + 'px">' + segs + '</div><div class="bar-dia">' + (+d.slice(8, 10)) + '</div></div>';
+  function st(rot, val, cor) { return '<div class="gd-st"><div class="gd-st-rot">' + rot + '</div><div class="gd-st-val"' + (cor ? ' style="color:' + cor + '"' : '') + '>' + val + '</div></div>'; }
+  var st1 = dentro ? st(T('Hoje'), fmtY(Math.max(0, pd[hj] || 0))) : st(T('Maior dia'), iMaior >= 0 ? fmtY(maior) : '—');
+  var st3 = lim > 0 ? (dentro ? st(T('Pode gastar/dia'), fmtY(Math.max(0, pode)), pode > 0 ? '#16a34a' : '#dc2626') : st(T('Orçamento/dia'), fmtY(porDiaOrc))) : st(T('Dias c/ gasto'), pass.filter(function (x) { return (pd[x] || 0) > 0; }).length);
+  var W = 320, BASE = 112, TOPO = 16, n = dias.length, bw = W / n, gap = Math.min(3, bw * 0.28);
+  var mx = Math.max(maior, ref) * 1.08 || 1;
+  var yRef = BASE - ref / mx * (BASE - TOPO);
+  var barras = dias.map(function (x, i) {
+    var xx = (i * bw + gap / 2).toFixed(1), ww = Math.max(1, bw - gap).toFixed(1), v = vals[i], h, cor;
+    if (x > hj || v <= 0) { h = 2; cor = x > hj ? '#e5e7eb' : x === hj ? '#1d4ed8' : '#cbd5e1'; }
+    else { h = Math.max(3, v / mx * (BASE - TOPO)); cor = x === hj ? '#1d4ed8' : ref > 0 && v > ref ? '#f59e0b' : '#93c5fd'; }
+    return '<rect class="gd-b" data-i="' + i + '" x="' + xx + '" y="' + (BASE - h).toFixed(1) + '" width="' + ww + '" height="' + h.toFixed(1) + '" rx="' + Math.min(3, ww / 3).toFixed(1) + '" fill="' + cor + '"/>';
   }).join('');
-  var mediaPos = Math.round(media / maxVal * CHART_H);
-  el.innerHTML = stats +
-    '<div class="chart-wrap"><div class="chart-inner">' +
-    '<div class="chart-yaxis"><div class="chart-ylabel">' + fmtY(maxVal) + '</div><div class="chart-ylabel">' + fmtY(maxVal / 2) + '</div><div class="chart-ylabel">' + fmtY(0) + '</div></div>' +
-    '<div class="chart-body"><div class="chart-grid"><div class="chart-gridline"></div><div class="chart-gridline"></div><div class="chart-gridline"></div></div>' +
-    (media > 0 ? '<div class="chart-media-line" style="bottom:' + (26 + mediaPos) + T('px"><span class="chart-media-label">méd ') + fmtY(media) + '</span></div>' : '') +
-    '<div class="chart-bars" style="height:' + (CHART_H + 26) + 'px">' + bars + '</div></div></div></div>' +
-    '<div class="chart-legenda">' + cats.map(function (c) { return '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:' + c.cor + '"></div>' + esc(nomeVis(c)) + '</div>'; }).join('') +
-    T('<div class="chart-leg-item"><div style="width:14px;border-top:2px dashed rgba(29,78,216,.6)"></div>Média</div></div>');
+  var toque = dias.map(function (x, i) { return x > hj ? '' : '<rect data-i="' + i + '" x="' + (i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (BASE + 4) + '" fill="transparent"/>'; }).join('');
+  function rotX(i, anc, cls) { return '<text x="' + (anc === 'start' ? 0 : anc === 'end' ? W : (i + 0.5) * bw).toFixed(1) + '" y="128" text-anchor="' + anc + '" class="gd-x' + (cls || '') + '">' + (+dias[i].slice(8, 10)) + '</text>'; }
+  var iH = dentro ? dias.indexOf(hj) : -1, perto = Math.max(3, Math.round(n / 10));
+  var eixo = (iH < 0 || iH > perto ? rotX(0, 'start') : '') + (iH < 0 || n - 1 - iH > perto ? rotX(n - 1, 'end') : '') + (iH >= 0 ? rotX(iH, iH === 0 ? 'start' : iH === n - 1 ? 'end' : 'middle', ' gd-x-hoje') : '');
+  var linha = ref > 0 ? '<line x1="0" y1="' + yRef.toFixed(1) + '" x2="' + W + '" y2="' + yRef.toFixed(1) + '" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+    '<text x="' + W + '" y="' + Math.max(10, yRef - 4).toFixed(1) + '" text-anchor="end" class="gd-ref">' + fmtY(ref) + T('/dia') + '</text>' : '';
+  el.innerHTML = '<div class="gd-sts">' + st1 + st(T('Média por dia'), fmtY(media)) + st3 + '</div>' +
+    '<div class="gd-tip" id="gd-tip">' + T('Toque numa barra para ver o dia') + '</div>' +
+    '<svg class="gd-svg" viewBox="0 0 ' + W + ' 134" width="100%" role="img" aria-label="' + T('Gastos por Dia no Período') + '">' +
+    '<line x1="0" y1="' + BASE + '" x2="' + W + '" y2="' + BASE + '" stroke="#e5e7eb" stroke-width="1"/>' + barras + linha + eixo + toque + '</svg>';
+  el.onclick = function (ev) {
+    var t = ev.target, i = t && t.getAttribute ? t.getAttribute('data-i') : null; if (i === null) return;
+    i = +i; var x = dias[i], v = Math.max(0, pd[x] || 0);
+    el.querySelectorAll('.gd-b').forEach(function (b) { b.style.opacity = +b.getAttribute('data-i') === i ? '1' : '.35'; });
+    var cs = Object.keys(pdc).map(function (k) { return { k: k, v: pdc[k][x] || 0 }; }).filter(function (c) { return c.v > 0; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 3);
+    var txt = '<b>' + diaMes(x) + ' · ' + formatar(v) + '</b>' + (v > 0 ? cs.map(function (c) { var cat = catPorId(c.k); return ' · ' + esc(cat ? nomeVis(cat) : c.k) + ' ' + formatar(c.v); }).join('') : ' · ' + T('sem gastos'));
+    $('gd-tip').innerHTML = txt; $('gd-tip').classList.add('ativo');
+  };
 }
 
 // Selo de devolução / crédito na loja ao lado da descrição (16/11/2026)

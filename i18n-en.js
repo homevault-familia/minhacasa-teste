@@ -1318,5 +1318,13 @@ MCI18N.add('en', {
  "Por Categoria": "By category",
  "💳 Por cartão": "💳 By card",
  "Top 5 Maiores Gastos": "Top 5 largest expenses",
- "📅 Semana a Semana": "📅 Week by week"
+ "📅 Semana a Semana": "📅 Week by week",
+ "Maior dia": "Biggest day",
+ "Pode gastar/dia": "Can spend/day",
+ "Orçamento/dia": "Budget/day",
+ "Dias c/ gasto": "Days with spending",
+ "Média por dia": "Daily average",
+ "/dia": "/day",
+ "Toque numa barra para ver o dia": "Tap a bar to see that day",
+ "sem gastos": "no spending"
 });
