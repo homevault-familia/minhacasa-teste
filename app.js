@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.31';
+var VERSAO = '2.35.32';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1329,7 +1329,8 @@ function chaveIcone(nome, emoji) {
   }
   return (emoji && ICS_EMO[emoji]) || (emoji && ICS_EMO[String(emoji).replace(/️/g, '')]) || 'etiqueta';
 }
-function icoCat(nome, emoji, cls) { return '<svg class="' + (cls || 'ic-cat') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICS[chaveIcone(nome, emoji)] + '</svg>'; }
+var SVG_IC = ' viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'; // atributos no próprio desenho: fica certo mesmo se o estilo demorar a chegar
+function icoCat(nome, emoji, cls) { return '<svg class="' + (cls || 'ic-cat') + '"' + SVG_IC + '>' + ICS[chaveIcone(nome, emoji)] + '</svg>'; }
 function renderAdd() {
   var a = S.add, editParc = a.editId && a.cat === PARC;
   var tiles = (editParc ? [catParc()] : catsComuns());
@@ -1363,7 +1364,7 @@ function renderAdd() {
       var on = s.id === a.sub, k = chaveIcone(nomeVis(s) + ' ' + s.nome, '');
       if (k === 'etiqueta' || k === 'outros' && !/outr|other|autre/i.test(semAcentoIc(s.nome))) k = chaveIcone(nomeVis(cat) + ' ' + cat.nome, cat.emoji); // sem ícone próprio: usa o da categoria
       return '<button type="button" class="ic-tile' + (on ? ' on' : '') + '" data-addsub="' + s.id + '"' + (on ? ' style="--tc:' + cat.cor + ';--tb:' + alfa(cat.cor, '1c') + '"' : '') + '>' +
-        '<svg class="ic-cat" viewBox="0 0 24 24" aria-hidden="true">' + ICS[k] + '</svg><span>' + esc(nomeVis(s)) + '</span></button>';
+        '<svg class="ic-cat"' + SVG_IC + '>' + ICS[k] + '</svg><span>' + esc(nomeVis(s)) + '</span></button>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
 }
