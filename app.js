@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.27';
+var VERSAO = '2.35.28';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1409,7 +1409,7 @@ function renderizarHistorico() {
   var lista = listaHistorico(per);
   var filtro = '';
   if (usaCartoes()) {
-    filtro = '<button type="button" class="cc-voltar" id="cc-voltar">‹ ' + T('Cartões') + '</button>' + cartoesFiltroHist(per);
+    filtro = '<button type="button" class="cc-voltar" id="cc-voltar"><span aria-hidden="true">‹</span> ' + T('Voltar aos cartões') + '</button>' + cartoesFiltroHist(per);
   }
   if (!lista.length) { el.innerHTML = filtro + T('<div class="vazio">📭 Sem lançamentos neste período</div>'); ligarFiltroHist(); return; }
   var pm = buildPagasMap(lancamentos()), porDia = {}, dm = devolvidoPorCompra();

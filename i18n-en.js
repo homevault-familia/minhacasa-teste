@@ -1369,5 +1369,6 @@ MCI18N.add('en', {
  "{n} no período": "{n} in this period",
  "{p}% de {v}": "{p}% of {v}",
  "Cartões": "Cards",
- "Toque num cartão para ver os lançamentos": "Tap a card to see its expenses"
+ "Toque num cartão para ver os lançamentos": "Tap a card to see its expenses",
+ "Voltar aos cartões": "Back to cards"
 });

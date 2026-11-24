@@ -1369,5 +1369,6 @@ MCI18N.add('fr', {
  "{n} no período": "{n} sur la période",
  "{p}% de {v}": "{p} % de {v}",
  "Cartões": "Cartes",
- "Toque num cartão para ver os lançamentos": "Touchez une carte pour voir ses dépenses"
+ "Toque num cartão para ver os lançamentos": "Touchez une carte pour voir ses dépenses",
+ "Voltar aos cartões": "Retour aux cartes"
 });
