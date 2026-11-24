@@ -1370,5 +1370,6 @@ MCI18N.add('fr', {
  "{p}% de {v}": "{p} % de {v}",
  "Cartões": "Cartes",
  "Toque num cartão para ver os lançamentos": "Touchez une carte pour voir ses dépenses",
- "Voltar aos cartões": "Retour aux cartes"
+ "Voltar aos cartões": "Retour aux cartes",
+ "Toque para escolher a subcategoria": "Touchez pour choisir la sous-catégorie"
 });

@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.37';
+var VERSAO = '2.35.38';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1352,7 +1352,12 @@ function estiloRegistrar() {
     '.sub-bt b{font-weight:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.sub-bt:active{transform:scale(.97)}' +
     '.sub-bt.on{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:700;box-shadow:0 3px 8px var(--sb)}' +
-    '.sub-bt.on i{background:rgba(255,255,255,.25);color:#fff}';
+    '.sub-bt.on i{background:rgba(255,255,255,.25);color:#fff}' +
+    '.sub-resumo{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:48px;padding:8px 12px;border-radius:14px;border:1.5px dashed var(--sb);background:var(--sp);font:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:left}' +
+    '.sub-resumo .sr-esc{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;background:var(--tc);color:#fff;font-size:14px;font-weight:700;max-width:70%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}' +
+    '.sub-resumo .sr-esc i{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);font-style:normal;font-size:12px}' +
+    '.sub-resumo .sr-vazio{font-size:14px;font-weight:600;color:#475569}' +
+    '.sub-resumo .sr-acao{display:inline-flex;align-items:center;font-size:13px;font-weight:700;color:var(--tc);white-space:nowrap}';
   document.head.appendChild(st);
 }
 function renderAdd() {
@@ -1391,6 +1396,16 @@ function renderAdd() {
       return '<button type="button" class="sub-bt' + (on ? ' on' : '') + '" data-addsub="' + s.id + '"><i aria-hidden="true">' + (on ? '✓' : esc(ini)) + '</i><b>' + esc(nomeVis(s)) + '</b></button>';
     }).join('');
     $('sub-chips').style.cssText = '--tc:' + cat.cor + ';--sp:' + alfa(cat.cor, '14') + ';--sb:' + alfa(cat.cor, '40');
+    // Minimizada por padrão (24/11/2026): abre ao tocar na categoria; escolhida a subcategoria, fecha e mostra só a escolha
+    var rs = $('sub-resumo');
+    if (!rs) { rs = document.createElement('button'); rs.type = 'button'; rs.id = 'sub-resumo'; rs.className = 'sub-resumo'; $('sub-chips').parentNode.insertBefore(rs, $('sub-chips')); }
+    var subSel = a.sub && cat.subs.filter(function (x) { return x.id === a.sub; })[0];
+    rs.style.cssText = '--tc:' + cat.cor + ';--sp:' + alfa(cat.cor, '14') + ';--sb:' + alfa(cat.cor, '40');
+    rs.innerHTML = (subSel ? '<span class="sr-esc"><i aria-hidden="true">✓</i>' + esc(nomeVis(subSel)) + '</span>' : '<span class="sr-vazio">' + T('Toque para escolher a subcategoria') + '</span>') +
+      '<span class="sr-acao">' + (subSel ? T('Trocar') : '') + '<span class="dobra-chev" aria-hidden="true"></span></span>';
+    rs.setAttribute('aria-expanded', a.subAberta ? 'true' : 'false');
+    rs.style.display = a.subAberta ? 'none' : '';
+    $('sub-chips').style.display = a.subAberta ? '' : 'none';
   } else $('grupo-sub').style.display = 'none';
 }
 function atualizarParcUI() {
@@ -4306,11 +4321,12 @@ function ligarEventos() {
     if (t.closest('[data-origtrocar]')) { S.add.orig = null; $('inp-valor').value = ''; $('inp-desc').value = ''; renderOrig(); atualizarAvisoValor(); return; }
     if ((b = t.closest('[data-origem]'))) { if (S.add.orig !== b.dataset.origem) escolherOrig(b.dataset.origem); return; }
     if ((b = t.closest('[data-addcat]'))) {
-      var trocou = S.add.cat !== b.dataset.addcat; if (trocou) S.add.sub = null; S.add.cat = b.dataset.addcat; renderAdd();
-      if (trocou && $('grupo-sub').style.display !== 'none') setTimeout(function () { $('grupo-sub').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); // já mostra as subcategorias
+      var trocou = S.add.cat !== b.dataset.addcat; if (trocou) S.add.sub = null; S.add.cat = b.dataset.addcat; S.add.subAberta = true; renderAdd();
+      if ($('grupo-sub').style.display !== 'none') setTimeout(function () { $('grupo-sub').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); // abre as subcategorias
       return;
     }
-    if ((b = t.closest('[data-addsub]'))) { S.add.sub = S.add.sub === b.dataset.addsub ? null : b.dataset.addsub; renderAdd(); return; }
+    if ((b = t.closest('[data-addsub]'))) { S.add.sub = S.add.sub === b.dataset.addsub ? null : b.dataset.addsub; if (S.add.sub) S.add.subAberta = false; renderAdd(); return; }
+    if ((b = t.closest('#sub-resumo'))) { S.add.subAberta = true; renderAdd(); return; }
     if ((b = t.closest('[data-per] .rel-per-btn'))) { setPer(b.parentNode.dataset.per, b.dataset.tipo); return; }
     if ((b = t.closest('[data-rc]'))) { S.rcCat = b.dataset.rc; renderizarRelcat(); return; }
     if ((b = t.closest('[data-cancelar-plano]'))) { cancelarPlano(b.dataset.cancelarPlano); return; }
