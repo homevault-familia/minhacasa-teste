@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.38';
+var VERSAO = '2.35.39';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -4301,6 +4301,13 @@ function ligarEventos() {
   $('ul-senha').onkeydown = function (e) { if (e.key === 'Enter') desbloquear(); };
 
   // Histórico: tocar no fundo vazio (fora dos cartões, lançamentos e botões) volta para a tela dos cartões (24/11/2026)
+  // Registrar: tocar fora das subcategorias (no branco, no valor, na data…) minimiza a lista (24/11/2026)
+  document.addEventListener('click', function (e) {
+    if (S.tela !== 'add' || !S.add || !S.add.subAberta) return;
+    var t = e.target;
+    if (t.closest && (t.closest('#sub-chips') || t.closest('#sub-resumo') || t.closest('[data-addcat]'))) return;
+    S.add.subAberta = false; renderAdd();
+  });
   document.addEventListener('click', function (e) {
     if (S.tela !== 'historico' || !usaCartoes() || S.histVista !== 'lista') return;
     var t = e.target;
@@ -4321,8 +4328,9 @@ function ligarEventos() {
     if (t.closest('[data-origtrocar]')) { S.add.orig = null; $('inp-valor').value = ''; $('inp-desc').value = ''; renderOrig(); atualizarAvisoValor(); return; }
     if ((b = t.closest('[data-origem]'))) { if (S.add.orig !== b.dataset.origem) escolherOrig(b.dataset.origem); return; }
     if ((b = t.closest('[data-addcat]'))) {
-      var trocou = S.add.cat !== b.dataset.addcat; if (trocou) S.add.sub = null; S.add.cat = b.dataset.addcat; S.add.subAberta = true; renderAdd();
-      if ($('grupo-sub').style.display !== 'none') setTimeout(function () { $('grupo-sub').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); // abre as subcategorias
+      var trocou = S.add.cat !== b.dataset.addcat; if (trocou) S.add.sub = null; S.add.cat = b.dataset.addcat;
+      S.add.subAberta = trocou || !S.add.subAberta; renderAdd(); // tocar de novo na mesma categoria minimiza
+      if (S.add.subAberta && $('grupo-sub').style.display !== 'none') setTimeout(function () { $('grupo-sub').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); // abre as subcategorias
       return;
     }
     if ((b = t.closest('[data-addsub]'))) { S.add.sub = S.add.sub === b.dataset.addsub ? null : b.dataset.addsub; if (S.add.sub) S.add.subAberta = false; renderAdd(); return; }
