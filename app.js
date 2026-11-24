@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.19';
+var VERSAO = '2.35.20';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -771,22 +771,64 @@ function renderizar() {
       corpo + '</div>';
   }).join('');
 
-  renderizarPizza(TT.tots, TT.comum);
+  renderizarPizza(TT, p);
   renderizarBarras(TT, p);
   renderizarRecentes(TT.todos);
   pintarCartaoSemana();
   if (!$('topo-config').classList.contains('editando')) preencherConfig();
 }
 
-function renderizarPizza(tots, total) {
-  $('pizza-wrap').innerHTML = '<div class="pizza-legenda">' + todasCats().map(function (c) {
+// Distribuição por categoria em sanfona (24/11/2026): barrinha do orçamento em cada linha; tocar abre o detalhe da categoria
+function renderizarPizza(TT, p) {
+  var tots = TT.tots, total = TT.comum, hj = hoje(), el = $('pizza-wrap');
+  var faltam = hj >= p.inicio && hj <= p.fim ? diasEntre(hj, p.fim) + 1 : 0;
+  var linhas = todasCats().map(function (c) {
     var v = tots[c.id] || 0, orc = +c.orc || 0;
-    var pct = orc > 0 ? (v / orc * 100).toFixed(0) : (total > 0 ? (v / total * 100).toFixed(0) : 0);
-    var cor = v > orc && orc > 0 ? '#f44336' : v < 0 ? '#16a34a' : c.cor;
-    return '<div class="pizza-item"><div class="pizza-cor" style="background:' + cor + '"></div>' +
-      '<div class="pizza-txt">' + esc(nomeVis(c)) + ' <span style="color:#6b7280;font-size:11px">(' + (v < 0 ? T('devolução') : pct + '% ' + (orc > 0 ? T('do orç.') : T('do total'))) + ')</span></div>' +
-      '<div class="pizza-val" style="color:' + cor + '">' + formatar(v) + '</div></div>';
+    return { c: c, v: v, orc: orc, pct: orc > 0 ? v / orc * 100 : -1 };
+  }).sort(function (a, b) { return a.pct !== b.pct ? b.pct - a.pct : b.v - a.v; }); // mais perto de estourar primeiro; sem orçamento no fim
+  var maxSem = Math.max.apply(null, linhas.map(function (l) { return l.orc > 0 ? 0 : l.v; }).concat([1]));
+  el.innerHTML = '<div class="dc-lista">' + linhas.map(function (L) {
+    var c = L.c, v = L.v, cor, larg, rot;
+    if (L.orc > 0) { cor = v > L.orc ? '#dc2626' : L.pct >= 80 ? '#f59e0b' : '#16a34a'; larg = Math.max(0, Math.min(100, L.pct)); rot = Math.round(L.pct) + '% ' + T('do orç.'); }
+    else { cor = '#94a3b8'; larg = Math.max(0, v / maxSem * 100); rot = v < 0 ? T('devolução') : (total > 0 ? Math.round(v / total * 100) : 0) + '% ' + T('do total'); }
+    var aberta = S.dcAberta === c.id;
+    return '<div class="dc-item' + (aberta ? ' aberta' : '') + '" data-dc="' + esc(c.id) + '">' +
+      '<button type="button" class="dc-cab" aria-expanded="' + aberta + '">' +
+        '<span class="dc-ic" style="background:' + alfa(c.cor, '22') + '">' + esc(c.emoji || '•') + '</span>' +
+        '<span class="dc-meio"><span class="dc-l1"><span class="dc-nome">' + esc(nomeVis(c)) + '</span><span class="dc-val' + (L.orc > 0 && v > L.orc ? ' ruim' : '') + '">' + formatar(v) + '</span></span>' +
+        '<span class="dc-barra"><span style="width:' + larg.toFixed(1) + '%;background:' + cor + '"></span></span>' +
+        '<span class="dc-l2"><span>' + rot + '</span>' + (L.orc > 0 ? '<span>' + T('Orç.') + ' ' + formatar(L.orc) + '</span>' : '<span>' + T('Sem orçamento') + '</span>') + '</span></span>' +
+        '<span class="dobra-chev" aria-hidden="true"></span>' +
+      '</button>' + (aberta ? detalheDC(TT, c, L, faltam) : '') + '</div>';
   }).join('') + '</div>';
+  el.onclick = function (ev) {
+    var t = ev.target, ver = t.closest && t.closest('[data-dc-ver]');
+    if (ver) { irParaCategoria(ver.getAttribute('data-dc-ver')); return; }
+    var cab = t.closest && t.closest('.dc-cab'); if (!cab) return;
+    var id = cab.parentNode.getAttribute('data-dc');
+    S.dcAberta = S.dcAberta === id ? null : id; // só uma aberta por vez
+    renderizarPizza(TT, p);
+  };
+}
+function detalheDC(TT, c, L, faltam) {
+  var doCat = TT.lista.filter(function (l) { return l.cat === c.id; }), h = '<div class="dc-det">';
+  if (L.orc > 0) {
+    var sobra = L.orc - L.v;
+    h += '<div class="dc-sobra ' + (sobra < 0 ? 'ruim' : '') + '">' + (sobra < 0 ? T('Passou {v} do orçamento', { v: formatar(-sobra) }) :
+      T('Sobram {v}', { v: formatar(sobra) }) + (faltam > 0 ? ' · ' + T('{v} por dia nos {n} dias que faltam', { v: formatar(sobra / faltam), n: faltam }) : '')) + '</div>';
+  }
+  var subs = {}; doCat.forEach(function (l) { var k = l.sub || ''; subs[k] = (subs[k] || 0) + l.valor; });
+  var ks = Object.keys(subs).filter(function (k) { return Math.abs(subs[k]) >= 0.005; }).sort(function (a, b) { return subs[b] - subs[a]; });
+  if (ks.length && !(ks.length === 1 && ks[0] === '')) {
+    h += '<div class="dc-tit">' + T('Subcategorias') + '</div>' + ks.map(function (k) {
+      return '<div class="dc-lin"><span>' + esc(k ? (nomeSub(c.id, k) || T('Outros')) : T('Sem subcategoria')) + '</span><b>' + formatar(subs[k]) + '</b></div>';
+    }).join('');
+  }
+  var ult = doCat.slice().sort(function (a, b) { return a.data !== b.data ? (a.data < b.data ? 1 : -1) : b.ts - a.ts; }).slice(0, 3);
+  h += '<div class="dc-tit">' + T('Últimos lançamentos') + '</div>' + (ult.length ? ult.map(function (l) {
+    return '<div class="dc-lin"><span><span class="dc-dt">' + diaMes(l.data) + '</span> ' + esc(descLanc(l)) + '</span><b' + (l.valor < 0 ? ' style="color:#16a34a"' : '') + '>' + formatar(l.valor) + '</b></div>';
+  }).join('') : '<div class="dc-lin"><span style="color:#9ca3af">' + T('Nenhum lançamento no período') + '</span></div>');
+  return h + '<button type="button" class="dc-ver" data-dc-ver="' + esc(c.id) + '">' + T('Ver todos da categoria') + ' ›</button></div>';
 }
 
 function renderizarBarras(TT, p) {

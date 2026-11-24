@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.19">
+<meta name="app-version" content="2.35.20">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -378,6 +378,29 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
 
 /* ── PIZZA ── */
 .pizza-wrap { display: flex; gap: 12px; align-items: center; }
+.dc-lista { display: flex; flex-direction: column; width: 100%; }
+.dc-item { border-bottom: 1px solid #f1f5f9; }
+.dc-item:last-child { border-bottom: 0; }
+.dc-cab { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 0; background: none; border: 0; font: inherit; text-align: left; cursor: pointer; color: inherit; min-height: 52px; }
+.dc-ic { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.dc-meio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dc-l1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.dc-nome { font-size: 14px; font-weight: 700; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-val { font-size: 14px; font-weight: 800; color: #111827; white-space: nowrap; }
+.dc-val.ruim { color: #dc2626; }
+.dc-barra { display: block; height: 6px; border-radius: 4px; background: #eef1f5; overflow: hidden; }
+.dc-barra span { display: block; height: 6px; border-radius: 4px; }
+.dc-l2 { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #6b7280; }
+.dc-det { margin: 0 0 12px 42px; padding: 10px 12px; background: #f8fafc; border-radius: 12px; font-size: 13px; }
+.dc-sobra { font-weight: 700; color: #15803d; margin-bottom: 4px; }
+.dc-sobra.ruim { color: #dc2626; }
+.dc-tit { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #94a3b8; margin: 10px 0 4px; }
+.dc-lin { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; color: #374151; }
+.dc-lin span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-lin b { white-space: nowrap; color: #111827; }
+.dc-dt { color: #94a3b8; font-weight: 600; margin-right: 4px; }
+.dc-ver { margin-top: 10px; width: 100%; min-height: 40px; border: 1.5px solid #bfdbfe; background: #fff; color: #1d4ed8; font: inherit; font-size: 13px; font-weight: 700; border-radius: 10px; cursor: pointer; }
+.dc-item.aberta > .dc-cab .dobra-chev { transform: rotate(-135deg); margin-top: 4px; }
 .pizza-legenda { flex: 1; }
 .pizza-item { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
 .pizza-item:last-child { margin-bottom: 0; }
