@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.21';
+var VERSAO = '2.35.22';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1401,8 +1401,7 @@ function renderizarHistorico() {
   var lista = listaHistorico(per);
   var filtro = '';
   if (usaCartoes()) {
-    var op = [{ id: '', nome: T('Todos') }].concat(opcoesCartao().map(function (c) { return { id: c.id, nome: nomeCartao(c.id, true) }; })).concat([{ id: '_sem', nome: T('Sem cartão') }]);
-    filtro = '<div class="ct-filtro">' + op.map(function (o) { return '<button type="button" class="ct-fb' + ((S.histCartao || '') === o.id ? ' on' : '') + '" data-histct="' + o.id + '">' + esc(o.nome) + '</button>'; }).join('') + '</div>';
+    filtro = cartoesFiltroHist(per);
   }
   if (!lista.length) { el.innerHTML = filtro + T('<div class="vazio">📭 Sem lançamentos neste período</div>'); ligarFiltroHist(); return; }
   var pm = buildPagasMap(lancamentos()), porDia = {}, dm = devolvidoPorCompra();
@@ -1416,7 +1415,29 @@ function renderizarHistorico() {
     }).join('');
   if (filtro) { el.innerHTML = filtro + el.innerHTML; ligarFiltroHist(); }
 }
-function ligarFiltroHist() { qsa('[data-histct]').forEach(function (b) { b.onclick = function () { S.histCartao = b.dataset.histct || null; renderizarHistorico(); }; }); }
+// Filtro do Histórico em formato de cartão de crédito (24/11/2026): cor que a casa escolheu, chip, nome, banco e o total do período
+function cartoesFiltroHist(per) {
+  var todos = lancamentosPeriodo(lancamentos(), per).filter(function (l) { return l.cat !== PARC; }), tot = { '': 0, _sem: 0 };
+  todos.forEach(function (l) { var k = cartaoPorId(l.cartao) ? l.cartao : '_sem'; tot[k] = (tot[k] || 0) + l.valor; tot[''] += l.valor; });
+  var op = [{ id: '', nome: T('Todos'), cor: '#1f2937', tipo: 'todos' }]
+    .concat(opcoesCartao().map(function (c) { return { id: c.id, nome: c.nome, banco: c.banco, cor: c.cor || '#334155', tipo: c.din ? 'din' : 'ct' }; }))
+    .concat(tot._sem ? [{ id: '_sem', nome: T('Sem cartão'), cor: '', tipo: 'sem' }] : []);
+  return '<div class="cc-fila">' + op.map(function (o) {
+    var on = (S.histCartao || '') === o.id, claro = o.cor && corClara(o.cor);
+    var topo = o.tipo === 'ct' ? '<span class="cc-banco">' + esc(o.banco || '') + '</span><svg class="cc-nfc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 7.5a6 6 0 0 1 0 9M12 5a10 10 0 0 1 0 14M5 10a2.5 2.5 0 0 1 0 4"/></svg>' :
+      o.tipo === 'din' ? '<span class="cc-banco">' + T('Dinheiro') + '</span><span class="cc-emo">💵</span>' :
+      o.tipo === 'todos' ? '<span class="cc-banco">' + T('Todos os cartões') + '</span>' : '<span class="cc-banco">' + T('Sem cartão') + '</span>';
+    var meio = o.tipo === 'ct' ? '<span class="cc-chip"></span>' : o.tipo === 'todos' ? '<span class="cc-pilha"><i></i><i></i><i></i></span>' : '<span class="cc-chip" style="visibility:hidden"></span>';
+    return '<button type="button" class="cc cc-' + o.tipo + (on ? ' on' : '') + (claro ? ' claro' : '') + '" data-histct="' + o.id + '" aria-pressed="' + on + '"' + (o.cor ? ' style="background:' + o.cor + '"' : '') + '>' +
+      '<span class="cc-topo">' + topo + '</span>' + meio +
+      '<span class="cc-nome">' + esc(o.tipo === 'ct' || o.tipo === 'din' ? o.nome : '') + '</span>' +
+      '<span class="cc-val">' + semCent(tot[o.id] || 0) + '</span></button>';
+  }).join('') + '</div>';
+}
+function corClara(hex) { var m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return false; var n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 170; }
+function ligarFiltroHist() {
+  var on = document.querySelector('.cc.on'), fila = on && on.parentNode; if (fila) fila.scrollLeft = Math.max(0, on.offsetLeft - fila.offsetLeft - (fila.clientWidth - on.offsetWidth) / 2); // cartão escolhido sempre à vista
+  qsa('[data-histct]').forEach(function (b) { b.onclick = function () { S.histCartao = b.dataset.histct || null; renderizarHistorico(); }; }); }
 function compartilharTexto(msg) {
   if (navigator.share) navigator.share({ text: msg }).catch(function () {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
