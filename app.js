@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.7';
+var VERSAO = '2.35.8';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1396,7 +1396,8 @@ function renderizarRelatorio() {
   // Subtotais por subcategoria
   var subTot = {};
   TT.lista.forEach(function (l) { if (l.cat === PARC || !l.sub) return; var k = l.cat + '|' + l.sub; subTot[k] = (subTot[k] || 0) + l.valor; });
-  var cats = T('<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>') +
+  // 24/11/2026: começa fechado; abre com um toque (e continua aberto enquanto o app estiver aberto)
+  var cats = '<details class="dobra-rel" id="rel-cats"' + (S.relCatsAberto ? ' open' : '') + '><summary>' + T('Por Categoria') + '<span class="dobra-chev" aria-hidden="true"></span></summary>' +
     todasCats().filter(function (c) { return (TT.tots[c.id] || 0) !== 0; }).map(function (c) { // só categorias com gasto no período (14/11/2026)
       var g = TT.tots[c.id] || 0, o = +c.orc || 0, pC = o > 0 ? Math.max(0, Math.min(g / o * 100, 100)) : 0, pTot = grand > 0 ? g / grand * 100 : 0;
       var corB = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : c.cor, restC = o - g;
@@ -1412,7 +1413,7 @@ function renderizarRelatorio() {
         (o > 0 ? '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:#555">' + formatar(o) + T('</div><div class="rel-cat-num-lbl">Orçado</div></div>') +
           '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:' + (restC < 0 ? '#f44336' : '#43a047') + '">' + formatar(Math.abs(restC)) + '</div><div class="rel-cat-num-lbl">' + (restC < 0 ? T('Excedeu') : T('Disponível')) + '</div></div>' : '') +
         '</div>' + barra + subs + '</div>';
-    }).join('');
+    }).join('') + '</details>';
 
   var top5 = TT.lista.filter(function (l) { return l.cat !== PARC; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, 5);
   var top = top5.length ? T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>') + top5.map(function (l, i) {
@@ -1451,6 +1452,7 @@ function renderizarRelatorio() {
     met + cats + blocoPorCartao(TT.lista) + top + heat + sem +
     T('<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>');
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
+  if ($('rel-cats')) $('rel-cats').addEventListener('toggle', function () { S.relCatsAberto = $('rel-cats').open; });
   $('rel-wa').onclick = function () {
     var msg = T('📊 *RELATÓRIO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
     todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + nomeVis(c) + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
