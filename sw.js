@@ -1,5 +1,5 @@
 // MinhaCasa — service worker (funciona offline para abrir o app; dados vêm do Firebase)
-var CACHE = 'minhacasa-v2.35.36';
+var CACHE = 'minhacasa-v2.35.37';
 var ARQUIVOS = ['./', 'index.html', 'app.js', 'banco.js', 'i18n.js', 'i18n-en.js', 'i18n-fr.js', 'config.js', 'manifest.json', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -15,9 +15,9 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   e.respondWith(
-    // no-cache em TUDO, inclusive na página (24/11/2026): antes a página vinha da cópia do navegador (até 10 min)
-    // enquanto o app.js vinha novo, e a tela aparecia sem o estilo novo
-    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(function (r) {
+    // A página vai pela navegação normal do aparelho (24/11/2026: buscar a página por fora deixou o iPhone com tela branca);
+    // os outros arquivos vão com no-cache. O estilo do Registrar agora vem dentro do app.js, então não fica de versão diferente.
+    (e.request.mode === 'navigate' ? fetch(e.request) : fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })).then(function (r) {
       var copia = r.clone();
       caches.open(CACHE).then(function (c) { c.put(e.request, copia); });
       return r;
