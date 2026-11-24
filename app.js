@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.28';
+var VERSAO = '2.35.29';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -4159,6 +4159,14 @@ function ligarEventos() {
   $('ul-btn').onclick = desbloquear;
   $('ul-senha').onkeydown = function (e) { if (e.key === 'Enter') desbloquear(); };
 
+  // Histórico: tocar no fundo vazio (fora dos cartões, lançamentos e botões) volta para a tela dos cartões (24/11/2026)
+  document.addEventListener('click', function (e) {
+    if (S.tela !== 'historico' || !usaCartoes() || S.histVista !== 'lista') return;
+    var t = e.target;
+    if (t === document.body || t === document.documentElement || t.id === 'tela-historico' || t.id === 'corpo-historico' || (t.classList && (t.classList.contains('conteudo') || t.classList.contains('cc-fila')))) {
+      S.histVista = 'cartoes'; S.histCartao = null; renderizarHistorico();
+    }
+  });
   document.addEventListener('click', function (e) {
     var t = e.target, b;
     if ((b = t.closest('[data-acao="sair"]'))) { sair(); return; }
