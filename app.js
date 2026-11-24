@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.9';
+var VERSAO = '2.35.10';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -565,13 +565,13 @@ function blocoPorCartao(lista) {
   var ks = Object.keys(t).filter(function (k) { return Math.abs(t[k]) > 0.004; }).sort(function (a, b) { return t[b] - t[a]; });
   if (!ks.length) return '';
   var max = Math.max.apply(null, ks.map(function (k) { return Math.abs(t[k]); }));
-  return T('<div class="card" style="margin-bottom:8px"><div class="card-titulo">💳 Por cartão</div>') + ks.map(function (k) {
+  return '<details class="dobra-rel" id="rel-cartoes"' + (S.relCtAberto ? ' open' : '') + '><summary>' + T('💳 Por cartão') + '<span class="dobra-chev" aria-hidden="true"></span></summary>' + ks.map(function (k) {
     var c = cartaoPorId(k), cor = c ? c.cor : '#9ca3af', pc = total > 0 ? t[k] / total * 100 : 0;
     return '<div style="padding:8px 0;border-top:1px solid #f3f4f6"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">' +
       '<span style="font-weight:700;font-size:14px">' + esc(c ? nomeCartao(k) : T('Sem cartão')) + '<small style="color:#9ca3af;font-weight:600"> · ' + (n[k] === 1 ? T('1 compra') : T('{n} compras', { n: n[k] || 0 })) + '</small></span>' +
       '<span style="font-weight:800;color:' + cor + ';white-space:nowrap">' + formatar(t[k]) + ' <small style="color:#6b7280">' + pc.toFixed(0) + '%</small></span></div>' +
       '<div style="height:7px;background:#f3f4f6;border-radius:4px;margin-top:6px"><div style="height:7px;border-radius:4px;background:' + cor + ';width:' + Math.max(2, Math.abs(t[k]) / max * 100).toFixed(1) + '%"></div></div></div>';
-  }).join('') + '</div>';
+  }).join('') + '</details>';
 }
 function textoPorCartao(lista) {
   if (!usaCartoes()) return '';
@@ -1453,6 +1453,7 @@ function renderizarRelatorio() {
     T('<div class="card"><button class="btn-whatsapp" id="rel-wa">📱 Enviar por WhatsApp</button></div>');
   if ($('rel-sem-orc')) $('rel-sem-orc').onclick = abrirOrcamentoInicial;
   if ($('rel-cats')) $('rel-cats').addEventListener('toggle', function () { S.relCatsAberto = $('rel-cats').open; });
+  if ($('rel-cartoes')) $('rel-cartoes').addEventListener('toggle', function () { S.relCtAberto = $('rel-cartoes').open; });
   $('rel-wa').onclick = function () {
     var msg = T('📊 *RELATÓRIO — ') + formatarData(per.inicio) + ' → ' + formatarData(per.fim) + '*\n━━━━━━━━━━━━━━━━\n';
     todasCats().forEach(function (c) { var g = TT.tots[c.id] || 0; if (g || +c.orc) msg += c.emoji + ' ' + nomeVis(c) + ': ' + formatar(g) + (+c.orc ? ' / ' + formatar(c.orc) : '') + '\n'; });
