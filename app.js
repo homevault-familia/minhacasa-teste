@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.24';
+var VERSAO = '2.35.25';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1237,8 +1237,9 @@ function renderAdd() {
   var tiles = (editParc ? [catParc()] : catsComuns());
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
-    return '<div class="cat-tile" data-addcat="' + c.id + '"' + (on ? ' style="border-color:' + c.cor + ';background:' + alfa(c.cor, '12') + ';box-shadow:0 0 0 3px ' + alfa(c.cor, '26') + '"' : '') + '>' +
-      '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm"' + (on ? ' style="color:' + c.cor + '"' : '') + '>' + esc(nomeVis(c)) + '</div></div>';
+    // fundo suave na cor da categoria (24/11/2026); a escolhida fica mais forte, com borda e anel
+    return '<div class="cat-tile" data-addcat="' + c.id + '" style="border-color:' + (on ? c.cor : alfa(c.cor, '38')) + ';background:' + alfa(c.cor, on ? '2e' : '17') + (on ? ';box-shadow:0 0 0 3px ' + alfa(c.cor, '30') : '') + '">' +
+      '<div class="cat-tile-ic">' + esc(c.emoji) + '</div><div class="cat-tile-nm" style="color:' + (on ? c.cor : '#374151') + '">' + esc(nomeVis(c)) + '</div></div>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
   var hdr = $('add-header');
@@ -1258,6 +1259,11 @@ function renderAdd() {
     $('sub-step').style.background = cat.cor;
     $('sel-sub').innerHTML = T('<option value="">— Selecione —</option>') + ordenarVis(cat.subs).map(function (s) {
       return '<option value="' + s.id + '"' + (s.id === a.sub ? ' selected' : '') + '>' + esc(nomeVis(s)) + '</option>';
+    }).join('');
+    // subcategorias como botões, já abertos (24/11/2026): um toque escolhe; tocar de novo desmarca
+    $('sub-chips').innerHTML = ordenarVis(cat.subs).map(function (s) {
+      var on = s.id === a.sub;
+      return '<button type="button" class="sub-chip' + (on ? ' on' : '') + '" data-addsub="' + s.id + '" style="' + (on ? 'background:' + cat.cor + ';border-color:' + cat.cor + ';color:#fff' : 'border-color:' + alfa(cat.cor, '55') + ';background:' + alfa(cat.cor, '10')) + '">' + esc(nomeVis(s)) + '</button>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
 }
@@ -4158,7 +4164,12 @@ function ligarEventos() {
     if ((b = t.closest('[data-descsug]'))) { var ns = _descSug[+b.dataset.descsug]; if (ns) { $('inp-desc').value = ns; atualizarSugDesc(); } return; }
     if (t.closest('[data-origtrocar]')) { S.add.orig = null; $('inp-valor').value = ''; $('inp-desc').value = ''; renderOrig(); atualizarAvisoValor(); return; }
     if ((b = t.closest('[data-origem]'))) { if (S.add.orig !== b.dataset.origem) escolherOrig(b.dataset.origem); return; }
-    if ((b = t.closest('[data-addcat]'))) { if (S.add.cat !== b.dataset.addcat) S.add.sub = null; S.add.cat = b.dataset.addcat; renderAdd(); return; }
+    if ((b = t.closest('[data-addcat]'))) {
+      var trocou = S.add.cat !== b.dataset.addcat; if (trocou) S.add.sub = null; S.add.cat = b.dataset.addcat; renderAdd();
+      if (trocou && $('grupo-sub').style.display !== 'none') setTimeout(function () { $('grupo-sub').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); // já mostra as subcategorias
+      return;
+    }
+    if ((b = t.closest('[data-addsub]'))) { S.add.sub = S.add.sub === b.dataset.addsub ? null : b.dataset.addsub; renderAdd(); return; }
     if ((b = t.closest('[data-per] .rel-per-btn'))) { setPer(b.parentNode.dataset.per, b.dataset.tipo); return; }
     if ((b = t.closest('[data-rc]'))) { S.rcCat = b.dataset.rc; renderizarRelcat(); return; }
     if ((b = t.closest('[data-cancelar-plano]'))) { cancelarPlano(b.dataset.cancelarPlano); return; }

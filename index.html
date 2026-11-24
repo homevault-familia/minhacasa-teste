@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="app-version" content="2.35.24">
+<meta name="app-version" content="2.35.25">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -600,6 +600,9 @@ details[open] > summary .dobra-chev { transform: rotate(-135deg); margin-top: 4p
   justify-content: center; flex-shrink: 0; }
 
 .cat-grid-pro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sub-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sub-chip { font: inherit; font-size: 14px; font-weight: 700; color: #1f2937; padding: 10px 14px; min-height: 42px; border-radius: 21px; border: 1.5px solid #e5e7eb; background: #fff; cursor: pointer; transition: background .15s, color .15s; }
+.sub-chip.on { box-shadow: 0 2px 6px rgba(15,23,42,.15); }
 .cat-tile { border: 2px solid #e5e7eb; border-radius: 14px; padding: 18px 8px;
   text-align: center; cursor: pointer; background: #fafafa; transition: all .15s; }
 .cat-tile-ic { font-size: 28px; margin-bottom: 6px; }
@@ -1339,7 +1342,8 @@ body.na-tela-add .add-sticky-footer { padding-bottom: calc(12px + env(safe-area-
     </div>
     <div class="add-card" id="grupo-sub" style="display:none">
       <div class="add-card-title"><span class="add-step-n" id="sub-step">↳</span><span id="sub-titulo">Subcategoria</span></div>
-      <select id="sel-sub" class="add-select"></select>
+      <div class="sub-chips" id="sub-chips"></div>
+      <select id="sel-sub" class="add-select" style="display:none" aria-hidden="true" tabindex="-1"></select>
     </div>
     <div class="add-card">
       <div class="add-card-title"><span class="add-step-n">2</span><span id="lbl-valor">Valor Gasto</span></div>
