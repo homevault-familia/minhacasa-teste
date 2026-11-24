@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.34';
+var VERSAO = '2.35.35';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1337,12 +1337,13 @@ function estiloRegistrar() {
   var st = document.createElement('style'); st.id = 'st-reg';
   st.textContent =
     '#add-cats.cat-grid-pro{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}' +
-    '.ic-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:1/1;min-width:0;padding:6px 3px;border-radius:14px;border:1.5px solid transparent;background:#f1f3f6;font:inherit;color:#334155;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}' +
+    '.ic-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:1/1;min-width:0;padding:6px 3px;border-radius:14px;border:1.5px solid transparent;background:var(--tf,#f1f3f6);font:inherit;color:#334155;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}' +
     '.ic-tile:active{transform:scale(.95)}' +
     '.ic-tile span{font-size:10.5px;font-weight:600;line-height:1.15;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}' +
     '.ic-tile.longo span{font-size:9.5px;letter-spacing:-.02em}' +
+    '.ic-tile .ic-cat{color:var(--tc,#334155)}' +
     '.ic-cat{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}' +
-    '.ic-tile.on{background:var(--tb);border-color:var(--tc);color:var(--tc)}' +
+    '.ic-tile.on{background:var(--tb);border-color:var(--tc);color:var(--tc);box-shadow:0 0 0 3px var(--tf)}' +
     '.ic-tile.on span{font-weight:700}' +
     // subcategorias: painel na cor da categoria, com pílulas de tamanho livre (bem diferentes das caixas das categorias)
     '.sub-chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-radius:16px;background:var(--sp)}' +
@@ -1361,7 +1362,7 @@ function renderAdd() {
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
     // grade de ícones de traço (24/11/2026): neutra; a escolhida fica na cor da categoria
-    return '<button type="button" class="ic-tile' + (on ? ' on' : '') + (nomeVis(c).length > 10 ? ' longo' : '') + '" data-addcat="' + c.id + '"' + (on ? ' style="--tc:' + c.cor + ';--tb:' + alfa(c.cor, '1c') + '"' : '') + '>' +
+    return '<button type="button" class="ic-tile' + (on ? ' on' : '') + (nomeVis(c).length > 10 ? ' longo' : '') + '" data-addcat="' + c.id + '" style="--tc:' + c.cor + ';--tf:' + alfa(c.cor, '1f') + ';--tb:' + alfa(c.cor, '38') + '">' +
       icoCat(nomeVis(c) + ' ' + c.nome, c.emoji) + '<span>' + esc(nomeVis(c)) + '</span></button>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
