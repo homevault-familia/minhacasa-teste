@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.32';
+var VERSAO = '2.35.33';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -1331,13 +1331,33 @@ function chaveIcone(nome, emoji) {
 }
 var SVG_IC = ' viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'; // atributos no próprio desenho: fica certo mesmo se o estilo demorar a chegar
 function icoCat(nome, emoji, cls) { return '<svg class="' + (cls || 'ic-cat') + '"' + SVG_IC + '>' + ICS[chaveIcone(nome, emoji)] + '</svg>'; }
+// Estilo do Registrar vem junto com o código (24/11/2026): assim código e visual nunca ficam de versões diferentes
+function estiloRegistrar() {
+  if ($('st-reg')) return;
+  var st = document.createElement('style'); st.id = 'st-reg';
+  st.textContent =
+    '#add-cats.cat-grid-pro{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}' +
+    '.ic-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:1/1;min-width:0;padding:6px 3px;border-radius:14px;border:1.5px solid transparent;background:#f1f3f6;font:inherit;color:#334155;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}' +
+    '.ic-tile:active{transform:scale(.95)}' +
+    '.ic-tile span{font-size:10.5px;font-weight:600;line-height:1.15;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}' +
+    '.ic-tile.longo span{font-size:9.5px;letter-spacing:-.02em}' +
+    '.ic-cat{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}' +
+    '.ic-tile.on{background:var(--tb);border-color:var(--tc);color:var(--tc)}' +
+    '.ic-tile.on span{font-weight:700}' +
+    '.sub-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}' +
+    '.sub-bt{min-width:0;min-height:40px;padding:6px 8px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent}' +
+    '.sub-bt:active{transform:scale(.97)}' +
+    '.sub-bt.on{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:700}';
+  document.head.appendChild(st);
+}
 function renderAdd() {
+  estiloRegistrar();
   var a = S.add, editParc = a.editId && a.cat === PARC;
   var tiles = (editParc ? [catParc()] : catsComuns());
   $('add-cats').innerHTML = tiles.length ? tiles.map(function (c) {
     var on = c.id === a.cat;
     // grade de ícones de traço (24/11/2026): neutra; a escolhida fica na cor da categoria
-    return '<button type="button" class="ic-tile' + (on ? ' on' : '') + '" data-addcat="' + c.id + '"' + (on ? ' style="--tc:' + c.cor + ';--tb:' + alfa(c.cor, '1c') + '"' : '') + '>' +
+    return '<button type="button" class="ic-tile' + (on ? ' on' : '') + (nomeVis(c).length > 10 ? ' longo' : '') + '" data-addcat="' + c.id + '"' + (on ? ' style="--tc:' + c.cor + ';--tb:' + alfa(c.cor, '1c') + '"' : '') + '>' +
       icoCat(nomeVis(c) + ' ' + c.nome, c.emoji) + '<span>' + esc(nomeVis(c)) + '</span></button>';
   }).join('') : T('<div class="vazio">Nenhuma categoria. Crie em Ajustes.</div>');
   var cat = catPorId(a.cat);
@@ -1361,10 +1381,8 @@ function renderAdd() {
     }).join('');
     // subcategorias como botões, já abertos (24/11/2026): um toque escolhe; tocar de novo desmarca
     $('sub-chips').innerHTML = ordenarVis(cat.subs).map(function (s) {
-      var on = s.id === a.sub, k = chaveIcone(nomeVis(s) + ' ' + s.nome, '');
-      if (k === 'etiqueta' || k === 'outros' && !/outr|other|autre/i.test(semAcentoIc(s.nome))) k = chaveIcone(nomeVis(cat) + ' ' + cat.nome, cat.emoji); // sem ícone próprio: usa o da categoria
-      return '<button type="button" class="ic-tile' + (on ? ' on' : '') + '" data-addsub="' + s.id + '"' + (on ? ' style="--tc:' + cat.cor + ';--tb:' + alfa(cat.cor, '1c') + '"' : '') + '>' +
-        '<svg class="ic-cat"' + SVG_IC + '>' + ICS[k] + '</svg><span>' + esc(nomeVis(s)) + '</span></button>';
+      var on = s.id === a.sub;
+      return '<button type="button" class="sub-bt' + (on ? ' on' : '') + '" data-addsub="' + s.id + '" style="--tc:' + cat.cor + '">' + esc(nomeVis(s)) + '</button>';
     }).join('');
   } else $('grupo-sub').style.display = 'none';
 }
