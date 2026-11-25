@@ -1371,5 +1371,6 @@ MCI18N.add('fr', {
  "Cartões": "Cartes",
  "Toque num cartão para ver os lançamentos": "Touchez une carte pour voir ses dépenses",
  "Voltar aos cartões": "Retour aux cartes",
- "Toque para escolher a subcategoria": "Touchez pour choisir la sous-catégorie"
+ "Toque para escolher a subcategoria": "Touchez pour choisir la sous-catégorie",
+ "O mês não é curto. <span>Falta um plano.</span>": "Le mois n’est pas trop court. <span>Il manque un plan.</span>"
 });

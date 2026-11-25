@@ -1371,5 +1371,6 @@ MCI18N.add('en', {
  "Cartões": "Cards",
  "Toque num cartão para ver os lançamentos": "Tap a card to see its expenses",
  "Voltar aos cartões": "Back to cards",
- "Toque para escolher a subcategoria": "Tap to choose a subcategory"
+ "Toque para escolher a subcategoria": "Tap to choose a subcategory",
+ "O mês não é curto. <span>Falta um plano.</span>": "The month isn’t too short. <span>It just needs a plan.</span>"
 });
