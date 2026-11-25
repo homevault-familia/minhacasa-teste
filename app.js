@@ -26,7 +26,7 @@ var T = I18N.T;
 })();
 I18N.traduzirPagina(document.body);
 
-var VERSAO = '2.35.39';
+var VERSAO = '2.35.40';
 // Ao mudar a VERSAO com algo que o usuário percebe, acrescente uma entrada NO TOPO de NOVIDADES (20/11/2026).
 var NOVIDADES = [
   { v: '2.35.0', d: '23/11/2026', itens: [
@@ -3977,7 +3977,12 @@ function iniciar() {
   auth.onAuthStateChanged(function (u) {
     pararEscuta(); limparFormularios();
     S.user = u; S.casa = null; S.chave = null; S.cfg = null; S.raw = {}; S.perfis = {}; S.membros = {};
-    if (!u) { mostrarEntrada(deveApresentar() ? 'card-apres' : 'card-auth'); return; }
+    if (!u) {
+      // vindo do site de divulgação: ?cadastro abre direto em Criar conta; ?entrar abre em Entrar (25/11/2026)
+      if (/[?&]cadastro\b/.test(location.search)) { S.apresVista = true; mostrarEntrada('card-auth'); setModoCriar(true); return; }
+      if (/[?&]entrar\b/.test(location.search)) { S.apresVista = true; mostrarEntrada('card-auth'); setModoCriar(false); return; }
+      mostrarEntrada(deveApresentar() ? 'card-apres' : 'card-auth'); return;
+    }
     try { localStorage.setItem('mc_ja_entrou', '1'); } catch (e) {}
     var cr = u.metadata && Date.parse(u.metadata.creationTime); // quando a conta foi criada (para o painel do admin)
     var ct = { email: u.email || '', ultimo: firebase.database.ServerValue.TIMESTAMP, v: VERSAO }; if (cr && cr <= Date.now()) ct.criado = cr;

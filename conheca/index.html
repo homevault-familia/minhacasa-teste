@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MinhaCasa™ · O plano financeiro do mês da sua família</title>
+<meta name="description" content="Seu dinheiro não some. Ele vaza. O MinhaCasa é o plano financeiro do mês da sua família: vocês combinam quanto podem gastar e o app acompanha cada gasto, com avisos antes de estourar. 14 dias grátis.">
+<meta property="og:title" content="MinhaCasa™ · Seu dinheiro não some. Ele vaza.">
+<meta property="og:description" content="O plano financeiro do mês da sua família, com avisos antes de estourar e a projeção de como o mês vai fechar. 14 dias grátis.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="../icon.svg">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+:root { --navy:#0f172a; --azul:#1d4ed8; --azul2:#93c5fd; --azul-cl:#eff6ff; --amb:#fbbf24; --verde:#16a34a; --cinza:#475569; --borda:#e2e8f0; --fundo:#f8fafc; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Manrope, system-ui, -apple-system, Segoe UI, sans-serif; color: var(--navy); background: #fff; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+img, svg { display: block; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 22px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 14px 26px; border-radius: 14px; font-weight: 800; font-size: 16px; text-decoration: none; transition: transform .15s, background .15s; }
+.btn:active { transform: scale(.98); }
+.btn-pri { background: var(--azul); color: #fff; box-shadow: 0 8px 20px rgba(29,78,216,.3); }
+.btn-pri:hover { background: #1e40af; }
+.btn-sec { background: rgba(255,255,255,.08); color: #fff; border: 1.5px solid rgba(255,255,255,.25); }
+.btn-sec:hover { background: rgba(255,255,255,.14); }
+.btn-cl { background: #fff; color: var(--navy); }
+.tag { display: inline-block; font-size: 13px; font-weight: 800; letter-spacing: .02em; padding: 7px 14px; border-radius: 999px; background: var(--azul-cl); color: var(--azul); }
+h1, h2, h3 { letter-spacing: -0.03em; line-height: 1.08; margin: 0; }
+h2 { font-size: clamp(30px, 5vw, 46px); font-weight: 800; }
+.sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--cinza); font-weight: 500; margin: 14px 0 0; max-width: 680px; }
+section { padding: 84px 0; }
+
+/* topo */
+.topo { position: sticky; top: 0; z-index: 10; background: rgba(15,23,42,.92); backdrop-filter: saturate(160%) blur(10px); -webkit-backdrop-filter: saturate(160%) blur(10px); }
+.topo .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.marca { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+.marca span { color: var(--azul2); }
+.topo nav { display: flex; align-items: center; gap: 6px; }
+.topo nav a.lk { color: #cbd5e1; text-decoration: none; font-weight: 700; font-size: 14px; padding: 10px 12px; border-radius: 10px; }
+.topo nav a.lk:hover { color: #fff; }
+.topo .btn { min-height: 42px; padding: 10px 18px; font-size: 14px; border-radius: 11px; box-shadow: none; white-space: nowrap; }
+@media (max-width: 400px) { .topo .btn { padding: 10px 13px; } .topo nav a.lk { padding: 10px 8px; } .marca { font-size: 17px; } }
+@media (max-width: 720px) { .topo nav a.lk.op { display: none; } }
+
+/* hero */
+.hero { background: var(--navy); color: #fff; padding: 64px 0 0; overflow: hidden; }
+.hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: end; }
+.hero h1 { font-size: clamp(44px, 7.2vw, 80px); font-weight: 800; letter-spacing: -0.045em; line-height: .98; }
+.hero h1 span { color: var(--amb); }
+.hero p.lead { font-size: clamp(18px, 2.4vw, 22px); color: #cbd5e1; font-weight: 500; margin: 22px 0 30px; max-width: 560px; }
+.hero .acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero .nota { margin: 16px 0 0; font-size: 14px; color: #94a3b8; font-weight: 600; }
+.hero .txt { padding-bottom: 72px; }
+.cel { width: 330px; max-width: 100%; margin: 0 auto; border: 10px solid #1e293b; border-bottom: 0; border-radius: 48px 48px 0 0; background: #f1f5f9; overflow: hidden; color: var(--navy); }
+@media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } .hero .txt { padding-bottom: 36px; } }
+
+/* mini app (ilustração) */
+.ma-top { background: var(--azul); color: #fff; padding: 30px 18px 18px; }
+.ma-top .l1 { font-size: 13px; font-weight: 600; color: #dbeafe; }
+.ma-top .rot { font-size: 12px; font-weight: 600; color: #bfdbfe; margin-top: 12px; }
+.ma-top .val { font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.ma-top .val small { font-size: 14px; font-weight: 600; color: #bfdbfe; }
+.ma-bar { height: 9px; border-radius: 6px; background: #3b5fe0; margin-top: 10px; overflow: hidden; }
+.ma-bar i { display: block; width: 56%; height: 9px; background: #fff; border-radius: 6px; }
+.ma-top .pct { font-size: 11.5px; font-weight: 600; color: #dbeafe; margin-top: 7px; }
+.ma-corpo { padding: 14px; display: grid; gap: 10px; }
+.ma-dois { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.ma-card { background: #fff; border-radius: 14px; padding: 11px 12px; }
+.ma-card .r { font-size: 11px; font-weight: 600; color: #64748b; }
+.ma-card .v { font-size: 21px; font-weight: 800; }
+.ma-alerta { background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 14px; padding: 11px 12px; color: #9a3412; font-size: 12px; font-weight: 500; }
+.ma-alerta b { display: block; font-size: 13px; font-weight: 800; }
+.ma-cats { background: #fff; border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+.ma-cats .t { font-size: 12px; font-weight: 800; color: #334155; }
+.ma-l { display: grid; gap: 4px; }
+.ma-l .lin { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+.ma-l .lin span:last-child { color: #64748b; font-weight: 600; }
+.ma-l .tr { height: 7px; border-radius: 5px; background: #e2e8f0; overflow: hidden; }
+.ma-l .tr i { display: block; height: 7px; border-radius: 5px; }
+
+/* problema */
+.prob { background: var(--fundo); }
+.prob-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; margin-top: 40px; }
+.prob-it { background: #fff; border: 1.5px solid var(--borda); border-radius: 20px; padding: 26px; }
+.prob-it .n { font-size: 34px; font-weight: 800; color: #d97706; letter-spacing: -.03em; }
+.prob-it p { margin: 8px 0 0; color: var(--cinza); font-weight: 500; }
+@media (max-width: 860px) { .prob-grid { grid-template-columns: 1fr; } }
+
+/* diferencial */
+.dif .comp { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 40px; }
+.comp-c { border-radius: 22px; padding: 28px; }
+.comp-c h3 { font-size: 21px; font-weight: 800; margin-bottom: 14px; }
+.comp-c ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.comp-c li { display: flex; gap: 12px; font-weight: 600; font-size: 16px; }
+.comp-c li svg { flex-shrink: 0; margin-top: 3px; }
+.comp-ou { background: var(--fundo); border: 1.5px solid var(--borda); color: #64748b; }
+.comp-mc { background: var(--navy); color: #fff; }
+.comp-mc h3 span { color: var(--azul2); }
+@media (max-width: 760px) { .dif .comp { grid-template-columns: 1fr; } }
+
+/* passos */
+.passos { background: var(--fundo); }
+.p-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 40px; }
+.p-it { background: #fff; border: 1.5px solid var(--borda); border-radius: 20px; padding: 24px; }
+.p-it .num { width: 46px; height: 46px; border-radius: 14px; background: var(--navy); color: var(--azul2); font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.p-it h3 { font-size: 19px; font-weight: 800; margin: 16px 0 8px; letter-spacing: -.02em; }
+.p-it p { margin: 0; color: var(--cinza); font-weight: 500; font-size: 15px; }
+@media (max-width: 960px) { .p-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .p-grid { grid-template-columns: 1fr; } }
+
+/* recursos */
+.r-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 40px; }
+.r-it { border-radius: 20px; padding: 24px; border: 1.5px solid var(--borda); }
+.r-ic { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.r-ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.r-it h3 { font-size: 18px; font-weight: 800; margin: 16px 0 6px; letter-spacing: -.02em; }
+.r-it p { margin: 0; color: var(--cinza); font-weight: 500; font-size: 15px; }
+.c-az { background: #eff6ff; color: #1d4ed8; } .c-vd { background: #f0fdf4; color: #15803d; } .c-lr { background: #fff7ed; color: #c2410c; }
+.c-rx { background: #f5f3ff; color: #6d28d9; } .c-rs { background: #fdf2f8; color: #be185d; } .c-tl { background: #f0fdfa; color: #0f766e; }
+@media (max-width: 960px) { .r-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .r-grid { grid-template-columns: 1fr; } }
+
+/* planos */
+.planos { background: var(--navy); color: #fff; }
+.planos .sub { color: #cbd5e1; }
+.pl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 40px; max-width: 820px; }
+.pl { border-radius: 24px; padding: 30px; border: 2px solid #334155; position: relative; }
+.pl h3 { font-size: 20px; font-weight: 800; color: #cbd5e1; }
+.pl .pr { display: flex; align-items: baseline; gap: 6px; margin: 14px 0 4px; }
+.pl .pr small { font-size: 22px; font-weight: 700; color: #cbd5e1; }
+.pl .pr b { font-size: 60px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.pl .per { font-weight: 600; color: #94a3b8; }
+.pl p { margin: 16px 0 0; color: #e2e8f0; font-weight: 600; }
+.pl-dest { background: var(--azul); border-color: var(--azul); }
+.pl-dest h3, .pl-dest .pr small { color: #dbeafe; } .pl-dest .per { color: #dbeafe; }
+.selo { position: absolute; top: 24px; right: 24px; font-size: 13px; font-weight: 800; background: #fde68a; color: #713f12; padding: 6px 12px; border-radius: 999px; }
+.gratis { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+.gratis .chk { display: flex; gap: 10px; align-items: center; font-weight: 700; color: #e2e8f0; }
+@media (max-width: 680px) { .pl-grid { grid-template-columns: 1fr; } }
+
+/* privacidade */
+.priv .wrap { display: grid; grid-template-columns: auto 1fr; gap: 34px; align-items: center; }
+.priv-ic { width: 120px; height: 120px; border-radius: 32px; background: #f0fdf4; color: #15803d; display: flex; align-items: center; justify-content: center; }
+.priv-ic svg { width: 62px; height: 62px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 680px) { .priv .wrap { grid-template-columns: 1fr; } }
+
+/* faq */
+.faq { background: var(--fundo); }
+.faq-l { margin-top: 32px; display: grid; gap: 12px; max-width: 820px; }
+.faq details { background: #fff; border: 1.5px solid var(--borda); border-radius: 16px; padding: 0 22px; }
+.faq summary { list-style: none; cursor: pointer; padding: 20px 0; font-weight: 800; font-size: 17px; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ''; width: 10px; height: 10px; border-right: 2.5px solid #94a3b8; border-bottom: 2.5px solid #94a3b8; transform: rotate(45deg); transition: transform .2s; flex-shrink: 0; margin-top: -4px; }
+.faq details[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
+.faq details p { margin: 0 0 20px; color: var(--cinza); font-weight: 500; }
+
+/* final */
+.final { text-align: center; }
+.final .sub { margin-left: auto; margin-right: auto; }
+.final .btn { margin-top: 30px; }
+footer { background: var(--navy); color: #94a3b8; padding: 34px 0; font-size: 14px; font-weight: 600; }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: center; }
+footer a { color: #cbd5e1; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="wrap">
+    <a class="marca" href="#" aria-label="MinhaCasa, início">
+      <svg width="34" height="34" viewBox="0 0 100 100" aria-hidden="true"><path d="M14 46 L50 16 L86 46" fill="none" stroke="#93c5fd" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><rect x="28" y="62" width="12" height="22" rx="3" fill="#fff"/><rect x="44" y="52" width="12" height="32" rx="3" fill="#fff"/><rect x="60" y="40" width="12" height="44" rx="3" fill="#fff"/></svg>
+      <b style="font-weight:800">Minha<span>Casa</span></b>
+    </a>
+    <nav aria-label="Menu">
+      <a class="lk op" href="#como">Como funciona</a>
+      <a class="lk op" href="#planos">Planos</a>
+      <a class="lk" href="../?entrar">Entrar</a>
+      <a class="btn btn-pri" href="../?cadastro">Começar grátis</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div class="txt">
+      <h1>Seu dinheiro não some. <span>Ele vaza.</span></h1>
+      <p class="lead">O MinhaCasa mostra para onde, enquanto ainda dá tempo de ajustar o mês. É o plano financeiro da sua família, acompanhado dia a dia.</p>
+      <div class="acoes">
+        <a class="btn btn-pri" href="../?cadastro">Começar 14 dias grátis</a>
+        <a class="btn btn-sec" href="#como">Ver como funciona</a>
+      </div>
+      <p class="nota">Sem cartão para testar · Funciona no celular e no computador</p>
+    </div>
+    <div class="cel" role="img" aria-label="Tela do app MinhaCasa mostrando o valor disponível no mês, quanto ainda pode gastar por dia e um aviso de categoria perto do limite">
+      <div class="ma-top">
+        <div class="l1">Novembro · Casa da família</div>
+        <div class="rot">Disponível no mês</div>
+        <div class="val">R$ 1.760 <small>de R$ 4.000</small></div>
+        <div class="ma-bar"><i></i></div>
+        <div class="pct">56% usado · faltam 7 dias</div>
+      </div>
+      <div class="ma-corpo">
+        <div class="ma-dois">
+          <div class="ma-card"><div class="r">Pode gastar/dia</div><div class="v" style="color:#15803d">R$ 58</div></div>
+          <div class="ma-card"><div class="r">Projeção do mês</div><div class="v">R$ 3.790</div></div>
+        </div>
+        <div class="ma-alerta"><b>Restaurantes em 85%</b>Faltam R$ 60 do orçamento desta categoria</div>
+        <div class="ma-cats">
+          <div class="t">Onde o dinheiro está indo</div>
+          <div class="ma-l"><div class="lin"><span>Mercado</span><span>R$ 744 de 1.200</span></div><div class="tr"><i style="width:62%;background:#16a34a"></i></div></div>
+          <div class="ma-l"><div class="lin"><span>Restaurantes</span><span style="color:#c2410c">R$ 340 de 400</span></div><div class="tr"><i style="width:85%;background:#f59e0b"></i></div></div>
+          <div class="ma-l"><div class="lin"><span>Casa</span><span>R$ 620 de 1.500</span></div><div class="tr"><i style="width:41%;background:#0d9488"></i></div></div>
+          <div class="ma-l"><div class="lin"><span>Carro</span><span>R$ 280 de 600</span></div><div class="tr"><i style="width:47%;background:#2563eb"></i></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="prob">
+  <div class="wrap">
+    <span class="tag">O problema</span>
+    <h2 style="margin-top:16px">O mês acaba antes do dinheiro?</h2>
+    <p class="sub">Quase nunca é um gasto grande. São os pequenos, espalhados pela casa, que ninguém soma até a fatura chegar.</p>
+    <div class="prob-grid">
+      <div class="prob-it"><div class="n">“Para onde foi?”</div><p>Você olha o extrato no fim do mês e não consegue explicar metade dos gastos.</p></div>
+      <div class="prob-it"><div class="n">Tarde demais</div><p>A maioria dos apps só mostra o que já aconteceu. Quando você percebe, o mês já estourou.</p></div>
+      <div class="prob-it"><div class="n">Cada um por si</div><p>Na família, cada pessoa gasta de um lado, e ninguém sabe quanto ainda sobra para todos.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="dif">
+  <div class="wrap">
+    <span class="tag">Por que é diferente</span>
+    <h2 style="margin-top:16px">Não é só anotar entradas e saídas.</h2>
+    <p class="sub">É combinar, em família, quanto dá para gastar no mês e acompanhar esse combinado todos os dias, com avisos antes de estourar.</p>
+    <div class="comp">
+      <div class="comp-c comp-ou">
+        <h3>Apps de controle comuns</h3>
+        <ul>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Só registram o que já foi gasto</li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Você descobre o problema no fim do mês</li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Feitos para uma pessoa só</li>
+        </ul>
+      </div>
+      <div class="comp-c comp-mc">
+        <h3>Minha<span>Casa</span></h3>
+        <ul>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Começa pelo valor que a família pode gastar</li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Avisa quando uma categoria chega perto do limite</li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Mostra como o mês vai fechar, enquanto dá tempo</li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Toda a casa lança junto, em tempo real</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="passos" id="como">
+  <div class="wrap">
+    <span class="tag">Como funciona</span>
+    <h2 style="margin-top:16px">Quatro passos, um mês sob controle.</h2>
+    <div class="p-grid">
+      <div class="p-it"><div class="num">1</div><h3>Combinem o valor do mês</h3><p>Definam juntos quanto a casa pode gastar e dividam por categoria: mercado, casa, carro, lazer…</p></div>
+      <div class="p-it"><div class="num">2</div><h3>Todos lançam juntos</h3><p>Cada pessoa da casa registra o que gasta, em segundos. No iPhone, a compra com Apple Pay entra sozinha.</p></div>
+      <div class="p-it"><div class="num">3</div><h3>Avisos antes de estourar</h3><p>Quando uma categoria chega perto do limite, o app avisa. Dá tempo de segurar.</p></div>
+      <div class="p-it"><div class="num">4</div><h3>Saiba como o mês vai fechar</h3><p>A projeção mostra onde você vai terminar e quanto ainda pode gastar por dia.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="recursos">
+  <div class="wrap">
+    <span class="tag">Recursos</span>
+    <h2 style="margin-top:16px">Tudo o que a família precisa, num lugar só.</h2>
+    <div class="r-grid">
+      <div class="r-it"><div class="r-ic c-az"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></div><h3>Orçamento por categoria</h3><p>Um valor para cada área da casa, com barrinha verde, laranja ou vermelha.</p></div>
+      <div class="r-it"><div class="r-ic c-lr"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><h3>Avisos a tempo</h3><p>O app avisa quando uma categoria está perto do limite, não depois.</p></div>
+      <div class="r-it"><div class="r-ic c-vd"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div><h3>Projeção do mês</h3><p>Veja hoje como o mês vai fechar e quanto ainda dá para gastar por dia.</p></div>
+      <div class="r-it"><div class="r-ic c-rx"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2A5 5 0 0 1 21.5 19"/></svg></div><h3>A família inteira junta</h3><p>Convide quem mora com você. Todos lançam e veem os mesmos números, na hora.</p></div>
+      <div class="r-it"><div class="r-ic c-rs"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div><h3>Cartões e Apple Pay</h3><p>Saiba quanto foi gasto em cada cartão. No iPhone, a compra com Apple Pay é registrada sozinha.</p></div>
+      <div class="r-it"><div class="r-ic c-tl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Relatórios simples</h3><p>Semana a semana, maiores gastos, mapa de calor e resumo para mandar no WhatsApp ou em PDF.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="planos" id="planos">
+  <div class="wrap">
+    <span class="tag" style="background:#1e3a8a;color:#bfdbfe">Planos</span>
+    <h2 style="margin-top:16px">Menos de R$ 0,25 por dia para cuidar do dinheiro da casa.</h2>
+    <p class="sub">Uma assinatura para a família inteira usar junta. Comece com 14 dias grátis e escolha depois.</p>
+    <div class="pl-grid">
+      <div class="pl">
+        <h3>Mensal</h3>
+        <div class="pr"><small>R$</small><b>15,90</b></div>
+        <div class="per">por mês</div>
+        <p>Pague mês a mês.</p>
+      </div>
+      <div class="pl pl-dest">
+        <span class="selo">Economize 53%</span>
+        <h3>Anual</h3>
+        <div class="pr"><small>R$</small><b>89,90</b></div>
+        <div class="per">no primeiro ano</div>
+        <p>Equivale a R$ 7,49 por mês.</p>
+      </div>
+    </div>
+    <div class="gratis">
+      <a class="btn btn-cl" href="../?cadastro">Começar 14 dias grátis</a>
+      <span class="chk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Sem cartão para testar</span>
+      <span class="chk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Se não assinar, seus dados continuam lá para consulta</span>
+    </div>
+  </div>
+</section>
+
+<section class="priv">
+  <div class="wrap">
+    <div class="priv-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15.5" r="1.4"/></svg></div>
+    <div>
+      <span class="tag" style="background:#f0fdf4;color:#15803d">Privacidade</span>
+      <h2 style="margin-top:16px">Só a sua família lê os seus números.</h2>
+      <p class="sub">Os lançamentos são criptografados no próprio aparelho com a senha da casa, antes de ir para a nuvem. Nem quem administra o sistema consegue lê-los.</p>
+    </div>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <span class="tag">Dúvidas</span>
+    <h2 style="margin-top:16px">Perguntas frequentes</h2>
+    <div class="faq-l">
+      <details><summary>Preciso baixar na App Store ou no Google Play?</summary><p>Não. O MinhaCasa funciona direto no navegador do celular e do computador. No iPhone, abra no Safari e toque em Compartilhar → “Adicionar à Tela de Início”. No Android, abra no Chrome e toque em “Instalar app”. Ele fica com ícone, igual a um app.</p></details>
+      <details><summary>Minha família pode usar junto?</summary><p>Pode e deve. Quem cria a casa convida as outras pessoas, e todos lançam e veem os mesmos números em tempo real. É uma assinatura só para a casa inteira.</p></details>
+      <details><summary>Como funcionam os 14 dias grátis?</summary><p>Você cria a conta e a casa sem cartão e usa tudo por 14 dias. Depois, escolhe o plano mensal ou o anual. Se não assinar, a casa fica disponível para consulta, sem perder nada do que foi lançado.</p></details>
+      <details><summary>Meus dados estão seguros?</summary><p>Os lançamentos são criptografados no seu aparelho com a senha da casa antes de serem guardados. Sem essa senha, ninguém consegue lê-los, nem a equipe do MinhaCasa. Por isso, guarde bem a senha da casa.</p></details>
+      <details><summary>Preciso ligar o app à minha conta do banco?</summary><p>Não. Você registra os gastos em poucos segundos, sem dar acesso ao seu banco. No iPhone, dá para registrar automaticamente as compras feitas com Apple Pay.</p></details>
+      <details><summary>Funciona em outros idiomas?</summary><p>Sim. O app está em português, inglês e francês, e cada pessoa da casa pode usar no seu idioma.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Descubra onde o dinheiro está vazando.</h2>
+    <p class="sub">Comece hoje, com 14 dias grátis, e feche o mês dentro do combinado.</p>
+    <a class="btn btn-pri" href="../?cadastro">Começar 14 dias grátis</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 MinhaCasa™</span>
+    <span><a href="../?entrar">Entrar no app</a> · <a href="mailto:[SEU E-MAIL DE CONTATO]">Contato</a></span>
+  </div>
+</footer>
+</body>
+</html>
