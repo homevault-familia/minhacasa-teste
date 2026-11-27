@@ -70,6 +70,13 @@ label.lb{display:block;font-size:12.5px;font-weight:800;color:#475569;margin:12p
 .barra .tr{background:#f1f5f9;border-radius:4px}
 .barra i{display:block;height:10px;border-radius:4px;background:#60a5fa}
 .barra.passou i{background:#dc2626}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
+.filtros button{border:1.5px solid #cbd5e1;background:#fff;border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:700;cursor:pointer;min-height:38px;color:#0f172a}
+.filtros button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.caixa{flex:none;width:30px;height:30px;border-radius:8px;border:2px solid #94a3b8;background:#fff;color:#fff;font-weight:900;font-size:17px;cursor:pointer;padding:0}
+.feito .caixa{background:#15803d;border-color:#15803d}
+.feito .t{text-decoration:line-through;color:#94a3b8}
+.mono{font-family:ui-monospace,Menlo,monospace}
 .passos{margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#334155}
 .login{max-width:380px;margin:12vh auto 0;padding:0 18px}
 .login img{width:64px;height:64px;border-radius:16px;display:block;margin:0 auto 12px}
@@ -94,9 +101,16 @@ a{color:#1d4ed8}
   <h1>Mercado</h1>
   <p>MinhaCasa™ · área pessoal</p>
   <div class="card">
-    <p class="nota">Entre com a sua conta Google de administrador. Os dados do Mercado são só seus: ninguém da casa nem das outras famílias consegue ver.</p>
+    <p class="nota">Administrador: entre com a sua conta Google. Só entra quem você liberar.</p>
     <button class="btn pri cheio" id="l-google">Entrar com o Google</button>
     <div class="erro" id="l-erro"></div>
+  </div>
+  <div class="card">
+    <p class="nota">Família: entre com o e-mail e a senha do app MinhaCasa.</p>
+    <label class="lb" for="l-email">E-mail</label><input class="in" id="l-email" type="email" autocomplete="username">
+    <label class="lb" for="l-senha">Senha</label><input class="in" id="l-senha" type="password" autocomplete="current-password">
+    <div class="erro" id="l-erro2"></div>
+    <button class="btn cheio" id="l-entrar">Entrar com e-mail e senha</button>
   </div>
 </div>
 
@@ -104,6 +118,8 @@ a{color:#1d4ed8}
   <img src="../icon.svg?v=2" alt="">
   <h1>Sem acesso</h1>
   <p id="n-msg">Esta área é pessoal.</p>
+  <div class="card" id="n-codbox" style="display:none"><label class="lb" style="margin-top:0">Seu código</label><div class="mono" id="n-cod" style="word-break:break-all;font-size:15px;background:#f1f5f9;border-radius:10px;padding:12px"></div>
+  <button class="btn pri cheio" id="n-copiar" style="margin-top:10px">Enviar o código</button></div>
   <button class="btn cheio" id="n-sair">Sair e entrar com outra conta</button>
 </div>
 
@@ -134,9 +150,9 @@ a{color:#1d4ed8}
 <script src="mercado.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-window.iniciarMercado({ initializeApp, getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, getDatabase, ref, onValue, update, remove });
+import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getDatabase, ref, onValue, update, remove, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+window.iniciarMercado({ initializeApp, getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, getDatabase, ref, onValue, update, remove, get });
 </script>
 </body>
 </html>
