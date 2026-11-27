@@ -10,7 +10,7 @@ var Leitor = (function () {
     ['gianttiger', /GIANT\s*TIGER/],
     ['outro', /FOODLAND|CO-?OP|SAVE\s*EASY|SHOPPERS/]
   ];
-  var PULAR = /(SUB\s*-?\s*TOTAL|\bTOTAL\b|\bHST\b|\bGST\b|\bPST\b|\bTAX|\bTVH|CHANGE|\bCASH\b|VISA|MASTER\s*CARD|\bDEBIT|INTERAC|AMEX|CREDIT|BALANCE|POINTS|OPTIMUM|SCENE\+?|AUTH|APPROV|ACCOUNT|\bCARD\b|TERMINAL|\bREF\b|INVOICE|TRANS(ACTION)?\b|CASHIER|\bTEL\b|PHONE|THANK|MERCI|ITEMS?\s*SOLD|NUMBER OF ITEMS|TENDER|AMOUNT|YOU SAVED|TOTAL SAVINGS|SAVINGS|REWARDS|MEMBER|RECEIPT|SURVEY|WWW\.|\.COM|\.CA\b|STORE\s*#|ST#|OP#|TE#|TR#|CUSTOMER COPY|SIGNATURE|AID:|TVR|RETAIN)/;
+  var PULAR = /(SUB\s*-?\s*TOTAL|\bTOTAL\b|\bHST\b|\bGST\b|\bPST\b|\bTAX|\bTVH|CHANGE|\bCASH\b|VISA|MASTER\s*CARD|\bDEBIT|INTERAC|AMEX|CREDIT|BALANCE|POINTS|OPTIMUM|SCENE\+?|AUTH|APPROV|ACCOUNT|\bCARD\b|TERMINAL|\bREF\b|INVOICE|TRANS(ACTION)?\b|CASHIER|\bTEL\b|PHONE|THANK|MERCI|ITEMS?\s*SOLD|NUMBER OF ITEMS|TENDER|AMOUNT|YOU SAVED|TOTAL SAVINGS|SAVINGS|REWARDS|MEMBER|RECEIPT|SURVEY|WWW\.|\.COM|\.CA\b|STORE\s*#|ST#|OP#|TE#|TR#|CUSTOMER COPY|SIGNATURE|AID:|TVR|RETAIN|HAVE A|GREAT DAY|NICE DAY|COME AGAIN|SEE YOU|PAYER|DROP-?IN|CUSTOMER|PRODUCT SALE|SOLD BY|SERVED BY|CLERK|REGISTER|LANE\b)/;
   var DESCONTO = /(SAVE|DISCOUNT|COUPON|REDUCTION|RABAIS|INSTANT|PROMO|MULTI\s*BUY|\bOFF\b|PRICE\s*MATCH|ROLLBACK\s*SAV|CPN|TPD|\bREDUC)/;
   var EXPANDE = { BLK: 'BLACK', WHT: 'WHITE', CHKN: 'CHICKEN', CKN: 'CHICKEN', BRST: 'BREAST', BNLS: 'BONELESS', SKNLS: 'SKINLESS', BRD: 'BREAD', ORG: 'ORGANIC', GRN: 'GREEN', RD: 'RED', YLW: 'YELLOW', VEG: 'VEGETABLE', VEGS: 'VEGETABLES', FRZ: 'FROZEN', FZN: 'FROZEN', BF: 'BEEF', GRND: 'GROUND', LN: 'LEAN', XLN: 'EXTRA LEAN', CHS: 'CHEESE', CHSE: 'CHEESE', CHED: 'CHEDDAR', MOZZ: 'MOZZARELLA', YOG: 'YOGURT', YGRT: 'YOGURT', BTR: 'BUTTER', MLK: 'MILK', CRM: 'CREAM', SR: 'SOUR', PNT: 'PEANUT', BTTR: 'BUTTER', JCE: 'JUICE', ORNG: 'ORANGE', APPL: 'APPLE', BAN: 'BANANA', BANAN: 'BANANAS', POT: 'POTATO', POTS: 'POTATOES', TOM: 'TOMATO', TOMS: 'TOMATOES', ONIO: 'ONION', LETT: 'LETTUCE', CUC: 'CUCUMBER', STRAWB: 'STRAWBERRIES', BLUEB: 'BLUEBERRIES', WW: 'WHOLE WHEAT', WHL: 'WHOLE', WHT_: 'WHEAT', MUSH: 'MUSHROOMS', PEPP: 'PEPPERS', SAUS: 'SAUSAGE', PK: 'PORK', TKY: 'TURKEY', SLMN: 'SALMON', CRL: 'CEREAL', OATML: 'OATMEAL', PSTA: 'PASTA', SPAG: 'SPAGHETTI', SCE: 'SAUCE', TP: 'TOILET PAPER', PT: 'PAPER TOWEL', DET: 'DETERGENT', LIQ: 'LIQUID', DISH: 'DISH', SHMP: 'SHAMPOO', TOOTHP: 'TOOTHPASTE', BTL: 'BOTTLE', PKG: 'PACK', LRG: 'LARGE', LG: 'LARGE', MED: 'MEDIUM', SM: 'SMALL', XL: 'EXTRA LARGE', GV: 'GREAT VALUE', NN: 'NO NAME', CMPL: 'COMPLIMENTS', KS: 'KIRKLAND', FLK: 'FLAKES', FLKS: 'FLAKES', ORIG: 'ORIGINAL', ENG: 'ENGLISH', BNS: 'BEANS', GRK: 'GREEK', CRNCH: 'CRUNCH', HNY: 'HONEY', SWT: 'SWEET', PEAN: 'PEANUT', ALMD: 'ALMOND', CHOC: 'CHOCOLATE', STRWB: 'STRAWBERRY', RSP: 'RASPBERRY', CRN: 'CORN', OLV: 'OLIVE', VEGG: 'VEGGIE', TORT: 'TORTILLA', SNDWCH: 'SANDWICH' };
   var CATS = [
@@ -120,13 +120,14 @@ var Leitor = (function () {
     }
     // 3) percorre em ordem
     // Texto ao Vivo também separa rótulo e valor: "Subtotal" numa linha e "$8.25" na de baixo
-    var pend = null, pendQtd = null, ultimo = null, rot = null;
+    // ...ou um bloco de rótulos seguido de um bloco de valores, na mesma ordem
+    var pend = null, pendQtd = null, ultimo = null, rots = [];
     C.forEach(function (c) {
-      if (c.t === 'preco' && rot) { if (rot === 'total') { if (total == null || c.v > total) total = c.v; } else if (rot === 'imposto') imposto += c.v; rot = null; return; }
-      if (c.t !== 'pular') rot = null;
+      if (c.t === 'preco' && rots.length) { var r0 = rots.shift(); if (r0 === 'total') { if (total == null || c.v > total) total = c.v; } else if (r0 === 'imposto') imposto += c.v; return; }
+      if (c.t !== 'pular' && c.t !== 'preco') rots = [];
       if (c.t === 'total') { if (total == null || c.v > total) total = c.v; ultimo = null; return; }
       if (c.t === 'imposto') { imposto += c.v; ultimo = null; return; }
-      if (c.t === 'pular') { if (c.rot) { rot = c.rot; pend = null; } ultimo = null; return; }
+      if (c.t === 'pular') { if (c.rot) { rots.push(c.rot); pend = null; } ultimo = null; return; }
       if (c.t === 'usado') { ultimo = null; return; }
       if (c.t === 'qtd') {
         if (c.v != null && pend) { ultimo = addItem(pend, c.v, c.q); pend = null; return; }
@@ -134,7 +135,7 @@ var Leitor = (function () {
         pendQtd = c.q; return;
       }
       if (c.t === 'desc') { var x = itens[itens.length - 1]; if (x) { x.total = Math.round((x.total - c.v) * 100) / 100; x.un = Math.round(x.total / x.qtd * 100) / 100; } return; }
-      if (c.t === 'preco') { if (pend) { ultimo = addItem(pend, c.v, pendQtd); pend = null; pendQtd = null; } return; }
+      if (c.t === 'preco') { if (pend && !(total != null && itens.length && Math.abs(c.v - total) < 0.005)) { ultimo = addItem(pend, c.v, pendQtd); pendQtd = null; } pend = null; return; }
       if (c.t === 'item') { pend = null; ultimo = addItem(c.d, c.v, pendQtd); pendQtd = null; return; }
       if (c.t === 'nome') { pend = c.d; ultimo = null; }
     });
