@@ -35,9 +35,9 @@ window.iniciarMercado = function (F) {
 
   var app = F.initializeApp(window.HOMEVAULT_FIREBASE), A = F.getAuth(app), DB = F.getDatabase(app);
   A.languageCode = 'pt-BR';
-  var U = null, base = '', parar = null;
+  var U = null, base = '', dono = '', ehDono = true, parar = null;
   var M = { recibos: {}, produtos: {}, dic: {}, ajustes: {} };
-  var UI = { aba: 'lista', rev: null, texto: '', off: {} };
+  var UI = { aba: 'lista', rev: null, texto: '', off: {}, agrupar: 'cat' };
 
   if (window.MINHACASA_AMBIENTE !== 'producao') document.body.classList.add('teste');
 
@@ -59,25 +59,44 @@ window.iniciarMercado = function (F) {
       $('l-erro').textContent = /popup-blocked/.test(c) ? 'O navegador bloqueou a janela do Google. Permita pop-ups para este site e tente de novo.' : 'Não foi possível entrar (' + c + ').';
     });
   };
+  $('l-entrar').onclick = function () {
+    var em = $('l-email').value.trim(), se = $('l-senha').value; $('l-erro2').textContent = '';
+    if (!em || !se) { $('l-erro2').textContent = 'Digite o e-mail e a senha do MinhaCasa.'; return; }
+    $('l-entrar').disabled = true;
+    F.signInWithEmailAndPassword(A, em, se).catch(function (e) {
+      var c = (e && e.code) || String(e);
+      $('l-erro2').textContent = /wrong-password|invalid-credential|user-not-found|invalid-login|invalid-email/.test(c) ? 'E-mail ou senha incorretos.' : /multi-factor/.test(c) ? 'Esta conta usa verificação em duas etapas: entre com o Google.' : 'Não foi possível entrar (' + c + ').';
+    }).then(function () { $('l-entrar').disabled = false; });
+  };
+  $('l-senha').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('l-entrar').click(); });
   $('p-sair').onclick = $('n-sair').onclick = function () { F.signOut(A); };
+  $('n-copiar').onclick = function () { compartilharTexto('Código do Mercado (MinhaCasa) de ' + ((U && U.email) || '') + ':\n' + (U ? U.uid : ''), 'Código do Mercado'); };
 
+  function semAcesso(u, e) {
+    var negado = /PERMISSION/i.test((e && e.code) || String(e || 'PERMISSION'));
+    $('n-msg').innerHTML = negado
+      ? 'A conta <b>' + esc(u.email || '') + '</b> ainda não tem acesso ao Mercado.<br>Para liberar, mande o código abaixo para quem administra o Mercado da casa.'
+      : 'Não foi possível ler os dados (' + esc(erroTxt(e)) + ').';
+    $('n-cod').textContent = negado ? u.uid : '';
+    $('n-codbox').style.display = negado ? '' : 'none';
+    mostrar('v-negado');
+  }
   F.onAuthStateChanged(A, function (u) {
     if (parar) { parar(); parar = null; }
     U = u;
     if (!u) { mostrar('v-login'); return; }
-    base = 'mercado/' + u.uid;
     $('p-quem').textContent = u.email || '';
-    var primeira = true;
-    parar = F.onValue(F.ref(DB, base), function (s) {
-      var v = s.val() || {};
-      M = { recibos: v.recibos || {}, produtos: v.produtos || {}, dic: v.dic || {}, ajustes: v.ajustes || {} };
-      if (primeira) { primeira = false; mostrar('v-app'); }
-      desenhar();
-    }, function (e) {
-      $('n-msg').innerHTML = /PERMISSION/i.test((e && e.code) || String(e))
-        ? 'A conta ' + esc(u.email || '') + ' não tem acesso ao Mercado.<br><small style="color:#94a3b8">Só a conta Google de administrador entra aqui. Se for a sua, confira se as regras novas foram publicadas no Firebase.</small>'
-        : 'Não foi possível ler os dados (' + esc(erroTxt(e)) + ').';
-      mostrar('v-negado');
+    // Membro da família? mercadoDe/<uid> diz de quem é o Mercado que esta conta pode usar.
+    F.get(F.ref(DB, 'mercadoDe/' + u.uid)).then(function (s) { return s.val(); }, function () { return null; }).then(function (d) {
+      if (U !== u) return;
+      dono = (typeof d === 'string' && d) ? d : u.uid; ehDono = dono === u.uid; base = 'mercado/' + dono;
+      var primeira = true;
+      parar = F.onValue(F.ref(DB, base), function (s) {
+        var v = s.val() || {};
+        M = { recibos: v.recibos || {}, produtos: v.produtos || {}, dic: v.dic || {}, ajustes: v.ajustes || {}, membros: v.membros || {} };
+        if (primeira) { primeira = false; mostrar('v-app'); }
+        desenhar();
+      }, function (e) { semAcesso(u, e); });
     });
   });
 
@@ -117,10 +136,11 @@ window.iniciarMercado = function (F) {
       if (!auto && fixo !== true) return;
       var soma = jan.reduce(function (s, b) { return s + b.qtd; }, 0) / nm, peso = jan.some(function (b) { return b.qtd % 1; });
       var qtd = peso ? Math.max(0.1, Math.round(soma * 10) / 10) : Math.max(1, Math.round(soma));
+      var pr = M.produtos[k] || {}; if (+pr.qtd > 0) qtd = +pr.qtd;
       var ult = c.compras.slice().sort(function (a, b) { return b.data.localeCompare(a.data); })[0] || null;
       var precos = COMPARA.map(function (l) { var p = precoEm(k, l.id, cat); return p ? Object.assign({ loja: l.id }, p) : null; }).filter(Boolean);
       var min = precos.reduce(function (a, b) { return !a || b.p < a.p ? b : a; }, null);
-      out.push({ k: k, pt: c.pt, cat: c.cat, qtd: qtd, ult: ult, precos: precos, min: min, meses: nMeses });
+      out.push({ k: k, pt: c.pt, cat: c.cat, qtd: qtd, ult: ult, precos: precos, min: min, meses: nMeses, marcado: pr.marcado === mesDe(hojeISO()) });
     });
     return out.sort(function (a, b) { return CATS.indexOf(a.cat) - CATS.indexOf(b.cat) || a.pt.localeCompare(b.pt); });
   }
@@ -143,20 +163,63 @@ window.iniciarMercado = function (F) {
       '<div class="kpi ' + (orc && g > orc ? 'vermelho' : '') + '"><b>' + (orc ? din(Math.max(0, orc - g)) : '—') + '</b><span>' + (orc ? (g > orc ? 'acima do orçamento' : 'sobra do orçamento') : 'defina o orçamento em Gastos') + '</span></div>' +
       '<div class="kpi verde"><b>' + (L.length ? din(Math.max(0, r.sempre - r.melhor)) : '—') + '</b><span>economia possível na lista</span></div></div>';
   }
+  function nomesConhecidos() { var n = {}; Object.keys(M.dic).forEach(function (k) { n[M.dic[k].pt] = 1; }); Object.values(catalogo()).forEach(function (c) { n[c.pt] = 1; }); return Object.keys(n).sort(); }
+  function grupos(L) {
+    var g = [], idx = {};
+    L.forEach(function (i) {
+      var nome = UI.agrupar === 'loja' ? (i.min ? LN[i.min.loja] : 'Sem preço ainda') : i.cat;
+      if (!(nome in idx)) { idx[nome] = g.length; g.push({ nome: nome, itens: [] }); }
+      g[idx[nome]].itens.push(i);
+    });
+    if (UI.agrupar === 'loja') g.sort(function (a, b) { return (a.nome === 'Sem preço ainda') - (b.nome === 'Sem preço ainda') || b.itens.length - a.itens.length; });
+    return g;
+  }
+  function textoLista(L) {
+    var linhas = ['🛒 Lista do mercado — ' + mesBR(mesDe(hojeISO()))];
+    grupos(L).forEach(function (g) {
+      var sub = g.itens.reduce(function (s, i) { return s + (i.min ? i.min.p * i.qtd : 0); }, 0);
+      linhas.push('', '*' + g.nome + '*' + (UI.agrupar === 'loja' && sub ? ' (~' + din(sub) + ')' : ''));
+      g.itens.forEach(function (i) { linhas.push((i.marcado ? '☑ ' : '☐ ') + i.qtd + ' × ' + i.pt + (UI.agrupar !== 'loja' && i.min ? ' — ' + LN[i.min.loja] + ' ' + din(i.min.p) : '')); });
+    });
+    var r = resumo(L);
+    if (r.melhor) linhas.push('', 'Estimativa: ' + din(r.melhor));
+    return linhas.join('\n');
+  }
+  function compartilharTexto(t, titulo) {
+    if (navigator.share) { navigator.share({ title: titulo || 'Lista do mercado', text: t }).catch(function (e) { if (e && e.name !== 'AbortError') copiarTexto(t); }); return; }
+    copiarTexto(t);
+  }
+  function copiarTexto(t) {
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { toast('Copiado. Cole no WhatsApp ou no e-mail.'); }, function () {
+      abrirFolha('<h3>Copie o texto</h3><textarea class="in" style="min-height:260px">' + esc(t) + '</textarea><button class="btn cheio" id="f-fechar" style="margin-top:10px">Fechar</button>'); $('f-fechar').onclick = fecharFolha;
+    });
+  }
+  function cartaoIncluir() {
+    return '<div class="card"><h2>Incluir na lista</h2><datalist id="nomes-l">' + nomesConhecidos().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+      '<input class="in" id="add-nome" list="nomes-l" placeholder="Ex.: Café 925 g, detergente…" aria-label="Item para incluir">' +
+      '<div class="grade3" style="grid-template-columns:minmax(0,1fr) 5.5em auto;margin-top:6px"><select class="in" id="add-cat" aria-label="Categoria">' + CATS.map(function (c) { return '<option' + (c === 'Mercearia' ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select>' +
+      '<label class="mini">Qtd<input class="in" id="add-qtd" type="number" min="0.1" step="0.1" inputmode="decimal" value="1"></label><button class="btn pri" id="add-ok">Incluir</button></div><div class="erro" id="add-erro"></div></div>';
+  }
   function telaLista() {
     var L = listaDoMes();
-    if (!recibos().length) return kpis() + '<div class="card"><h2>Comece pelo primeiro recibo</h2><p class="nota">A lista do mês se monta sozinha com o que você compra com frequência. Toque em <b>Recibo</b> lá em cima e cole o texto do recibo.</p><button class="btn pri" data-ir="recibo">Adicionar recibo</button></div>';
-    var r = resumo(L), meses = ultimosMeses(3).map(mesBR).join(', ');
-    var h = kpis() + '<div class="card"><h2>Lista do mês · ' + L.length + ' itens</h2><p class="nota">O que apareceu em pelo menos 2 dos últimos 3 meses (' + esc(meses) + '). A quantidade é a sua média por mês. Comprando cada item onde é mais barato: <b>' + din(r.melhor) + '</b> em vez de ' + din(r.sempre) + '.</p>';
-    var cat = '';
-    L.forEach(function (i) {
-      if (i.cat !== cat) { cat = i.cat; h += '<div class="selo" style="margin:12px 0 2px">' + esc(cat) + '</div>'; }
-      h += '<div class="linha"><div class="info"><div class="t">' + esc(i.qtd) + ' × ' + esc(i.pt) + '</div><div class="s">' + (i.min ? 'Mais barato: ' + esc(LN[i.min.loja]) + ' ' + din(i.min.p) : 'Sem preço para comparar') + (i.ult ? ' · última vez ' + din(i.ult.p) + ' (' + esc(LN[i.ult.loja] || '') + ')' : '') + '</div></div>' +
-        '<button class="btn sm" data-tirar="' + esc(i.k) + '" aria-label="Tirar ' + esc(i.pt) + ' da lista">Tirar</button></div>';
+    if (!L.length) return kpis() + cartaoIncluir() + '<div class="card"><h2>A lista se monta sozinha</h2><p class="nota">Com o que você compra com frequência nos recibos, ou com os itens que você incluir acima.</p><button class="btn" data-ir="recibo">Adicionar recibo</button></div>';
+    var r = resumo(L), meses = ultimosMeses(3).map(mesBR).join(', '), marcados = L.filter(function (i) { return i.marcado; }).length;
+    var h = kpis() + cartaoIncluir() + '<div class="card"><h2>Lista do mês · ' + L.length + ' itens' + (marcados ? ' · ' + marcados + ' no carrinho' : '') + '</h2>' +
+      '<p class="nota">' + (meses ? 'O que você comprou em pelo menos 2 dos últimos 3 meses (' + esc(meses) + ') e o que você incluiu. ' : '') + 'Comprando cada item onde é mais barato: <b>' + din(r.melhor) + '</b>' + (r.sempre > r.melhor ? ' em vez de ' + din(r.sempre) : '') + '. Toque no quadradinho para marcar o que já pegou.</p>' +
+      '<div class="filtros"><button data-agrupar="cat" class="' + (UI.agrupar === 'cat' ? 'on' : '') + '">Por categoria</button><button data-agrupar="loja" class="' + (UI.agrupar === 'loja' ? 'on' : '') + '">Por mercado</button></div>';
+    grupos(L).forEach(function (g) {
+      var sub = g.itens.reduce(function (s, i) { return s + (i.min ? i.min.p * i.qtd : 0); }, 0);
+      h += '<div class="selo" style="margin:12px 0 2px">' + esc(g.nome) + (UI.agrupar === 'loja' && sub ? ' · ~' + din(sub) : '') + '</div>';
+      g.itens.forEach(function (i) {
+        h += '<div class="linha' + (i.marcado ? ' feito' : '') + '"><button class="caixa" data-marcar="' + esc(i.k) + '" aria-pressed="' + i.marcado + '" aria-label="Marcar ' + esc(i.pt) + '">' + (i.marcado ? '✓' : '') + '</button><div class="info"><div class="t">' + esc(i.qtd) + ' × ' + esc(i.pt) + '</div><div class="s">' +
+          (i.min ? (UI.agrupar === 'loja' ? din(i.min.p) + ' cada' : 'Mais barato: ' + esc(LN[i.min.loja]) + ' ' + din(i.min.p)) : 'Sem preço para comparar') + (i.ult && UI.agrupar !== 'loja' ? ' · última vez ' + din(i.ult.p) + ' (' + esc(LN[i.ult.loja] || '') + ')' : '') + '</div></div>' +
+          '<button class="btn sm" data-qtd="' + esc(i.k) + '" aria-label="Mudar quantidade de ' + esc(i.pt) + '">Qtd</button><button class="btn sm" data-tirar="' + esc(i.k) + '" aria-label="Tirar ' + esc(i.pt) + ' da lista">Tirar</button></div>';
+      });
     });
-    h += '<div class="grupo-btn" style="margin-top:12px"><button class="btn" id="copiar-lista">Copiar lista</button></div></div>';
+    h += '<div class="grupo-btn" style="margin-top:14px"><button class="btn pri" id="compartilhar">Compartilhar</button><button class="btn" id="copiar-lista">Copiar</button>' + (marcados ? '<button class="btn" id="desmarcar">Desmarcar tudo</button>' : '') + '</div>' +
+      '<p class="nota" style="margin-top:8px">Compartilhar abre o WhatsApp, o e-mail ou as Mensagens do iPhone com a lista pronta' + (UI.agrupar === 'loja' ? ', separada por mercado' : '') + '.</p></div>';
     var fora = Object.values(catalogo()).filter(function (c) { return !L.some(function (l) { return l.k === c.k; }); }).sort(function (a, b) { return a.pt.localeCompare(b.pt); });
-    h += '<div class="card"><h2>Outros itens já comprados</h2><p class="nota">Toque para colocar na lista.</p><div class="chips">' + (fora.map(function (c) { return '<button class="chip" data-fixar="' + esc(c.k) + '">+ ' + esc(c.pt) + '</button>'; }).join('') || '<span class="vazio">Nenhum.</span>') + '</div></div>';
+    if (fora.length) h += '<div class="card"><h2>Outros itens já comprados</h2><p class="nota">Toque para colocar na lista.</p><div class="chips">' + fora.map(function (c) { return '<button class="chip" data-fixar="' + esc(c.k) + '">+ ' + esc(c.pt) + '</button>'; }).join('') + '</div></div>';
     return h;
   }
   function telaRecibo() {
@@ -264,7 +327,7 @@ window.iniciarMercado = function (F) {
     return kpis() + '<div class="card"><h2>Orçamento mensal do mercado</h2><div class="grade3" style="grid-template-columns:minmax(0,10em) auto;justify-content:start"><input class="in" type="number" min="0" step="10" inputmode="decimal" id="orc" value="' + esc(orc || '') + '" placeholder="CAD" aria-label="Orçamento mensal em dólares"><button class="btn" id="orc-salvar">Salvar</button></div></div>' +
       '<div class="card"><h2>Por mês</h2>' + barras(meses, Math.max(orc, mx(meses)), orc) + (orc ? '<p class="nota" style="margin-top:8px">Em vermelho, os meses acima de ' + din(orc) + '.</p>' : '') + '</div>' +
       '<div class="card"><h2>Este mês por categoria</h2>' + barras(cats, mx(cats)) + '</div>' +
-      '<div class="card"><h2>Por mercado · últimos 3 meses</h2>' + barras(lojas, mx(lojas)) + '</div>';
+      '<div class="card"><h2>Por mercado · últimos 3 meses</h2>' + barras(lojas, mx(lojas)) + '</div>' + cartaoFamilia();
   }
 
   // ── ações ──
@@ -272,10 +335,25 @@ window.iniciarMercado = function (F) {
     qsa('[data-ir]').forEach(function (b) { b.onclick = function () { qsa('#abas button').forEach(function (x) { if (x.dataset.aba === b.dataset.ir) x.click(); }); }; });
     qsa('[data-tirar]').forEach(function (b) { b.onclick = function () { var k = b.dataset.tirar, m = {}; m['produtos/' + k + '/fixo'] = false; gravar(m).then(function () { toast('Tirado da lista'); }); }; });
     qsa('[data-fixar]').forEach(function (b) { b.onclick = function () { var k = b.dataset.fixar, c = catalogo()[k], m = {}; m['produtos/' + k + '/fixo'] = true; m['produtos/' + k + '/pt'] = c.pt; m['produtos/' + k + '/cat'] = c.cat; gravar(m); }; });
-    if ($('copiar-lista')) $('copiar-lista').onclick = function () {
-      var t = listaDoMes().map(function (i) { return '☐ ' + i.qtd + ' × ' + i.pt + (i.min ? ' — ' + LN[i.min.loja] + ' ' + din(i.min.p) : ''); }).join('\n');
-      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { toast('Lista copiada'); }, function () { abrirFolha('<h3>Copie a lista</h3><textarea class="in" style="min-height:260px">' + esc(t) + '</textarea><button class="btn cheio" id="f-fechar" style="margin-top:10px">Fechar</button>'); $('f-fechar').onclick = fecharFolha; });
-    };
+    if ($('copiar-lista')) $('copiar-lista').onclick = function () { copiarTexto(textoLista(listaDoMes())); };
+    if ($('compartilhar')) $('compartilhar').onclick = function () { compartilharTexto(textoLista(listaDoMes())); };
+    qsa('[data-agrupar]').forEach(function (b) { b.onclick = function () { UI.agrupar = b.dataset.agrupar; desenhar(); }; });
+    qsa('[data-marcar]').forEach(function (b) { b.onclick = function () { var k = b.dataset.marcar, on = b.getAttribute('aria-pressed') !== 'true', m = {}; m['produtos/' + k + '/marcado'] = on ? mesDe(hojeISO()) : null; m['produtos/' + k + '/pt'] = (catalogo()[k] || {}).pt || k; gravar(m); }; });
+    if ($('desmarcar')) $('desmarcar').onclick = function () { var m = {}; listaDoMes().forEach(function (i) { if (i.marcado) m['produtos/' + i.k + '/marcado'] = null; }); gravar(m); };
+    qsa('[data-qtd]').forEach(function (b) { b.onclick = function () { editarQtd(b.dataset.qtd); }; });
+    if ($('add-nome')) {
+      $('add-nome').onchange = function () { var k = chave(this.value), c = catalogo()[k], p = M.produtos[k], d = Object.keys(M.dic).map(function (x) { return M.dic[x]; }).filter(function (x) { return chave(x.pt) === k; })[0]; var cat = (c && c.cat) || (p && p.cat) || (d && d.cat); if (cat) $('add-cat').value = cat; };
+      $('add-ok').onclick = function () {
+        var nome = $('add-nome').value.trim().slice(0, 80), q = +$('add-qtd').value || 1;
+        if (!nome) { $('add-erro').textContent = 'Digite o nome do item.'; return; }
+        var k = chave(nome), m = {}, existe = catalogo()[k];
+        m['produtos/' + k + '/pt'] = existe ? existe.pt : nome; m['produtos/' + k + '/cat'] = $('add-cat').value; m['produtos/' + k + '/fixo'] = true; m['produtos/' + k + '/qtd'] = q;
+        gravar(m).then(function () { toast('Incluído: ' + nome); });
+      };
+      $('add-nome').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('add-ok').click(); });
+    }
+    if ($('mb-add')) $('mb-add').onclick = adicionarMembro;
+    qsa('[data-mbrm]').forEach(function (b) { b.onclick = function () { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'Confirmar'; return; } removerMembro(b.dataset.mbrm); }; });
     // recibo
     if ($('texto')) $('texto').oninput = function () { UI.texto = this.value; };
     if ($('colar')) $('colar').onclick = function () {
@@ -339,6 +417,38 @@ window.iniciarMercado = function (F) {
       $('rv-salvar').disabled = true;
       gravar(m).then(function () { UI.rev = null; UI.texto = ''; toast('Recibo salvo'); desenhar(); }, function () { $('rv-salvar').disabled = false; });
     };
+  }
+  function editarQtd(k) {
+    var c = catalogo()[k], i = listaDoMes().filter(function (x) { return x.k === k; })[0]; if (!c || !i) return;
+    var auto = !(+((M.produtos[k] || {}).qtd) > 0);
+    abrirFolha('<h3>' + esc(c.pt) + '</h3><p class="nota">' + (auto ? 'A quantidade vem da sua média por mês.' : 'Quantidade definida por você.') + '</p><label class="lb" for="f-qtd">Quantidade no mês</label><input class="in" id="f-qtd" type="number" min="0.1" step="0.1" inputmode="decimal" value="' + esc(i.qtd) + '">' +
+      '<div class="grupo-btn" style="margin-top:12px"><button class="btn pri" id="f-ok" style="flex:1">Salvar</button>' + (auto ? '' : '<button class="btn" id="f-auto">Usar a média</button>') + '<button class="btn" id="f-fechar">Cancelar</button></div>');
+    $('f-fechar').onclick = fecharFolha;
+    var salva = function (v) { var m = {}; m['produtos/' + k + '/qtd'] = v; m['produtos/' + k + '/pt'] = c.pt; gravar(m).then(fecharFolha); };
+    $('f-ok').onclick = function () { var v = +$('f-qtd').value; if (v > 0) salva(Math.round(v * 10) / 10); else fecharFolha(); };
+    if ($('f-auto')) $('f-auto').onclick = function () { salva(null); };
+  }
+  // ── família: o dono libera outras contas pelo código delas ──
+  function cartaoFamilia() {
+    if (!ehDono) return '<div class="card"><h2>Mercado compartilhado</h2><p class="nota" style="margin:0">Você está usando o Mercado da casa, liberado pelo administrador. Tudo o que você incluir, marcar ou salvar aparece para ele também.</p></div>';
+    var ms = M.membros || {}, ids = Object.keys(ms);
+    return '<div class="card"><h2>Compartilhar com a família</h2><p class="nota">Quem você liberar vê e mexe em tudo do Mercado: lista, preços, recibos e gastos. Para liberar, a pessoa abre <b>minhacasaapp.com/mercado</b>, entra com o e-mail e a senha dela do MinhaCasa e te manda o código que aparece.</p>' +
+      (ids.length ? ids.map(function (id) { return '<div class="linha"><div class="info"><div class="t">' + esc(ms[id].nome || 'Sem nome') + '</div><div class="s mono">' + esc(id.slice(0, 10)) + '…</div></div><button class="btn sm" data-mbrm="' + esc(id) + '">Remover</button></div>'; }).join('') : '') +
+      '<label class="lb" for="mb-nome">Nome</label><input class="in" id="mb-nome" placeholder="Ex.: Esposa">' +
+      '<label class="lb" for="mb-cod">Código que a pessoa te mandou</label><input class="in mono" id="mb-cod" autocapitalize="off" autocomplete="off" spellcheck="false">' +
+      '<div class="grupo-btn" style="margin-top:10px"><button class="btn pri" id="mb-add">Liberar acesso</button></div><div class="erro" id="mb-erro"></div></div>';
+  }
+  function raiz(m) { return F.update(F.ref(DB), m).catch(function (e) { toast('Não salvou: ' + erroTxt(e)); throw e; }); }
+  function adicionarMembro() {
+    var cod = ($('mb-cod').value.match(/[A-Za-z0-9]{20,40}/) || [''])[0], nome = $('mb-nome').value.trim().slice(0, 40) || 'Família';
+    if (!cod) { $('mb-erro').textContent = 'Cole o código completo (são umas 28 letras e números).'; return; }
+    if (cod === U.uid) { $('mb-erro').textContent = 'Esse é o seu próprio código.'; return; }
+    var m = {}; m['mercadoMembros/' + dono + '/' + cod] = true; m['mercadoDe/' + cod] = dono; m[base + '/membros/' + cod] = { nome: nome, desde: hojeISO() };
+    raiz(m).then(function () { toast('Acesso liberado para ' + nome); });
+  }
+  function removerMembro(cod) {
+    var m = {}; m['mercadoMembros/' + dono + '/' + cod] = null; m['mercadoDe/' + cod] = null; m[base + '/membros/' + cod] = null;
+    raiz(m).then(function () { toast('Acesso removido'); });
   }
   function abrirDic() {
     var ks = Object.keys(M.dic).sort(function (a, b) { return M.dic[a].pt.localeCompare(M.dic[b].pt); });
